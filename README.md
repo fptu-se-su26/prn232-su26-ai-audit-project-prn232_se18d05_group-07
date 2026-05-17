@@ -17,11 +17,11 @@
 
 | No | Student ID | Full Name | GitHub Username | Role | Main Responsibility |
 |---:|---|---|---|---|---|
-| 1 | DE180794 | Đỗ Thanh Tín |  | Leader |  |
+| 1 | DE180794 | Đỗ Thanh Tín | ElonTin | Leader |  |
 | 2 | DE180358 | Nguyễn Hồng An | NguyenHongAn12 | Member |  |
-| 3 | DE180303 | Phan Hoài An |  | Member |  |
+| 3 | DE180303 | Phan Hoài An | phanhoaian1203 | Member |  |
 | 4 | DE180286 | Trần Đình Quý | QuyTD-Dev | Member |  |
-| 5 | DE180336 | Nguyễn Hữu Triết |  | Member |  |
+| 5 | DE180336 | Nguyễn Hữu Triết | huutriet | Member |  |
 
 ---
 
