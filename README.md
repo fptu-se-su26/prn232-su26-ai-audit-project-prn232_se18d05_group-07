@@ -4,12 +4,12 @@
 
 | Item | Description |
 |---|---|
-| Course |  |
-| Class |  |
+| Course | PRN232 |
+| Class | SE18D05 |
 | Semester | SU26 |
-| Group |  |
-| Topic |  |
-| Repository |  |
+| Group | 07 |
+| Topic | RoomHub  |
+| Repository | prn232_se18d05_group-07 |
 
 ---
 
@@ -17,11 +17,11 @@
 
 | No | Student ID | Full Name | GitHub Username | Role | Main Responsibility |
 |---:|---|---|---|---|---|
-| 1 |  |  |  | Leader |  |
-| 2 |  |  |  | Member |  |
-| 3 |  |  |  | Member |  |
-| 4 |  |  |  | Member |  |
-| 5 |  |  |  | Member |  |
+| 1 | DE180794 | Đỗ Thanh Tín |  | Leader |  |
+| 2 | DE180358 | Nguyễn Hồng An |  | Member |  |
+| 3 | DE180303 | Phan Hoài An |  | Member |  |
+| 4 | DE180286 | Trần Đình Quý |  | Member |  |
+| 5 | DE180336 | Nguyễn Hữu Triết |  | Member |  |
 
 ---
 
