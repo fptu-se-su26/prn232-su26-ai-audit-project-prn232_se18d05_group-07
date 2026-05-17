@@ -21,7 +21,7 @@
 | 2 | DE180358 | Nguyễn Hồng An | NguyenHongAn12 | Member |  |
 | 3 | DE180303 | Phan Hoài An |  | Member |  |
 | 4 | DE180286 | Trần Đình Quý | QuyTD-Dev | Member |  |
-| 5 | DE180336 | Nguyễn Hữu Triết |  | Member |  |
+| 5 | DE180336 | Nguyễn Hữu Triết | huutriet | Member |  |
 
 ---
 
