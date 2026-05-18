@@ -56,7 +56,7 @@ Ví dụ:
 
 ```text
 Viết tại đây...
-
+```
 ## 4. Nhật ký sử dụng AI chi tiết
 
 > Mỗi lần sử dụng AI cho một phần quan trọng của bài tập/project, sinh viên cần ghi lại theo mẫu bên dưới.  
