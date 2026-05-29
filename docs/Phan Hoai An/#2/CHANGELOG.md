@@ -85,9 +85,10 @@ Nguyên tắc ghi changelog:
 - [x] Tích hợp Login Requirement Modal mượt mà khi người dùng chưa đăng nhập bấm nút yêu thích ở trang Tìm chỗ ở hoặc liên hệ ở trang Chi tiết
 - [x] Xây dựng trang giao diện Dành cho Chủ nhà `ForLandlords.tsx` với Sơ đồ phòng trực quan, bảng quản lý khách thuê tập trung, hóa đơn tự động và các câu hỏi thường gặp FAQ
 - [x] Xây dựng trang giao diện Cách hoạt động `HowItWorks.tsx` với Hero Section, Audience Switcher, Renter & Landlord Timelines, Sơ đồ quy trình xuyên suốt, ví dụ so sánh Minh & Cô Lan và Accordion FAQ tương tác động
-- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx và HowItWorks.tsx
+- [x] Xây dựng trang giao diện Hỗ trợ `Support.tsx` với Hero & Search Section, quick suggestions, 6 Categories, FAQ Accordion đóng mở động và Form liên hệ hỗ trợ tương tác có validation và reset form
+- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx, HowItWorks.tsx và Support.tsx
 - [x] Cập nhật Featured Room cards ở trang chủ để nhấp chuột chuyển hướng trực tiếp sang trang Chi tiết phòng tương ứng
-- [x] Sửa lỗi type-import verbatimModuleSyntax và các lỗi class/unused parameter của TypeScript để đóng gói thành công
+- [x] Sửa lỗi type-import verbatimModuleSyntax và các lỗi class/unused parameter/RefObject của TypeScript để đóng gói thành công
 - [x] Chạy kiểm chứng đóng gói production tĩnh bằng `npm run build` thành công 100% với 0 lỗi biên dịch
 
 ## Thay đổi chi tiết
@@ -106,6 +107,7 @@ Nguyên tắc ghi changelog:
 | 10 | Tích hợp định tuyến chuyển trang và quản lý state selectedRoomId | Phan Hoài An | `src/App.tsx`, `src/components/Navbar.tsx`, `src/pages/Browse.tsx` | Commit Git |
 | 11 | Tạo trang Dành cho Chủ nhà `ForLandlords.tsx` và tích hợp định tuyến | Phan Hoài An | `src/pages/ForLandlords.tsx`, `src/App.tsx`, `src/components/Navbar.tsx` | Commit Git |
 | 12 | Tạo trang Cách hoạt động `HowItWorks.tsx` và tích hợp định tuyến | Phan Hoài An | `src/pages/HowItWorks.tsx`, `src/App.tsx`, `src/components/Navbar.tsx`, `src/components/Footer.tsx` | Commit Git |
+| 13 | Tạo trang Hỗ trợ `Support.tsx` và tích hợp định tuyến | Phan Hoài An | `src/pages/Support.tsx`, `src/App.tsx`, `src/components/Navbar.tsx`, `src/components/Footer.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 
@@ -115,7 +117,7 @@ Nguyên tắc ghi changelog:
 Nếu có, mô tả AI đã hỗ trợ phần nào:
 
 ```text
-AI trợ lý Antigravity hỗ trợ viết cấu hình tự động cho tailwind.config.js, bóc tách và chuyển đổi mã nguồn HTML mẫu sang định dạng JSX của React TypeScript không xảy ra lỗi cú pháp, và cấu hình App.tsx đồng bộ cho toàn bộ các trang Homepage, Tìm chỗ ở, Chi tiết, Dành cho Chủ nhà và Cách hoạt động.
+AI trợ lý Antigravity hỗ trợ viết cấu hình tự động cho tailwind.config.js, bóc tách và chuyển đổi mã nguồn HTML mẫu sang định dạng JSX của React TypeScript không xảy ra lỗi cú pháp, và cấu hình App.tsx đồng bộ cho toàn bộ các trang Homepage, Tìm chỗ ở, Chi tiết, Dành cho Chủ nhà, Cách hoạt động và Hỗ trợ.
 ```
 
 ## Commit/Screenshot minh chứng
@@ -131,6 +133,7 @@ Commit Git:
 - feat: add room details page
 - feat: add for landlords page
 - feat: add how it works page
+- feat: add support page
 - test: verify npm run build succeeds with 0 errors
 ```
 
@@ -150,7 +153,7 @@ Trang chủ sau khi khởi tạo hiển thị rất đẹp, load mượt mà và
 |---|---|---|---|---|
 | 1 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed | dotnet build thành công | Đã hoàn thành ở đợt 1 |
 | 2 | Cài đặt và cấu hình TailwindCSS v3 vào dự án Frontend | Completed | tailwind.config.js cấu hình xong | Sẵn sàng hoạt động |
-| 3 | Xây dựng giao diện các trang dành cho Khách & Chủ nhà (Homepage, Tìm chỗ ở, Chi tiết, Dành cho Chủ nhà, Cách hoạt động) tiếng Việt Đà Nẵng | Completed | npm run build thành công | Tách biệt các component và sử dụng state-routing mượt mà |
+| 3 | Xây dựng giao diện các trang dành cho Khách & Chủ nhà (Homepage, Tìm chỗ ở, Chi tiết, Dành cho Chủ nhà, Cách hoạt động, Hỗ trợ) tiếng Việt Đà Nẵng | Completed | npm run build thành công | Tách biệt các component và sử dụng state-routing mượt mà |
 
 ---
 

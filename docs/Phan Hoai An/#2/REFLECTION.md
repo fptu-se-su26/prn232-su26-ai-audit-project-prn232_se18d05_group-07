@@ -35,7 +35,7 @@ Reflection cần thể hiện:
 Mô tả ngắn gọn quá trình sử dụng AI trong bài tập/project này.
 
 ```text
-Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium, bổ sung trang Tìm chỗ ở (Browse Rooms), trang Chi tiết chỗ ở (Room Detail), trang Dành cho Chủ nhà (For Landlords), và trang Cách hoạt động (How It Works), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng các trang con Browse.tsx, RoomDetail.tsx, ForLandlords.tsx và HowItWorks.tsx với đầy đủ bộ lọc, cost tables, rules, sơ đồ phòng trực quan, kịch bản so sánh thực tế và FAQ. Cuối cùng, AI hỗ trợ sửa lỗi TypeScript verbatimModuleSyntax, class attributes và RefObject, thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx, HowItWorks.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
+Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium, bổ sung trang Tìm chỗ ở (Browse Rooms), trang Chi tiết chỗ ở (Room Detail), trang Dành cho Chủ nhà (For Landlords), trang Cách hoạt động (How It Works), và trang Hỗ trợ (Support & Help Center), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng các trang con Browse.tsx, RoomDetail.tsx, ForLandlords.tsx, HowItWorks.tsx và Support.tsx với đầy đủ bộ lọc, cost tables, rules, sơ đồ phòng trực quan, kịch bản so sánh thực tế, FAQ và biểu mẫu liên hệ hỗ trợ. Cuối cùng, AI hỗ trợ sửa lỗi TypeScript verbatimModuleSyntax, class attributes và RefObject, thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx, HowItWorks.tsx, Support.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
 ```
 
 Gợi ý:
@@ -199,6 +199,9 @@ Mô tả rõ phần nào là đóng góp chính của sinh viên/nhóm, không p
 - Lập trình quản lý FAQ state đóng mở các câu hỏi của chủ nhà mượt mà.
 - Thiết lập cơ chế cuộn mượt mà bằng ref trong HowItWorks.tsx.
 - Lập trình Accordion FAQ tương tác động bằng React State cục bộ cho trang Cách hoạt động.
+- Thiết lập tính năng nhấp chọn Gợi ý từ khóa tự điền vào Ô tìm kiếm trong Support.tsx.
+- Lập trình biểu mẫu liên hệ hỗ trợ tương tác có validation và reset form.
+- Chuyển đổi FAQ details tĩnh sang Accordion đóng mở động mượt mà bằng React state cục bộ cho trang Hỗ trợ.
 - Xác thực đóng gói build dự án thành công 100%.
 - Soạn thảo tài liệu báo cáo học thuật đợt 2.
 ```
