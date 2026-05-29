@@ -4,7 +4,11 @@ import tenantBenefits from '../assets/tenant_benefits.png';
 import landlordDashboard from '../assets/landlord_dashboard.png';
 
 
-const Home: React.FC = () => {
+interface HomeProps {
+  setCurrentPage: (page: 'home' | 'browse') => void;
+}
+
+const Home: React.FC<HomeProps> = ({ setCurrentPage }) => {
   const handleAlert = (message: string) => {
     alert(message);
   };
@@ -28,9 +32,8 @@ const Home: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <a 
-                className="text-label-md font-label-md text-white bg-primary-container rounded-full px-8 py-4 text-center hover:bg-orange-600 transition-all soft-shadow hover:-translate-y-1" 
-                href="#"
-                onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng nhập để sử dụng bộ lọc tìm phòng chi tiết!'); }}
+                className="text-label-md font-label-md text-white bg-primary-container rounded-full px-8 py-4 text-center hover:bg-orange-600 transition-all soft-shadow hover:-translate-y-1 cursor-pointer" 
+                onClick={(e) => { e.preventDefault(); setCurrentPage('browse'); }}
               >
                 Tìm chỗ ở ngay
               </a>
@@ -167,8 +170,8 @@ const Home: React.FC = () => {
               </div>
             </div>
             <button 
-              className="w-full bg-primary-container text-white rounded-xl py-3 text-label-md font-label-md hover:bg-orange-600 transition-colors h-[46px] flex items-center justify-center gap-2" 
-              onClick={() => handleAlert('Vui lòng đăng nhập để sử dụng tính năng tìm kiếm phòng này')} 
+              className="w-full bg-primary-container text-white rounded-xl py-3 text-label-md font-label-md hover:bg-orange-600 transition-colors h-[46px] flex items-center justify-center gap-2 active:scale-98" 
+              onClick={() => setCurrentPage('browse')} 
               type="button"
             >
               <span className="material-symbols-outlined">search</span> Tìm kiếm
@@ -186,7 +189,7 @@ const Home: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
             {/* Category 1 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Phòng trọ!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">single_bed</span>
               </div>
@@ -194,7 +197,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Tiết kiệm, cơ bản</p>
             </div>
             {/* Category 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Phòng đơn!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">bed</span>
               </div>
@@ -202,7 +205,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Riêng tư 1 người</p>
             </div>
             {/* Category 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Phòng đôi!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">king_bed</span>
               </div>
@@ -210,7 +213,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Cho 2 người trở lên</p>
             </div>
             {/* Category 4 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Phòng ở ghép!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">group</span>
               </div>
@@ -218,7 +221,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Chia sẻ chi phí</p>
             </div>
             {/* Category 5 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục phòng Studio!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">weekend</span>
               </div>
@@ -226,7 +229,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Thiết kế mở</p>
             </div>
             {/* Category 6 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Căn hộ Mini!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">apartment</span>
               </div>
@@ -234,7 +237,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Đầy đủ tiện nghi</p>
             </div>
             {/* Category 7 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Căn hộ chung cư!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">location_city</span>
               </div>
@@ -242,7 +245,7 @@ const Home: React.FC = () => {
               <p className="text-xs text-gray-500">Cao cấp, an ninh</p>
             </div>
             {/* Category 8 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => handleAlert('Hệ thống đang chuẩn bị danh mục Nhà nguyên căn!')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">house</span>
               </div>
@@ -262,9 +265,8 @@ const Home: React.FC = () => {
               <p className="text-body-md font-body-md text-on-surface-variant">Những không gian sống được đánh giá cao tại trung tâm Đà Nẵng</p>
             </div>
             <a 
-              className="hidden md:flex items-center gap-1 text-primary-container font-semibold hover:text-orange-600 transition-colors" 
-              href="#"
-              onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng nhập để xem toàn bộ danh sách phòng nổi bật!'); }}
+              className="hidden md:flex items-center gap-1 text-primary-container font-semibold hover:text-orange-600 transition-colors cursor-pointer" 
+              onClick={(e) => { e.preventDefault(); setCurrentPage('browse'); }}
             >
               Xem tất cả <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </a>

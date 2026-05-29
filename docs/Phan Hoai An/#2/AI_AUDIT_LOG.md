@@ -156,6 +156,59 @@ Việc sử dụng ảnh thật thay cho các div xám tĩnh giúp giao diện t
 
 ---
 
+### Lần sử dụng AI số 3
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 29/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích sử dụng | Xây dựng trang Tìm chỗ ở `Browse.tsx` và tích hợp cơ chế định tuyến (state-routing) vào Frontend |
+| Phần việc liên quan | Frontend / Page Integration / Search Filters Logic / Routing |
+| Mức độ sử dụng | Hỗ trợ nhiều / Sinh chính nội dung |
+
+#### 4.1. Prompt đã sử dụng
+
+```text
+tiếp theo thực hiện cập nhật bổ sung tiếp trang Tìm chỗ ở, bạn hãy giúp tôi cập nhật lại đảm bảo chính xác phù hợp với dự án, không cần phải phải thực hiện giống 100% với file html tôi cung cấp, tôi muốn bạn dựa vào đó để cập nhật trang giao diện đẹp và chuẩn phù hợp với dự án nhất, đây là nội dung để bạn tham khảo...
+```
+
+#### 4.2. Kết quả AI gợi ý
+
+AI đã viết mã nguồn cho trang `Browse.tsx` mới và hỗ trợ **đồng bộ hóa hoàn toàn 8 loại chỗ ở và 8 quận/huyện** so với Trang chủ, đồng thời mở rộng cơ sở dữ liệu mẫu lên **11 phòng trọ/căn hộ** có độ phân giải cao tại các quận Cẩm Lệ, Thanh Khê, Hòa Vang. AI tích hợp **React State nâng cao** để bộ lọc hoạt động động 100% tại client:
+- Lọc phòng theo từ khóa tiêu đề, loại chỗ ở (Phòng trọ, Phòng đơn, Phòng đôi, Phòng ở ghép, Studio, Căn hộ Mini, Căn hộ chung cư, Nhà nguyên căn), quận/huyện (Hải Châu, Thanh Khê, Sơn Trà, Ngũ Hành Sơn, Liên Chiểu, Cẩm Lệ, Hòa Vang), khoảng giá và mảng tiện ích.
+- Sắp xếp phòng động theo giá tăng/giảm dần hoặc mới nhất.
+- Quick Tabs tương tác nhanh.
+- Thiết kế một Login Requirement Modal bóng bẩy khi click Trái tim yêu thích.
+
+Đồng thời, AI hỗ trợ cập nhật định tuyến chuyển trang đơn giản và mượt mà trong `App.tsx` bằng cách quản lý state `currentPage` và phân phối prop cho `Navbar.tsx` và `Home.tsx`.
+
+#### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
+
+Sử dụng toàn bộ file `Browse.tsx` mới (sau khi đồng bộ) và các cập nhật ghép nối Props trong `App.tsx`, `Navbar.tsx`, `Home.tsx`.
+
+#### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
+
+- Tự phối hợp khai báo Props kiểu TypeScript chính xác để biên dịch thành công.
+- Chủ động đồng bộ thêm danh mục loại phòng ở Quick Tabs và Sidebar Checkboxes cho trùng khớp 100% với trang chủ.
+- Thực hiện chạy build dự án `npm run build` kiểm nghiệm thành công 100%.
+
+#### 4.5. Minh chứng
+
+| Loại minh chứng | Nội dung |
+|---|---|
+| Link commit | Xây dựng trang Tìm chỗ ở Browse.tsx và tích hợp định tuyến chuyển trang |
+| File liên quan | RoomHub.Frontend/src/pages/Browse.tsx, App.tsx, components/Navbar.tsx |
+| Screenshot | ![alt text](image-2.png) |
+| Kết quả chạy/test | Vite build đóng gói thành công không lỗi trong 711ms |
+| Link video demo | N/A |
+| Ghi chú khác | Bộ lọc tìm kiếm hoạt động động rất mượt mà |
+
+#### 4.6. Nhận xét cá nhân/nhóm
+
+Trang tìm chỗ ở mới có tính tương tác cực kỳ cao nhờ React State cục bộ, giúp dự án trông vô cùng sinh động và dễ dàng demo cho giảng viên dù chưa hoàn tất kết nối API backend.
+
+---
+
 ## 5. Bảng tổng hợp mức độ sử dụng AI
 
 Đánh dấu mức độ AI hỗ trợ ở từng hạng mục.

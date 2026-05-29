@@ -72,6 +72,16 @@ Nguyên tắc ghi changelog:
 - [x] Dịch nghĩa tiếng Việt và tối ưu hóa toàn bộ JSX cho trang chủ `Home.tsx` từ HTML mẫu
 - [x] Bổ sung các cảnh báo giả lập `alert` trực quan khi Khách tương tác với các nút đăng nhập/đăng ký
 - [x] Ghép nối giao diện trong `App.tsx` và dọn dẹp file `App.css` để tránh xung đột phong cách thiết kế
+- [x] Sử dụng AI tạo ra 03 hình ảnh độc quyền độ phân giải cao thay thế các placeholders ảnh ban đầu
+- [x] Tối ưu hóa Browser Mockup phần "Giải pháp quản lý phòng trọ" lồng ghép ảnh Dashboard cực kỳ chân thực và sang trọng
+- [x] Tuyển chọn và nhúng các đường dẫn ảnh Unsplash chất lượng cao cho phần "Phòng/Căn hộ nổi bật tại Đà Nẵng"
+- [x] Xây dựng trang giao diện Tìm chỗ ở `Browse.tsx` với bộ lọc tìm kiếm nâng cao tương tác động
+- [x] Tích hợp bộ lọc client-side động bằng React State (lọc theo từ khóa, quận, loại phòng, khoảng giá và mảng tiện ích)
+- [x] Đồng bộ hóa hoàn toàn 8 loại chỗ ở và 8 quận/huyện trên trang Tìm chỗ ở `Browse.tsx` với giao diện trang chủ
+- [x] Mở rộng cơ sở dữ liệu mẫu lên 11 căn phòng/căn hộ đầy đủ tiện ích phủ khắp Đà Nẵng (Thanh Khê, Cẩm Lệ, Hòa Vang...) để kiểm chứng bộ lọc hoạt động chuẩn xác
+- [x] Lập trình tính năng sắp xếp kết quả động (giá tăng/giảm dần, mới nhất) và Quick Tabs chuyển đổi nhanh
+- [x] Tích hợp Login Requirement Modal mượt mà khi người dùng chưa đăng nhập bấm nút yêu thích
+- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, và Home.tsx
 - [x] Chạy kiểm chứng đóng gói production tĩnh bằng `npm run build` thành công 100%
 
 ## Thay đổi chi tiết
@@ -84,6 +94,8 @@ Nguyên tắc ghi changelog:
 | 4 | Tạo component chân trang tái sử dụng `Footer.tsx` bản địa hóa Đà Nẵng | Phan Hoài An | `src/components/Footer.tsx` | Commit Git |
 | 5 | Tạo trang chủ `Home.tsx` tối ưu JSX và bổ sung cảnh báo giả lập | Phan Hoài An | `src/pages/Home.tsx` | Commit Git |
 | 6 | Cập nhật định dạng nền App.tsx và làm rỗng App.css | Phan Hoài An | `src/App.tsx`, `src/App.css` | Commit Git |
+| 7 | Tạo trang Tìm chỗ ở `Browse.tsx` với các bộ lọc động | Phan Hoài An | `src/pages/Browse.tsx` | Commit Git |
+| 8 | Tích hợp định tuyến chuyển trang trong `App.tsx`, `Navbar.tsx`, `Home.tsx` | Phan Hoài An | `src/App.tsx`, `src/components/Navbar.tsx`, `src/pages/Home.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 

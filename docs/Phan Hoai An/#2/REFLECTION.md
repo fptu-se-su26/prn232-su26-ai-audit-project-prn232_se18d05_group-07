@@ -11,7 +11,7 @@
 | Tên bài tập / Project | RoomHub - Quản lý phòng/nhà trọ |
 | Tên sinh viên / Nhóm | Phan Hoài An / Nhóm 07 |
 | MSSV / Danh sách MSSV | DE180303 |
-| Giảng viên hướng dẫn | Giảng viên bộ môn PRN232 |
+| Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
 | Ngày hoàn thành reflection | 29/05/2026 |
 
 ---
@@ -35,7 +35,7 @@ Reflection cần thể hiện:
 Mô tả ngắn gọn quá trình sử dụng AI trong bài tập/project này.
 
 ```text
-Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage) của Khách và tối ưu hóa hệ thống tài nguyên hình ảnh, em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc tùy biến. Tiếp theo, giao cho AI bóc tách HTML mẫu tiếng Việt thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx). Sau đó, nhóm tiếp tục yêu cầu AI sử dụng công cụ tạo ảnh tích hợp generate_image để tự động tạo ra 03 bức ảnh độ phân giải cao độc quyền cực đẹp (căn hộ view cầu Rồng, người trẻ tìm phòng, dashboard chủ trọ) để thay thế toàn bộ placeholders cũ và nâng cấp giao diện Mockup trình duyệt trở nên vô cùng sang trọng và chuyên nghiệp. Cuối cùng, chúng em nhúng các liên kết ảnh Unsplash chất lượng cao cho phần Phòng nổi bật và chạy build thành công 100% không phát sinh bất kỳ lỗi nào.
+Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium và bổ sung trang Tìm chỗ ở (Browse Rooms), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng trang Tìm chỗ ở Browse.tsx tích hợp bộ lọc và sắp xếp động 100% bằng React State ở client cùng Login Modal sinh động. Cuối cùng, AI hỗ trợ thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
 ```
 
 Gợi ý:
