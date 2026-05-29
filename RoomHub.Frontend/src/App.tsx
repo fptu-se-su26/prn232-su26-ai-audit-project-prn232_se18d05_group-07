@@ -4,10 +4,11 @@ import Home from './pages/Home';
 import Browse from './pages/Browse';
 import RoomDetail from './pages/RoomDetail';
 import ForLandlords from './pages/ForLandlords';
+import HowItWorks from './pages/HowItWorks';
 import Footer from './components/Footer';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'home' | 'browse' | 'detail' | 'landlords'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works'>('home');
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
 
   return (
@@ -20,6 +21,8 @@ const App: React.FC = () => {
           <Browse setCurrentPage={setCurrentPage} setSelectedRoomId={setSelectedRoomId} />
         ) : currentPage === 'landlords' ? (
           <ForLandlords setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'how-it-works' ? (
+          <HowItWorks setCurrentPage={setCurrentPage} />
         ) : (
           <RoomDetail 
             selectedRoomId={selectedRoomId} 
@@ -28,9 +31,10 @@ const App: React.FC = () => {
           />
         )}
       </div>
-      <Footer />
+      <Footer setCurrentPage={setCurrentPage} />
     </div>
   );
 };
 
 export default App;
+

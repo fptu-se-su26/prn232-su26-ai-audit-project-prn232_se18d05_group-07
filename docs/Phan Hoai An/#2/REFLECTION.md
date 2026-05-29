@@ -35,7 +35,7 @@ Reflection cần thể hiện:
 Mô tả ngắn gọn quá trình sử dụng AI trong bài tập/project này.
 
 ```text
-Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium, bổ sung trang Tìm chỗ ở (Browse Rooms), trang Chi tiết chỗ ở (Room Detail), và trang Dành cho Chủ nhà (For Landlords), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng các trang con Browse.tsx, RoomDetail.tsx và ForLandlords.tsx với đầy đủ bộ lọc, cost tables, rules, sơ đồ phòng trực quan, và FAQ. Cuối cùng, AI hỗ trợ sửa lỗi TypeScript verbatimModuleSyntax và class attributes, thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
+Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium, bổ sung trang Tìm chỗ ở (Browse Rooms), trang Chi tiết chỗ ở (Room Detail), trang Dành cho Chủ nhà (For Landlords), và trang Cách hoạt động (How It Works), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng các trang con Browse.tsx, RoomDetail.tsx, ForLandlords.tsx và HowItWorks.tsx với đầy đủ bộ lọc, cost tables, rules, sơ đồ phòng trực quan, kịch bản so sánh thực tế và FAQ. Cuối cùng, AI hỗ trợ sửa lỗi TypeScript verbatimModuleSyntax, class attributes và RefObject, thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, ForLandlords.tsx, HowItWorks.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
 ```
 
 Gợi ý:
@@ -100,7 +100,7 @@ Antigravity cung cấp môi trường tích hợp trực tiếp, hiểu rõ cấ
 ### Mô tả chi tiết
 
 ```text
-AI giúp chuyển dịch toàn bộ lớp class tĩnh của Tailwind sang className trong React, tự sửa đổi các lỗi thẻ đơn chưa đóng của HTML, và tối ưu hóa việc phân chia các component dùng chung rất chuyên nghiệp. Đặc biệt là tự động sửa lỗi type import verbatimModuleSyntax, sửa lỗi thuộc tính class và unused parameter trong ForLandlords, và viết logic scrolling lên đầu trang khi chuyển đổi phòng.
+AI giúp chuyển dịch toàn bộ lớp class tĩnh của Tailwind sang className trong React, tự sửa đổi các lỗi thẻ đơn chưa đóng của HTML, và tối ưu hóa việc phân chia các component dùng chung rất chuyên nghiệp. Đặc biệt là tự động sửa lỗi type import verbatimModuleSyntax, sửa lỗi thuộc tính class và unused parameter trong ForLandlords, sửa lỗi RefObject type mismatch trong HowItWorks.tsx, viết logic scrolling lên đầu trang khi chuyển đổi phòng và dựng FAQ accordion tương tác động.
 ```
 
 ---
@@ -180,6 +180,7 @@ Ghi lại ít nhất một ví dụ nếu có.
 | 1 | Bỏ trống cột thông tin liên hệ cuối cùng ở Footer | Đọc mã nguồn Footer do AI đề xuất. | Bổ sung đầy đủ địa chỉ văn phòng hỗ trợ chính thức của nhóm tại Đại học FPT Đà Nẵng. | Luôn kiểm tra kỹ các thông tin nội dung (Content) hiển thị của ứng dụng để đảm bảo sản phẩm hoàn thiện nhất trước khi báo cáo. |
 | 2 | Import `Room` type trực tiếp từ `./Browse` trong `RoomDetail.tsx` | Chạy lệnh build frontend `npm run build` gặp lỗi compiler TS1484. | Xóa bỏ type import không sử dụng hoặc sử dụng cú pháp type-only import phù hợp. | Trình biên dịch TypeScript (tsc) của dự án có thể được cấu hình rất khắt khe với verbatimModuleSyntax; luôn chạy build thực tế thay vì chỉ tin tưởng mã nguồn AI viết ra mà không kiểm tra. |
 | 3 | Khai báo thuộc tính class và unused parameter trong ForLandlords.tsx | Chạy lệnh build frontend `npm run build` gặp lỗi tsc. | Thay thế class thành className và loại bỏ unused parameter setCurrentPage khỏi destructuring. | Luôn cảnh giác với các thẻ HTML thô có chứa class thay vì className, và chủ động dọn dẹp các parameters dư thừa để tránh lỗi tsc nghiêm ngặt. |
+| 4 | Lỗi RefObject kiểu nullable trong HowItWorks.tsx | Chạy lệnh build frontend `npm run build` gặp lỗi tsc. | Cập nhật tham số ref của scrollToSection thành `React.RefObject<HTMLDivElement | null>` để khớp với ref khai báo từ `useRef(null)`. | TS trong dự án quản lý rất khắt khe đối với kiểu nullable của DOM RefObject, cần kiểm tra và khai báo chính xác kiểu dữ liệu. |
 
 ---
 
@@ -196,6 +197,8 @@ Mô tả rõ phần nào là đóng góp chính của sinh viên/nhóm, không p
 - Lập trình cơ chế cuộn mượt mà lên đầu trang khi xem gợi ý chỗ ở tương tự.
 - Tự sửa các thuộc tính class thành className và dọn dẹp parameter tsc trong ForLandlords.tsx.
 - Lập trình quản lý FAQ state đóng mở các câu hỏi của chủ nhà mượt mà.
+- Thiết lập cơ chế cuộn mượt mà bằng ref trong HowItWorks.tsx.
+- Lập trình Accordion FAQ tương tác động bằng React State cục bộ cho trang Cách hoạt động.
 - Xác thực đóng gói build dự án thành công 100%.
 - Soạn thảo tài liệu báo cáo học thuật đợt 2.
 ```

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
 interface NavbarProps {
-  currentPage: 'home' | 'browse' | 'detail' | 'landlords';
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
+  currentPage: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works';
+  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
@@ -56,7 +56,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
           >
             Dành cho Chủ nhà
           </a>
-          <a className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors text-label-md font-label-md" href="#how-it-works">Cách hoạt động</a>
+          <a 
+            className={`text-label-md font-label-md transition-colors cursor-pointer ${
+              currentPage === 'how-it-works'
+                ? 'text-primary dark:text-primary-fixed font-bold border-b-2 border-primary dark:border-primary-fixed pb-1'
+                : 'text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed'
+            }`} 
+            onClick={(e) => { e.preventDefault(); setCurrentPage('how-it-works'); }}
+          >
+            Cách hoạt động
+          </a>
           <a className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors text-label-md font-label-md" href="#footer-contact">Hỗ trợ</a>
         </div>
 
@@ -115,9 +124,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
             Dành cho Chủ nhà
           </a>
           <a 
-            className="text-on-surface-variant text-sm py-2 border-b border-gray-50" 
-            href="#how-it-works"
-            onClick={() => setIsMobileMenuOpen(false)}
+            className={`text-sm py-2 border-b border-gray-50 cursor-pointer ${
+              currentPage === 'how-it-works' ? 'text-primary font-bold' : 'text-on-surface-variant'
+            }`} 
+            onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); setCurrentPage('how-it-works'); }}
           >
             Cách hoạt động
           </a>

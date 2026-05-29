@@ -61,6 +61,7 @@ Sinh viên/nhóm cần ghi lại:
 | 8 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Tìm chỗ ở Browse.tsx và tích hợp | Mã nguồn Browse.tsx cùng các props định tuyến liên quan | Có | RoomHub.Frontend/src/pages/Browse.tsx |
 | 9 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Chi tiết RoomDetail.tsx và tích hợp | Mã nguồn RoomDetail.tsx và cập nhật định tuyến | Có | RoomHub.Frontend/src/pages/RoomDetail.tsx |
 | 10 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Dành cho Chủ nhà ForLandlords.tsx | Mã nguồn ForLandlords.tsx và cập nhật điều hướng | Có | RoomHub.Frontend/src/pages/ForLandlords.tsx |
+| 11 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Cách hoạt động HowItWorks.tsx | Mã nguồn HowItWorks.tsx và tích hợp định tuyến | Có | RoomHub.Frontend/src/pages/HowItWorks.tsx |
 
 ---
 
@@ -402,6 +403,75 @@ Tự thiết lập các sự kiện `onClick` để nạp các thông báo alert
 | Link commit | [DE180303] feat: add for landlords page |
 | File liên quan | RoomHub.Frontend/src/pages/ForLandlords.tsx, App.tsx, components/Navbar.tsx |
 | Screenshot | ![alt text](image-4.png) |
+| Kết quả chạy/test | npm run build thành công 100% |
+| Ghi chú khác | N/A |
+
+#### 5.8. Ghi chú thêm
+
+```text
+AI phản hồi và sinh code JSX rất gọn gàng, tự chuyển đổi các thuộc tính HTML sang React.
+```
+
+---
+
+### Prompt số 6
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 29/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Bóc tách và chuyển đổi HTML Cách hoạt động sang JSX cao cấp có state-routing và accordion FAQ động. |
+| Phần việc liên quan | Frontend / How It Works UI Page / TypeScript Type Fixing / Routing Integration |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo hãy thực hiện cập nhật bổ sung tiếp cho trang cách hoạt động, hãy phân tích thật kĩ và thực hiện dựa  vào thực hiện bổ sung cập nhật cho dự án nhé...
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+```text
+Cần phát triển trang Cách hoạt động `HowItWorks.tsx` tương tác động cao dựa trên một tệp HTML tham khảo từ giảng viên, và cần ghép nối mượt mà vào thanh điều hướng (Navbar.tsx) và cấu trúc phân trang của App.tsx cũng như Footer.tsx.
+```
+
+#### 5.3. Kết quả AI trả về
+
+```text
+AI sinh mã nguồn cho trang `HowItWorks.tsx` mới với đầy đủ quy trình các bước cho người thuê & chủ nhà, kịch bản so sánh Minh & Cô Lan, sơ đồ xuyên suốt. Đồng thời, AI hướng dẫn sửa lỗi TypeScript RefObject kiểu div-element và tích hợp định tuyến mượt mà.
+```
+
+#### 5.4. Kết quả đã áp dụng vào bài
+
+```text
+Áp dụng 100% mã nguồn trang `HowItWorks.tsx` đã sửa lỗi biên dịch cùng các cấu hình định tuyến trong App, Navbar và Footer.
+```
+
+#### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
+
+```text
+Tự thiết lập hàm scrollToSection để hỗ trợ cuộn mượt mà đến các ref khi click switcher vai trò người thuê/chủ nhà và lập trình Accordion FAQ tương tác bằng React State thay vì dùng thẻ details mặc định.
+```
+
+#### 5.6. Đánh giá chất lượng prompt
+
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh
+- [ ] Prompt còn thiếu thông tin
+- [x] Prompt tạo ra kết quả tốt
+- [ ] Prompt tạo ra kết quả chưa phù hợp
+- [ ] Cần hỏi lại AI nhiều lần
+- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
+- [ ] Kết quả AI có lỗi hoặc chưa chính xác
+
+#### 5.7. Minh chứng liên quan
+
+| Loại minh chứng | Nội dung |
+|---|---|
+| Link commit | [DE180303] feat: add how it works page |
+| File liên quan | RoomHub.Frontend/src/pages/HowItWorks.tsx, App.tsx, components/Navbar.tsx, components/Footer.tsx |
+| Screenshot | ![alt text](image-5.png) |
 | Kết quả chạy/test | npm run build thành công 100% |
 | Ghi chú khác | N/A |
 

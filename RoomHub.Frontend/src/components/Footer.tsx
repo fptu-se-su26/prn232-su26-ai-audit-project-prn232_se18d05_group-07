@@ -1,6 +1,10 @@
 import React from 'react';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  setCurrentPage?: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works') => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
   const handleAlert = (message: string) => {
     alert(message);
   };
@@ -76,11 +80,17 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); handleAlert('Cẩm nang & Hướng dẫn thuê nhà Đà Nẵng sẽ sớm ra mắt!'); }}
+                  className="text-sm hover:text-primary-container transition-colors cursor-pointer" 
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    if (setCurrentPage) {
+                      setCurrentPage('how-it-works');
+                    } else {
+                      handleAlert('Cẩm nang & Hướng dẫn thuê nhà Đà Nẵng sẽ sớm ra mắt!');
+                    }
+                  }}
                 >
-                  Hướng dẫn thuê nhà
+                  Cách hoạt động
                 </a>
               </li>
             </ul>
