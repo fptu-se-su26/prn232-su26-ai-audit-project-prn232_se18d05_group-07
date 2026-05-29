@@ -38,7 +38,7 @@ Nguyên tắc ghi changelog:
 | Phiên bản/Giai đoạn | Thời gian | Nội dung chính | Trạng thái |
 |---|---|---|---|
 | Phase 01 | 28/05/2026 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed |
-| Phase 02 | 29/05/2026 | Xây dựng Giao diện Trang chủ (Homepage), Tìm chỗ ở (Browse), và Chi tiết chỗ ở (Room Details) | Completed |
+| Phase 02 | 29/05/2026 | Xây dựng Giao diện Trang chủ (Homepage), Tìm chỗ ở (Browse), Chi tiết chỗ ở (Room Details), và Dành cho Chủ nhà | Completed |
 | Phase 03 |  | Thiết kế hệ thống (ERD chi tiết, API) | Not Started |
 | Phase 04 |  | Implementation | Not Started |
 | Phase 05 |  | Testing & Debug | Not Started |
@@ -83,9 +83,10 @@ Nguyên tắc ghi changelog:
 - [x] Xây dựng trang giao diện Chi tiết chỗ ở `RoomDetail.tsx` cao cấp với Gallery Grid, Bảng chi phí chi tiết hàng tháng, Nội quy và Bản đồ giả lập vị trí
 - [x] Thiết lập Sticky Contact Card trong `RoomDetail.tsx` chứa thông tin chủ trọ, SĐT bị ẩn mờ và Login Requirement Modal khi tương tác
 - [x] Tích hợp Login Requirement Modal mượt mà khi người dùng chưa đăng nhập bấm nút yêu thích ở trang Tìm chỗ ở hoặc liên hệ ở trang Chi tiết
-- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, Home.tsx, Browse.tsx và RoomDetail.tsx
+- [x] Xây dựng trang giao diện Dành cho Chủ nhà `ForLandlords.tsx` với Sơ đồ phòng trực quan, bảng quản lý khách thuê tập trung, hóa đơn tự động và các câu hỏi thường gặp FAQ
+- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx, và ForLandlords.tsx
 - [x] Cập nhật Featured Room cards ở trang chủ để nhấp chuột chuyển hướng trực tiếp sang trang Chi tiết phòng tương ứng
-- [x] Sửa lỗi type-import verbatimModuleSyntax của TypeScript để đóng gói thành công
+- [x] Sửa lỗi type-import verbatimModuleSyntax và các lỗi class/unused parameter của TypeScript để đóng gói thành công
 - [x] Chạy kiểm chứng đóng gói production tĩnh bằng `npm run build` thành công 100% với 0 lỗi biên dịch
 
 ## Thay đổi chi tiết
@@ -102,6 +103,7 @@ Nguyên tắc ghi changelog:
 | 8 | Tạo trang Chi tiết chỗ ở `RoomDetail.tsx` đầy đủ thông tin cao cấp | Phan Hoài An | `src/pages/RoomDetail.tsx` | Commit Git |
 | 9 | Cập nhật click card ở trang chủ liên kết sang trang chi tiết | Phan Hoài An | `src/pages/Home.tsx` | Commit Git |
 | 10 | Tích hợp định tuyến chuyển trang và quản lý state selectedRoomId | Phan Hoài An | `src/App.tsx`, `src/components/Navbar.tsx`, `src/pages/Browse.tsx` | Commit Git |
+| 11 | Tạo trang Dành cho Chủ nhà `ForLandlords.tsx` và tích hợp định tuyến | Phan Hoài An | `src/pages/ForLandlords.tsx`, `src/App.tsx`, `src/components/Navbar.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 
@@ -142,7 +144,7 @@ Trang chủ sau khi khởi tạo hiển thị rất đẹp, load mượt mà và
 |---|---|---|---|---|
 | 1 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed | dotnet build thành công | Đã hoàn thành ở đợt 1 |
 | 2 | Cài đặt và cấu hình TailwindCSS v3 vào dự án Frontend | Completed | tailwind.config.js cấu hình xong | Sẵn sàng hoạt động |
-| 3 | Xây dựng giao diện các trang dành cho Khách (Homepage, Tìm chỗ ở, Chi tiết chỗ ở) tiếng Việt chuyên nghiệp Đà Nẵng | Completed | npm run build thành công | Tách biệt các component và sử dụng state-routing mượt mà |
+| 3 | Xây dựng giao diện các trang dành cho Khách & Chủ nhà (Homepage, Tìm chỗ ở, Chi tiết, Dành cho Chủ nhà) tiếng Việt Đà Nẵng | Completed | npm run build thành công | Tách biệt các component và sử dụng state-routing mượt mà |
 
 ---
 

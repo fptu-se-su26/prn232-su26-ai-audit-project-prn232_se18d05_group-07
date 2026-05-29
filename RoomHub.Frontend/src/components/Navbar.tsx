@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
 interface NavbarProps {
-  currentPage: 'home' | 'browse' | 'detail';
-  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  currentPage: 'home' | 'browse' | 'detail' | 'landlords';
+  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
@@ -47,9 +47,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
             Tìm chỗ ở
           </a>
           <a 
-            className="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors text-label-md font-label-md cursor-pointer" 
-            href="#"
-            onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng ký tài khoản Chủ nhà để sử dụng hệ thống quản lý!'); }}
+            className={`text-label-md font-label-md transition-colors cursor-pointer ${
+              currentPage === 'landlords'
+                ? 'text-primary dark:text-primary-fixed font-bold border-b-2 border-primary dark:border-primary-fixed pb-1'
+                : 'text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed'
+            }`} 
+            onClick={(e) => { e.preventDefault(); setCurrentPage('landlords'); }}
           >
             Dành cho Chủ nhà
           </a>
@@ -104,8 +107,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
             Tìm chỗ ở
           </a>
           <a 
-            className="text-on-surface-variant text-sm py-2 border-b border-gray-50 cursor-pointer" 
-            onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); handleAlert('Vui lòng đăng ký tài khoản Chủ nhà để sử dụng hệ thống quản lý!'); }}
+            className={`text-sm py-2 border-b border-gray-50 cursor-pointer ${
+              currentPage === 'landlords' ? 'text-primary font-bold' : 'text-on-surface-variant'
+            }`} 
+            onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); setCurrentPage('landlords'); }}
           >
             Dành cho Chủ nhà
           </a>

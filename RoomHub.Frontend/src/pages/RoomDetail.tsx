@@ -3,7 +3,7 @@ import { MOCK_ROOMS } from './Browse';
 
 interface RoomDetailProps {
   selectedRoomId: number | null;
-  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
   setSelectedRoomId: (id: number | null) => void;
 }
 

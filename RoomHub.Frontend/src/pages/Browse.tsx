@@ -15,7 +15,7 @@ export interface Room {
 }
 
 interface BrowseProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
   setSelectedRoomId: (id: number | null) => void;
 }
 

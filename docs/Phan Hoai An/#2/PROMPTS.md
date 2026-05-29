@@ -60,6 +60,7 @@ Sinh viên/nhóm cần ghi lại:
 | 6 | 29/05/2026 | Antigravity | Cấu hình | Cập nhật App.tsx và dọn dẹp App.css | Kết nối hoàn chỉnh giao diện trang chủ | Có | [walkthrough.md] |
 | 8 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Tìm chỗ ở Browse.tsx và tích hợp | Mã nguồn Browse.tsx cùng các props định tuyến liên quan | Có | RoomHub.Frontend/src/pages/Browse.tsx |
 | 9 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Chi tiết RoomDetail.tsx và tích hợp | Mã nguồn RoomDetail.tsx và cập nhật định tuyến | Có | RoomHub.Frontend/src/pages/RoomDetail.tsx |
+| 10 | 29/05/2026 | Antigravity | Tối ưu | Yêu cầu xây dựng trang Dành cho Chủ nhà ForLandlords.tsx | Mã nguồn ForLandlords.tsx và cập nhật điều hướng | Có | RoomHub.Frontend/src/pages/ForLandlords.tsx |
 
 ---
 
@@ -343,6 +344,75 @@ AI phản hồi và sinh code JSX rất gọn gàng, tự chuyển đổi các t
 
 ---
 
+### Prompt số 5
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 29/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Bóc tách và chuyển đổi HTML Dành cho Chủ nhà sang JSX cao cấp có state-routing và sửa lỗi TypeScript. |
+| Phần việc liên quan | Frontend / For Landlords UI Page / TypeScript Type Fixing / Routing Integration |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo bạn hãy giúp tôi thực hiện cập nhật bổ sung trang giao diện Dành cho Chủ nhà, tôi sẽ cung cấp file html bạn hãy dựa vào đó và thực hineej cập nhật chỉnh sửa để phù hợp vưới dự án nhé...
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+```text
+Cần phát triển trang Dành cho Chủ nhà `ForLandlords.tsx` tương tác động cao dựa trên một tệp HTML tham khảo từ giảng viên, và cần ghép nối mượt mà vào thanh điều hướng điều hành (Navbar.tsx) và cấu trúc phân trang của App.tsx.
+```
+
+#### 5.3. Kết quả AI trả về
+
+```text
+AI sinh mã nguồn cho trang `ForLandlords.tsx` mới với đầy đủ sơ đồ và báo cáo. Đồng thời, AI hướng dẫn sửa lỗi class thành className và dọn dẹp unused parameter `setCurrentPage` để vượt qua bộ kiểm soát kiểu của compiler, và tích hợp định tuyến chuyển đổi trang trong App.tsx và Navbar.tsx.
+```
+
+#### 5.4. Kết quả đã áp dụng vào bài
+
+```text
+Áp dụng 100% mã nguồn trang `ForLandlords.tsx` đã sửa lỗi biên dịch cùng các cấu hình định tuyến trong App, Navbar, Home, Browse và RoomDetail.
+```
+
+#### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
+
+```text
+Tự thiết lập các sự kiện `onClick` để nạp các thông báo alert chuyên nghiệp và sửa các thuộc tính `class` sang `className` để tránh lỗi biên dịch.
+```
+
+#### 5.6. Đánh giá chất lượng prompt
+
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh
+- [ ] Prompt còn thiếu thông tin
+- [x] Prompt tạo ra kết quả tốt
+- [ ] Prompt tạo ra kết quả chưa phù hợp
+- [ ] Cần hỏi lại AI nhiều lần
+- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
+- [ ] Kết quả AI có lỗi hoặc chưa chính xác
+
+#### 5.7. Minh chứng liên quan
+
+| Loại minh chứng | Nội dung |
+|---|---|
+| Link commit | [DE180303] feat: add for landlords page |
+| File liên quan | RoomHub.Frontend/src/pages/ForLandlords.tsx, App.tsx, components/Navbar.tsx |
+| Screenshot | ![alt text](image-4.png) |
+| Kết quả chạy/test | npm run build thành công 100% |
+| Ghi chú khác | N/A |
+
+#### 5.8. Ghi chú thêm
+
+```text
+AI phản hồi và sinh code JSX rất gọn gàng, tự chuyển đổi các thuộc tính HTML sang React.
+```
+
+---
+
 ## 6. Prompt quan trọng nhất
 
 Chọn một prompt có ảnh hưởng lớn nhất đến bài tập/project.
@@ -449,8 +519,8 @@ Cung cấp sẵn danh sách routes hoặc các trang con dự kiến để AI th
 | Prompt giải thích kiến thức | 0 | N/A |
 | Prompt thiết kế giải pháp | 1 | "tách header và footer để tái sử dụng..." |
 | Prompt thiết kế database | 0 | N/A |
-| Prompt sinh code mẫu | 4 | "bóc tách và tạo file Navbar.tsx..." |
-| Prompt debug lỗi | 2 | Sửa lỗi tsc verbatimModuleSyntax |
+| Prompt sinh code mẫu | 5 | "bóc tách và tạo file Navbar.tsx..." |
+| Prompt debug lỗi | 3 | Sửa lỗi tsc class/unused parameter |
 | Prompt viết test case | 0 | N/A |
 | Prompt review code | 0 | N/A |
 | Prompt tối ưu code | 1 | Viết state menu mobile |

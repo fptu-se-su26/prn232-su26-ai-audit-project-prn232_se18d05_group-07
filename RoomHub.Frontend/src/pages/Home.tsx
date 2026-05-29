@@ -5,7 +5,7 @@ import landlordDashboard from '../assets/landlord_dashboard.png';
 
 
 interface HomeProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
   setSelectedRoomId: (id: number | null) => void;
 }
 
