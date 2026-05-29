@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
 interface NavbarProps {
-  currentPage: 'home' | 'browse';
-  setCurrentPage: (page: 'home' | 'browse') => void;
+  currentPage: 'home' | 'browse' | 'detail';
+  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {

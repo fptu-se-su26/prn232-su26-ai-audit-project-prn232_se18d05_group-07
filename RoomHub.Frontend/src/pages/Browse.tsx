@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 
-interface Room {
+export interface Room {
   id: number;
   title: string;
   type: string;
@@ -15,10 +15,11 @@ interface Room {
 }
 
 interface BrowseProps {
-  setCurrentPage: (page: 'home' | 'browse') => void;
+  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  setSelectedRoomId: (id: number | null) => void;
 }
 
-const MOCK_ROOMS: Room[] = [
+export const MOCK_ROOMS: Room[] = [
   {
     id: 1,
     title: "Studio ban công view biển Mỹ Khê - Đầy đủ nội thất",
@@ -158,7 +159,7 @@ const MOCK_ROOMS: Room[] = [
   }
 ];
 
-const Browse: React.FC<BrowseProps> = ({ setCurrentPage }) => {
+const Browse: React.FC<BrowseProps> = ({ setCurrentPage, setSelectedRoomId }) => {
   // Search & Filters State
   const [searchKeyword, setSearchKeyword] = useState('');
   const [inputKeyword, setInputKeyword] = useState('');
@@ -565,7 +566,10 @@ const Browse: React.FC<BrowseProps> = ({ setCurrentPage }) => {
               {filteredRooms.map((room) => (
                 <div 
                   key={room.id}
-                  onClick={() => handleAlert('Vui lòng đăng nhập để xem thông tin chi tiết đầy đủ của phòng trọ!')}
+                  onClick={() => {
+                    setSelectedRoomId(room.id);
+                    setCurrentPage('detail');
+                  }}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"
                 >
                   {/* Card Image Cover */}

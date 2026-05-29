@@ -35,7 +35,7 @@ Reflection cần thể hiện:
 Mô tả ngắn gọn quá trình sử dụng AI trong bài tập/project này.
 
 ```text
-Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium và bổ sung trang Tìm chỗ ở (Browse Rooms), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng trang Tìm chỗ ở Browse.tsx tích hợp bộ lọc và sắp xếp động 100% bằng React State ở client cùng Login Modal sinh động. Cuối cùng, AI hỗ trợ thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
+Trong đợt cập nhật #2: Xây dựng Giao diện Trang chủ (Homepage), thiết lập hệ thống hình ảnh Premium, bổ sung trang Tìm chỗ ở (Browse Rooms) và trang Chi tiết chỗ ở (Room Detail), em đã phối hợp chặt chẽ cùng AI Antigravity. Bắt đầu bằng việc cài đặt thư viện TailwindCSS v3 và nạp cấu hình màu sắc mở rộng. Tiếp theo, giao cho AI bóc tách HTML mẫu thành các component độc lập (Navbar.tsx, Footer.tsx, Home.tsx) và sử dụng công cụ generate_image tạo 03 hình ảnh AI độc quyền tuyệt đẹp. Sau đó, nhóm tiếp tục nhờ AI xây dựng trang Tìm chỗ ở Browse.tsx và trang Chi tiết chỗ ở RoomDetail.tsx với đầy đủ bộ lọc, cost tables, rules, và sticky card liên hệ. Cuối cùng, AI hỗ trợ sửa lỗi TypeScript verbatimModuleSyntax, thiết lập cơ chế định tuyến (state-routing) thông suốt qua App.tsx, Navbar.tsx, Home.tsx, Browse.tsx, RoomDetail.tsx và chạy đóng gói build tĩnh thành công 100% không phát sinh lỗi.
 ```
 
 Gợi ý:
@@ -100,7 +100,7 @@ Antigravity cung cấp môi trường tích hợp trực tiếp, hiểu rõ cấ
 ### Mô tả chi tiết
 
 ```text
-AI giúp chuyển dịch toàn bộ lớp class tĩnh của Tailwind sang className trong React, tự sửa đổi các lỗi thẻ đơn chưa đóng của HTML, và tối ưu hóa việc phân chia các component dùng chung rất chuyên nghiệp.
+AI giúp chuyển dịch toàn bộ lớp class tĩnh của Tailwind sang className trong React, tự sửa đổi các lỗi thẻ đơn chưa đóng của HTML, và tối ưu hóa việc phân chia các component dùng chung rất chuyên nghiệp. Đặc biệt là tự động sửa lỗi type import verbatimModuleSyntax và viết logic scrolling lên đầu trang khi chuyển đổi phòng.
 ```
 
 ---
@@ -175,13 +175,10 @@ Chạy lệnh npm run build để kiểm thử bundle tĩnh, chạy npm run dev 
 
 Ghi lại ít nhất một ví dụ nếu có.
 
-| Nội dung | Mô tả |
-|---|---|
-| AI đã gợi ý gì? | Bỏ trống cột thông tin liên hệ cuối cùng ở Footer |
-| Vì sao gợi ý đó sai/chưa phù hợp? | Làm cho trang web trông thiếu chuyên nghiệp, sơ sài và thiếu độ tin cậy đối với dự án RoomHub Đà Nẵng. |
-| Em/nhóm phát hiện bằng cách nào? | Đọc mã nguồn Footer do AI đề xuất. |
-| Em/nhóm đã sửa như thế nào? | Bổ sung đầy đủ địa chỉ văn phòng hỗ trợ chính thức của nhóm tại Đại học FPT Đà Nẵng. |
-| Bài học rút ra | Luôn kiểm tra kỹ các thông tin nội dung (Content) hiển thị của ứng dụng để đảm bảo sản phẩm hoàn thiện nhất trước khi báo cáo. |
+| STT | Lỗi/hạn chế từ AI | Cách phát hiện | Cách xử lý/cải tiến | Bài học rút ra |
+|---:|---|---|---|---|
+| 1 | Bỏ trống cột thông tin liên hệ cuối cùng ở Footer | Đọc mã nguồn Footer do AI đề xuất. | Bổ sung đầy đủ địa chỉ văn phòng hỗ trợ chính thức của nhóm tại Đại học FPT Đà Nẵng. | Luôn kiểm tra kỹ các thông tin nội dung (Content) hiển thị của ứng dụng để đảm bảo sản phẩm hoàn thiện nhất trước khi báo cáo. |
+| 2 | Import `Room` type trực tiếp từ `./Browse` trong `RoomDetail.tsx` | Chạy lệnh build frontend `npm run build` gặp lỗi compiler TS1484. | Xóa bỏ type import không sử dụng hoặc sử dụng cú pháp type-only import phù hợp. | Trình biên dịch TypeScript (tsc) của dự án có thể được cấu hình rất khắt khe với verbatimModuleSyntax; luôn chạy build thực tế thay vì chỉ tin tưởng mã nguồn AI viết ra mà không kiểm tra. |
 
 ---
 
@@ -194,6 +191,8 @@ Mô tả rõ phần nào là đóng góp chính của sinh viên/nhóm, không p
 - Thiết lập và tối ưu hóa logic tương tác bật tắt menu của Navbar.
 - Bản địa hóa thông tin liên hệ FPT Đà Nẵng ở Footer.
 - Thiết lập các hàm giả lập alert thông báo khi tương tác.
+- Lập trình dọn dẹp các type-only imports không sử dụng và sửa lỗi TypeScript compiler.
+- Lập trình cơ chế cuộn mượt mà lên đầu trang khi xem gợi ý chỗ ở tương tự.
 - Xác thực đóng gói build dự án thành công 100%.
 - Soạn thảo tài liệu báo cáo học thuật đợt 2.
 ```

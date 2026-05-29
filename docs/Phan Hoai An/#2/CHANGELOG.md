@@ -38,7 +38,7 @@ Nguyên tắc ghi changelog:
 | Phiên bản/Giai đoạn | Thời gian | Nội dung chính | Trạng thái |
 |---|---|---|---|
 | Phase 01 | 28/05/2026 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed |
-| Phase 02 | 29/05/2026 | Xây dựng Giao diện Trang chủ (Homepage) và cấu hình TailwindCSS | Completed |
+| Phase 02 | 29/05/2026 | Xây dựng Giao diện Trang chủ (Homepage), Tìm chỗ ở (Browse), và Chi tiết chỗ ở (Room Details) | Completed |
 | Phase 03 |  | Thiết kế hệ thống (ERD chi tiết, API) | Not Started |
 | Phase 04 |  | Implementation | Not Started |
 | Phase 05 |  | Testing & Debug | Not Started |
@@ -80,9 +80,13 @@ Nguyên tắc ghi changelog:
 - [x] Đồng bộ hóa hoàn toàn 8 loại chỗ ở và 8 quận/huyện trên trang Tìm chỗ ở `Browse.tsx` với giao diện trang chủ
 - [x] Mở rộng cơ sở dữ liệu mẫu lên 11 căn phòng/căn hộ đầy đủ tiện ích phủ khắp Đà Nẵng (Thanh Khê, Cẩm Lệ, Hòa Vang...) để kiểm chứng bộ lọc hoạt động chuẩn xác
 - [x] Lập trình tính năng sắp xếp kết quả động (giá tăng/giảm dần, mới nhất) và Quick Tabs chuyển đổi nhanh
-- [x] Tích hợp Login Requirement Modal mượt mà khi người dùng chưa đăng nhập bấm nút yêu thích
-- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, và Home.tsx
-- [x] Chạy kiểm chứng đóng gói production tĩnh bằng `npm run build` thành công 100%
+- [x] Xây dựng trang giao diện Chi tiết chỗ ở `RoomDetail.tsx` cao cấp với Gallery Grid, Bảng chi phí chi tiết hàng tháng, Nội quy và Bản đồ giả lập vị trí
+- [x] Thiết lập Sticky Contact Card trong `RoomDetail.tsx` chứa thông tin chủ trọ, SĐT bị ẩn mờ và Login Requirement Modal khi tương tác
+- [x] Tích hợp Login Requirement Modal mượt mà khi người dùng chưa đăng nhập bấm nút yêu thích ở trang Tìm chỗ ở hoặc liên hệ ở trang Chi tiết
+- [x] Thiết lập cơ chế định tuyến (state-routing) phối hợp giữa App.tsx, Navbar.tsx, Home.tsx, Browse.tsx và RoomDetail.tsx
+- [x] Cập nhật Featured Room cards ở trang chủ để nhấp chuột chuyển hướng trực tiếp sang trang Chi tiết phòng tương ứng
+- [x] Sửa lỗi type-import verbatimModuleSyntax của TypeScript để đóng gói thành công
+- [x] Chạy kiểm chứng đóng gói production tĩnh bằng `npm run build` thành công 100% với 0 lỗi biên dịch
 
 ## Thay đổi chi tiết
 
@@ -95,7 +99,9 @@ Nguyên tắc ghi changelog:
 | 5 | Tạo trang chủ `Home.tsx` tối ưu JSX và bổ sung cảnh báo giả lập | Phan Hoài An | `src/pages/Home.tsx` | Commit Git |
 | 6 | Cập nhật định dạng nền App.tsx và làm rỗng App.css | Phan Hoài An | `src/App.tsx`, `src/App.css` | Commit Git |
 | 7 | Tạo trang Tìm chỗ ở `Browse.tsx` với các bộ lọc động | Phan Hoài An | `src/pages/Browse.tsx` | Commit Git |
-| 8 | Tích hợp định tuyến chuyển trang trong `App.tsx`, `Navbar.tsx`, `Home.tsx` | Phan Hoài An | `src/App.tsx`, `src/components/Navbar.tsx`, `src/pages/Home.tsx` | Commit Git |
+| 8 | Tạo trang Chi tiết chỗ ở `RoomDetail.tsx` đầy đủ thông tin cao cấp | Phan Hoài An | `src/pages/RoomDetail.tsx` | Commit Git |
+| 9 | Cập nhật click card ở trang chủ liên kết sang trang chi tiết | Phan Hoài An | `src/pages/Home.tsx` | Commit Git |
+| 10 | Tích hợp định tuyến chuyển trang và quản lý state selectedRoomId | Phan Hoài An | `src/App.tsx`, `src/components/Navbar.tsx`, `src/pages/Browse.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 
@@ -136,16 +142,11 @@ Trang chủ sau khi khởi tạo hiển thị rất đẹp, load mượt mà và
 |---|---|---|---|---|
 | 1 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed | dotnet build thành công | Đã hoàn thành ở đợt 1 |
 | 2 | Cài đặt và cấu hình TailwindCSS v3 vào dự án Frontend | Completed | tailwind.config.js cấu hình xong | Sẵn sàng hoạt động |
-| 3 | Xây dựng giao diện Trang chủ (Homepage) tiếng Việt chuyên nghiệp Đà Nẵng | Completed | npm run build thành công | Tách Navbar và Footer |
+| 3 | Xây dựng giao diện các trang dành cho Khách (Homepage, Tìm chỗ ở, Chi tiết chỗ ở) tiếng Việt chuyên nghiệp Đà Nẵng | Completed | npm run build thành công | Tách biệt các component và sử dụng state-routing mượt mà |
 
 ---
 
-### 4.2. Các chức năng chưa hoàn thành
-
-| STT | Chức năng | Lý do chưa hoàn thành | Hướng cải thiện |
-|---|---|---|---|
-| 1 | Các trang con của vai trò Khách (Tìm chỗ ở...) | Sẽ phát triển ở giai đoạn sau | Tạo các component trang con tương ứng |
-| 2 | Nghiệp vụ Đăng nhập / Đăng ký hệ thống | Thuộc về các phase sau | Lập trình API Token JWT ở backend và kết nối frontend |
+| 1 | Nghiệp vụ Đăng nhập / Đăng ký hệ thống | Thuộc về các phase sau | Lập trình API Token JWT ở backend và kết nối frontend |
 
 ---
 
@@ -167,7 +168,7 @@ Trang chủ sau khi khởi tạo hiển thị rất đẹp, load mượt mà và
 ### 4.5. Hướng cải thiện tiếp theo
 
 ```text
-Thiết kế các trang giao diện con (Tìm phòng trọ, Căn hộ...) cho khách và lập trình các API Đăng ký / Đăng nhập ở Backend.
+Thiết kế hệ thống chi tiết (ERD, APIs) và lập trình các API Đăng ký / Đăng nhập ở Backend cùng việc kết nối Frontend gọi API thực tế.
 ```
 
 ---

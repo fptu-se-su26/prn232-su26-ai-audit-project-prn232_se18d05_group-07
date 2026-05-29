@@ -5,10 +5,11 @@ import landlordDashboard from '../assets/landlord_dashboard.png';
 
 
 interface HomeProps {
-  setCurrentPage: (page: 'home' | 'browse') => void;
+  setCurrentPage: (page: 'home' | 'browse' | 'detail') => void;
+  setSelectedRoomId: (id: number | null) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ setCurrentPage }) => {
+const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
   const handleAlert = (message: string) => {
     alert(message);
   };
@@ -273,7 +274,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage }) => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Listing 1 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => handleAlert('Vui lòng đăng nhập để xem chi tiết')}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(1); setCurrentPage('detail'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Studio" 
@@ -317,7 +318,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage }) => {
             </div>
 
             {/* Listing 2 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => handleAlert('Vui lòng đăng nhập để xem chi tiết')}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(2); setCurrentPage('detail'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Căn hộ" 
@@ -358,7 +359,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage }) => {
             </div>
 
             {/* Listing 3 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => handleAlert('Vui lòng đăng nhập để xem chi tiết')}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(3); setCurrentPage('detail'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Phòng trọ" 
