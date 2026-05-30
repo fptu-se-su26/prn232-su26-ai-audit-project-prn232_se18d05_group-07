@@ -627,7 +627,16 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                     <tr key={index} className="hover:bg-orange-50/20">
                       <td className="p-4 text-on-surface font-black">{tenant.name}</td>
                       <td className="p-4 text-gray-500">{tenant.phone}</td>
-                      <td className="p-4 text-center font-black text-orange-600">{tenant.room}</td>
+                      <td className="p-4 text-center">
+                        <button 
+                          onClick={() => {
+                            window.location.hash = `#/owner/units/${tenant.room}`;
+                          }}
+                          className="font-black text-orange-600 hover:text-orange-700 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                        >
+                          Phòng {tenant.room}
+                        </button>
+                      </td>
                       <td className="p-4">{tenant.startDate}</td>
                       <td className="p-4">{formatPrice(tenant.deposit)}</td>
                       <td className="p-4">
@@ -688,7 +697,16 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                     <tr key={index} className="hover:bg-orange-50/20">
                       <td className="p-4 font-mono text-[10px] text-gray-400 font-bold">{inv.id}</td>
                       <td className="p-4">{inv.month}</td>
-                      <td className="p-4 text-center font-black text-on-surface">{inv.room}</td>
+                      <td className="p-4 text-center">
+                        <button 
+                          onClick={() => {
+                            window.location.hash = `#/owner/units/${inv.room}`;
+                          }}
+                          className="font-black text-gray-800 hover:text-primary-container hover:underline cursor-pointer bg-transparent border-0 p-0"
+                        >
+                          Phòng {inv.room}
+                        </button>
+                      </td>
                       <td className="p-4 font-black">{inv.tenant}</td>
                       <td className="p-4 text-primary-container font-black">{formatPrice(inv.total)}</td>
                       <td className="p-4 text-gray-500">{inv.dueDate}</td>
@@ -984,6 +1002,17 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
 
             {/* Actionable buttons */}
             <div className="border-t border-gray-150 pt-4 space-y-2 mt-6">
+              
+              <button 
+                onClick={() => {
+                  window.location.hash = `#/owner/units/${selectedRoom.id}`;
+                  setSelectedRoom(null);
+                }}
+                className="w-full py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container border border-orange-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[16px] font-bold">visibility</span>
+                Chi tiết vận hành & Khách thuê ➔
+              </button>
               
               {/* If Rented */}
               {selectedRoom.tenantName ? (

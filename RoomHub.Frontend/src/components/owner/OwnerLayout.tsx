@@ -46,8 +46,12 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         return { title: 'Chi tiết sơ đồ phòng', subtitle: 'Theo dõi, chốt điện nước và quản lý phòng chi tiết.' };
       case 'owner-properties-create':
         return { title: 'Thêm tài sản mới', subtitle: 'Tạo tòa nhà, dãy trọ, căn hộ và sinh sơ đồ phòng tự động.' };
+      case 'owner-unit-detail':
+        return { title: 'Chi tiết phòng/căn', subtitle: 'Quản lý khách thuê, công nợ, hợp đồng và hóa đơn dịch vụ.' };
       case 'owner-listings':
         return { title: 'Tin cho thuê', subtitle: 'Quản lý tin đăng, kiểm duyệt và trạng thái hiển thị.' };
+      case 'owner-listings-create':
+        return { title: 'Đăng tin cho thuê mới', subtitle: 'Tạo tin cho phòng trọ, studio, căn hộ mini hoặc căn hộ để người thuê có thể tìm thấy trên RoomHub.' };
       case 'owner-tenants':
         return { title: 'Người thuê', subtitle: 'Danh sách khách thuê trọ và thông tin liên hệ.' };
       case 'owner-invoices':
@@ -68,8 +72,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   // Sidebar Menu configuration
   const menuItems = [
     { label: 'Tổng quan', icon: 'dashboard', route: 'owner-dashboard' as PageType },
-    { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-property-detail', 'owner-properties-create', 'owner-units'] },
-    { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType },
+    { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-property-detail', 'owner-properties-create', 'owner-unit-detail', 'owner-units'] },
+    { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType, activeMatches: ['owner-listings', 'owner-listings-create'] },
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
     { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType },
     { label: 'Cài đặt chi phí', icon: 'calculate', route: 'owner-cost-settings' as PageType },

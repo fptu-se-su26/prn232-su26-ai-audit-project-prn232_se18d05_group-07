@@ -12,6 +12,9 @@ import OwnerDashboard from './pages/owner/Dashboard';
 import PropertyList from './pages/owner/PropertyList';
 import PropertyDetail from './pages/owner/PropertyDetail';
 import PropertyCreate from './pages/owner/PropertyCreate';
+import UnitDetail from './pages/owner/UnitDetail';
+import ListingCreate from './pages/owner/ListingCreate';
+import ListingList from './pages/owner/ListingList';
 
 export type PageType = 
   | 'home' 
@@ -24,7 +27,9 @@ export type PageType =
   | 'owner-properties'
   | 'owner-property-detail'
   | 'owner-properties-create'
+  | 'owner-unit-detail'
   | 'owner-listings'
+  | 'owner-listings-create'
   | 'owner-tenants'
   | 'owner-invoices'
   | 'owner-cost-settings'
@@ -35,6 +40,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   // 1. Listen for hash changes to support direct URL typing (e.g. #/owner/dashboard)
   useEffect(() => {
@@ -73,6 +79,15 @@ const App: React.FC = () => {
         }
       }
       if (hash === '#/owner/properties') { setCurrentPage('owner-properties'); return; }
+      if (hash.startsWith('#/owner/units/')) {
+        const id = hash.replace('#/owner/units/', '');
+        if (id) {
+          setSelectedUnitId(id);
+          setCurrentPage('owner-unit-detail');
+          return;
+        }
+      }
+      if (hash === '#/owner/listings/create') { setCurrentPage('owner-listings-create'); return; }
       if (hash === '#/owner/listings') { setCurrentPage('owner-listings'); return; }
       if (hash === '#/owner/tenants') { setCurrentPage('owner-tenants'); return; }
       if (hash === '#/owner/invoices') { setCurrentPage('owner-invoices'); return; }
@@ -100,8 +115,12 @@ const App: React.FC = () => {
       targetHash = `#/detail/${selectedRoomId}`;
     } else if (currentPage === 'owner-properties-create') {
       targetHash = '#/owner/properties/create';
+    } else if (currentPage === 'owner-listings-create') {
+      targetHash = '#/owner/listings/create';
     } else if (currentPage === 'owner-property-detail' && selectedPropertyId !== null) {
       targetHash = `#/owner/properties/${selectedPropertyId}`;
+    } else if (currentPage === 'owner-unit-detail' && selectedUnitId !== null) {
+      targetHash = `#/owner/units/${selectedUnitId}`;
     } else if (currentPage.startsWith('owner-')) {
       targetHash = '#/owner/' + currentPage.replace('owner-', '');
     }
@@ -109,7 +128,7 @@ const App: React.FC = () => {
     if (window.location.hash !== targetHash) {
       window.location.hash = targetHash;
     }
-  }, [currentPage, selectedRoomId, selectedPropertyId]);
+  }, [currentPage, selectedRoomId, selectedPropertyId, selectedUnitId]);
 
   // Check if it's an owner route
   const isOwnerRoute = currentPage.startsWith('owner-');
@@ -125,6 +144,12 @@ const App: React.FC = () => {
           <PropertyDetail propertyId={selectedPropertyId} setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-properties-create' ? (
           <PropertyCreate setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-unit-detail' ? (
+          <UnitDetail unitId={selectedUnitId} setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-listings-create' ? (
+          <ListingCreate setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-listings' ? (
+          <ListingList setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>
