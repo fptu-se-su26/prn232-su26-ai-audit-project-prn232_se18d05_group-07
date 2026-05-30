@@ -146,13 +146,9 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
                 <select className="w-full pl-10 pr-8 py-3 bg-gray-50 border-transparent focus:border-primary-container focus:ring-1 focus:ring-primary-container rounded-xl text-sm appearance-none focus:outline-none">
                   <option>Tất cả loại phòng</option>
                   <option>Phòng trọ</option>
-                  <option>Phòng đơn</option>
-                  <option>Phòng đôi</option>
-                  <option>Phòng ở ghép</option>
                   <option>Studio</option>
                   <option>Căn hộ mini</option>
-                  <option>Căn hộ chung cư</option>
-                  <option>Nhà nguyên căn</option>
+                  <option>Căn hộ</option>
                 </select>
               </div>
             </div>
@@ -195,63 +191,31 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">single_bed</span>
               </div>
               <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng trọ</h3>
-              <p className="text-xs text-gray-500">Tiết kiệm, cơ bản</p>
+              <p className="text-xs text-gray-500">Giá tốt, cơ bản</p>
             </div>
             {/* Category 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">bed</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng đơn</h3>
-              <p className="text-xs text-gray-500">Riêng tư 1 người</p>
-            </div>
-            {/* Category 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">king_bed</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng đôi</h3>
-              <p className="text-xs text-gray-500">Cho 2 người trở lên</p>
-            </div>
-            {/* Category 4 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">group</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng ở ghép</h3>
-              <p className="text-xs text-gray-500">Chia sẻ chi phí</p>
-            </div>
-            {/* Category 5 */}
             <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">weekend</span>
               </div>
               <h3 className="text-label-md font-label-md text-on-surface mb-1">Studio</h3>
-              <p className="text-xs text-gray-500">Thiết kế mở</p>
+              <p className="text-xs text-gray-500">Không gian mở, hiện đại</p>
             </div>
-            {/* Category 6 */}
+            {/* Category 3 */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
+                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">home_work</span>
+              </div>
+              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ mini</h3>
+              <p className="text-xs text-gray-500">Tiện nghi & tự do</p>
+            </div>
+            {/* Category 4 */}
             <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">apartment</span>
               </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ Mini</h3>
-              <p className="text-xs text-gray-500">Đầy đủ tiện nghi</p>
-            </div>
-            {/* Category 7 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">location_city</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ chung cư</h3>
-              <p className="text-xs text-gray-500">Cao cấp, an ninh</p>
-            </div>
-            {/* Category 8 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">house</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Nhà nguyên căn</h3>
-              <p className="text-xs text-gray-500">Phù hợp gia đình</p>
+              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ</h3>
+              <p className="text-xs text-gray-500">Sang trọng & an ninh</p>
             </div>
           </div>
         </div>
@@ -367,7 +331,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
                   src="https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=800&q=80"
                 />
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="bg-white/90 backdrop-blur text-primary-container text-xs font-bold px-2.5 py-1 rounded-md">Phòng đơn</span>
+                  <span className="bg-white/90 backdrop-blur text-primary-container text-xs font-bold px-2.5 py-1 rounded-md">Phòng trọ</span>
                 </div>
                 <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-md">Còn trống</span>
               </div>
