@@ -58,6 +58,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         return { title: 'Hóa đơn & Chốt tiền', subtitle: 'Quản lý hóa đơn hàng tháng, chốt chỉ số điện nước.' };
       case 'owner-invoices-create':
         return { title: 'Chốt tiền tháng', subtitle: 'Tạo hóa đơn hàng loạt cho các phòng/căn đang thuê, tự động tính tiền điện, nước và các khoản phí.' };
+      case 'owner-invoice-detail':
+        return { title: 'Chi tiết hóa đơn', subtitle: 'Theo dõi breakdown chi tiết chi phí dịch vụ, lịch sử đóng tiền và xuất file hóa đơn.' };
       case 'owner-cost-settings':
         return { title: 'Cài đặt chi phí', subtitle: 'Cấu hình đơn giá dịch vụ điện, nước, internet.' };
       case 'owner-notifications':
@@ -77,7 +79,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
     { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-property-detail', 'owner-properties-create', 'owner-unit-detail', 'owner-units'] },
     { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType, activeMatches: ['owner-listings', 'owner-listings-create'] },
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
-    { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType, activeMatches: ['owner-invoices', 'owner-invoices-create'] },
+    { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType, activeMatches: ['owner-invoices', 'owner-invoices-create', 'owner-invoice-detail'] },
     { label: 'Cài đặt chi phí', icon: 'calculate', route: 'owner-cost-settings' as PageType },
     { label: 'Thông báo', icon: 'notifications', route: 'owner-notifications' as PageType, badge: 3 },
     { label: 'Hồ sơ', icon: 'person', route: 'owner-profile' as PageType },

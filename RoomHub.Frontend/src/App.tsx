@@ -17,6 +17,7 @@ import ListingCreate from './pages/owner/ListingCreate';
 import ListingList from './pages/owner/ListingList';
 import InvoiceList from './pages/owner/InvoiceList';
 import InvoiceCreate from './pages/owner/InvoiceCreate';
+import InvoiceDetail from './pages/owner/InvoiceDetail';
 
 export type PageType = 
   | 'home' 
@@ -35,6 +36,7 @@ export type PageType =
   | 'owner-tenants'
   | 'owner-invoices'
   | 'owner-invoices-create'
+  | 'owner-invoice-detail'
   | 'owner-cost-settings'
   | 'owner-notifications'
   | 'owner-profile';
@@ -44,6 +46,7 @@ const App: React.FC = () => {
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   // 1. Listen for hash changes to support direct URL typing (e.g. #/owner/dashboard)
   useEffect(() => {
@@ -94,6 +97,14 @@ const App: React.FC = () => {
       if (hash === '#/owner/listings') { setCurrentPage('owner-listings'); return; }
       if (hash === '#/owner/tenants') { setCurrentPage('owner-tenants'); return; }
       if (hash === '#/owner/invoices/create') { setCurrentPage('owner-invoices-create'); return; }
+      if (hash.startsWith('#/owner/invoices/')) {
+        const id = hash.replace('#/owner/invoices/', '');
+        if (id) {
+          setSelectedInvoiceId(id);
+          setCurrentPage('owner-invoice-detail');
+          return;
+        }
+      }
       if (hash === '#/owner/invoices') { setCurrentPage('owner-invoices'); return; }
       if (hash === '#/owner/cost-settings') { setCurrentPage('owner-cost-settings'); return; }
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
@@ -127,6 +138,8 @@ const App: React.FC = () => {
       targetHash = `#/owner/units/${selectedUnitId}`;
     } else if (currentPage === 'owner-invoices-create') {
       targetHash = '#/owner/invoices/create';
+    } else if (currentPage === 'owner-invoice-detail' && selectedInvoiceId !== null) {
+      targetHash = `#/owner/invoices/${selectedInvoiceId}`;
     } else if (currentPage.startsWith('owner-')) {
       targetHash = '#/owner/' + currentPage.replace('owner-', '');
     }
@@ -160,6 +173,8 @@ const App: React.FC = () => {
           <InvoiceList setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-invoices-create' ? (
           <InvoiceCreate setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-invoice-detail' ? (
+          <InvoiceDetail invoiceId={selectedInvoiceId} setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

@@ -113,6 +113,7 @@ Nguyên tắc ghi changelog:
 | 11 | Xây dựng trang Quản lý tin cho thuê `ListingList.tsx` | Phan Hoài An | `src/pages/owner/ListingList.tsx` | Commit Git |
 | 12 | Xây dựng trang Quản lý Hóa đơn `InvoiceList.tsx` | Phan Hoài An | `src/pages/owner/InvoiceList.tsx` | Commit Git |
 | 13 | Xây dựng biểu mẫu Chốt tiền tháng hàng loạt `InvoiceCreate.tsx` | Phan Hoài An | `src/pages/owner/InvoiceCreate.tsx` | Commit Git |
+| 14 | Xây dựng trang Chi tiết Hóa đơn & Xuất Excel `InvoiceDetail.tsx` | Phan Hoài An | `src/pages/owner/InvoiceDetail.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 
@@ -122,7 +123,7 @@ Nguyên tắc ghi changelog:
 Nếu có, mô tả AI đã hỗ trợ phần nào:
 
 ```text
-AI trợ lý Antigravity đã hỗ trợ tích hợp sâu bộ định tuyến Hash Router trong App.tsx kết nối đồng bộ cấu trúc layout Dashboard của OwnerLayout.tsx. AI đề xuất và viết mã nguồn React chi tiết cho các trang PropertyList.tsx, PropertyDetail.tsx, UnitDetail.tsx và đặc biệt là cơ chế Live Grid Generator trong PropertyCreate.tsx giúp tự động vẽ lại sơ đồ tầng phòng trọ thời gian thực. AI cũng hỗ trợ viết logic validation sức chứa tối đa trong Add Tenant Modal, cấn trừ tiền cọc trong End Tenancy và phối hợp viết liên kết sâu hai chiều thông suốt toàn bộ hệ thống. Thêm vào đó, AI hỗ trợ xây dựng trang ListingCreate.tsx (Live Preview, Stepper 6 bước), trang ListingList.tsx (Table/Card view, Bulk Actions, 5 modals), trang InvoiceList.tsx (5 Financial Summary cards, 4 Quick Actions, Bulk action bar, 5 interactive modals quản lý công nợ có cảnh báo tài khoản offline), và trang chốt tiền hàng loạt InvoiceCreate.tsx (Stepper 5 bước, bảng 16 cột realtime, Drawer và 5 Modals nghiệp vụ).
+AI trợ lý Antigravity đã hỗ trợ tích hợp sâu bộ định tuyến Hash Router trong App.tsx kết nối đồng bộ cấu trúc layout Dashboard của OwnerLayout.tsx. AI đề xuất và viết mã nguồn React chi tiết cho các trang PropertyList.tsx, PropertyDetail.tsx, UnitDetail.tsx và đặc biệt là cơ chế Live Grid Generator trong PropertyCreate.tsx giúp tự động vẽ lại sơ đồ tầng phòng trọ thời gian thực. AI cũng hỗ trợ viết logic validation sức chứa tối đa trong Add Tenant Modal, cấn trừ tiền cọc trong End Tenancy và phối hợp viết liên kết sâu hai chiều thông suốt toàn bộ hệ thống. Thêm vào đó, AI hỗ trợ xây dựng trang ListingCreate.tsx (Live Preview, Stepper 6 bước), trang ListingList.tsx (Table/Card view, Bulk Actions, 5 modals), trang InvoiceList.tsx (5 Financial Summary cards, 4 Quick Actions, Bulk action bar, 5 interactive modals quản lý công nợ có cảnh báo tài khoản offline), trang chốt tiền hàng loạt InvoiceCreate.tsx (Stepper 5 bước, bảng 16 cột realtime, Drawer và 5 Modals nghiệp vụ), và trang chi tiết hóa đơn InvoiceDetail.tsx (A4 bill preview, breakdown chỉ số cũ/mới, timeline thanh toán và 4 modals chốt nghiệp vụ).
 ```
 
 ## Commit/Screenshot minh chứng
@@ -141,6 +142,7 @@ Commit Git:
 - [DE180303] feat: build owner listing management list page with filters and bulk actions
 - [DE180303] feat: build owner invoice management page with finance cards and 5 modals
 - [DE180303] feat: implement bulk monthly invoice form page with 5-step stepper and interactive calculations
+- [DE180303] feat: build owner invoice detail page with realistic A4 paper preview and 4 financial modals
 - [DE180303] test: verify production build compiles in 954ms with 0 errors
 ```
 
@@ -164,6 +166,7 @@ Các trang giao diện quản lý vận hành của Chủ nhà (Owner) được 
 | 4 | Xây dựng giao diện Vận hành & Quản lý của Chủ nhà (Dashboard, PropertyList, Room Grid, Sinh phòng tự động, UnitDetail, ListingCreate, ListingList & Modals) | Completed | npm run build thành công | Đồng bộ Hash Router, lồng ghép liên kết sâu hai chiều tương tác mượt mà và Live Preview |
 | 5 | Xây dựng giao diện Quản lý Hóa đơn của Chủ nhà (InvoiceList.tsx & Modals nghiệp vụ tài chính) | Completed | npm run build thành công | Tích hợp 5 modals tài chính chi tiết, cảnh báo tài khoản offline, phân trang động và xuất Excel báo cáo |
 | 6 | Xây dựng giao diện Chốt tiền tháng hàng loạt của Chủ nhà (InvoiceCreate.tsx & Stepper 5 bước) | Completed | npm run build thành công | Bảng 16 cột tính toán realtime, Drawer chi tiết, Mobile card accordion và 5 modals nghiệp vụ |
+| 7 | Xây dựng giao diện Chi tiết hóa đơn & Xuất Excel của Chủ nhà (InvoiceDetail.tsx & 4 Modals) | Completed | npm run build thành công | Preview A4 giấy thật, breakdown chỉ số điện nước, timeline đóng tiền, 4 modals nghiệp vụ (Export, Record, Notify, Cancel) |
 
 ---
 

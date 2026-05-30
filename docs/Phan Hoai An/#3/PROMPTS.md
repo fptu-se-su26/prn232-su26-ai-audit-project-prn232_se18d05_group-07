@@ -61,6 +61,7 @@ Sinh viên/nhóm cần ghi lại:
 | 7 | 30/05/2026 | Antigravity | Nghiệp vụ | Yêu cầu xây dựng trang danh sách quản lý tin cho thuê ListingList.tsx | Bảng danh sách SaaS, Card grid toggle, Bulk actions, và 5 Action Modals | Có | [walkthrough.md] |
 | 8 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang quản lý hóa đơn InvoiceList.tsx | Thẻ summary cards thống kê, 4 quick actions, Table/Card, Bulk actions bar, và bộ 5 modals chốt công nợ | Có | [walkthrough.md] |
 | 9 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang chốt tiền hàng loạt InvoiceCreate.tsx | Stepper 5 bước, bảng tính 16 cột realtime, Drawer và 5 Modals | Có | [walkthrough.md] |
+| 10 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang chi tiết hóa đơn InvoiceDetail.tsx | Bill preview A4, breakdown điện nước, timeline đóng tiền, 4 modals | Có | [walkthrough.md] |
 
 ---
 
@@ -351,6 +352,42 @@ AI đề xuất kế hoạch cấu trúc và viết toàn bộ component Invoice
 
 ```text
 Nhóm cấu hình các hash route trong App.tsx ưu tiên kiểm tra `#/owner/invoices/create` trước `#/owner/invoices` để tránh trùng chuỗi con, cập nhật activeMatches trong menu OwnerLayout.tsx giúp highlight cam đồng bộ mượt mà, và chạy biên dịch tsc đạt 100% 0 lỗi.
+```
+
+---
+
+### Prompt số 10
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Xây dựng trang chi tiết hóa đơn `InvoiceDetail.tsx` và xuất Excel |
+| Phân việc liên quan | Frontend / Invoice Detail / Payment History / Export Excel Modals / Responsive Card |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo bây giờ hãy triển khai thực hiện giao diện trang 9. Invoice Detail (/owner/invoices/:id) & Tính năng xuất hóa đơn Excel. tôi sẽ cung cấp mô tả chi tiết hãy thực hiện cập nhật bổ sung: # PROMPT — RoomHub Owner Invoice Detail Page + Export Excel Feature...
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+```text
+Cần thiết kế giao diện chi tiết hóa đơn gồm 5 thẻ tóm tắt stats nợ, bill preview in A4, breakdown chỉ số điện nước thực thu, timeline lịch sử thanh toán, ghi chú lưu audit logs và 4 modals nghiệp vụ (Record Payment, Send Notification nhắc Offline, Cancel Invoice và Export Excel Modal tích hợp Excel Grid Mockup).
+```
+
+#### 5.3. Kết quả AI trả về
+
+```text
+AI đề xuất kết cấu giao diện 2 cột SaaS và viết mã nguồn hoàn chỉnh tệp InvoiceDetail.tsx đầy đủ tất cả logic tính toán, chuyển đổi banner trạng thái mượt mà và 4 modals có validation chi tiết.
+```
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+```text
+Nhóm kiểm duyệt cơ chế so khớp Hash Router trong App.tsx sử dụng startsWith và ưu tiên đặt sau case kiểm tra /create để tránh xung đột khớp chuỗi con, cấu hình activeMatches ở OwnerLayout.tsx giúp sáng cam Sidebar nòng cốt, và chạy biên dịch tsc tĩnh thành công 100% 0 lỗi.
 ```
 
 ---
