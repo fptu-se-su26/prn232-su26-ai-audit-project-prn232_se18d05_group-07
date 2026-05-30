@@ -42,6 +42,10 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         return { title: 'Tổng quan', subtitle: 'Xem nhanh tình hình hoạt động cho thuê của bạn.' };
       case 'owner-properties':
         return { title: 'Tài sản & Phòng', subtitle: 'Quản lý danh sách toà nhà, căn hộ và sơ đồ phòng.' };
+      case 'owner-property-detail':
+        return { title: 'Chi tiết sơ đồ phòng', subtitle: 'Theo dõi, chốt điện nước và quản lý phòng chi tiết.' };
+      case 'owner-properties-create':
+        return { title: 'Thêm tài sản mới', subtitle: 'Tạo tòa nhà, dãy trọ, căn hộ và sinh sơ đồ phòng tự động.' };
       case 'owner-listings':
         return { title: 'Tin cho thuê', subtitle: 'Quản lý tin đăng, kiểm duyệt và trạng thái hiển thị.' };
       case 'owner-tenants':
@@ -64,7 +68,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   // Sidebar Menu configuration
   const menuItems = [
     { label: 'Tổng quan', icon: 'dashboard', route: 'owner-dashboard' as PageType },
-    { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-units'] },
+    { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-property-detail', 'owner-properties-create', 'owner-units'] },
     { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType },
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
     { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType },

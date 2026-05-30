@@ -9,6 +9,9 @@ import Support from './pages/Support';
 import Footer from './components/Footer';
 import OwnerLayout from './components/owner/OwnerLayout';
 import OwnerDashboard from './pages/owner/Dashboard';
+import PropertyList from './pages/owner/PropertyList';
+import PropertyDetail from './pages/owner/PropertyDetail';
+import PropertyCreate from './pages/owner/PropertyCreate';
 
 export type PageType = 
   | 'home' 
@@ -19,6 +22,8 @@ export type PageType =
   | 'support'
   | 'owner-dashboard'
   | 'owner-properties'
+  | 'owner-property-detail'
+  | 'owner-properties-create'
   | 'owner-listings'
   | 'owner-tenants'
   | 'owner-invoices'
@@ -29,6 +34,7 @@ export type PageType =
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
   // 1. Listen for hash changes to support direct URL typing (e.g. #/owner/dashboard)
   useEffect(() => {
@@ -56,6 +62,16 @@ const App: React.FC = () => {
 
       // Owner routes
       if (hash === '#/owner/dashboard') { setCurrentPage('owner-dashboard'); return; }
+      if (hash === '#/owner/properties/create') { setCurrentPage('owner-properties-create'); return; }
+      if (hash.startsWith('#/owner/properties/')) {
+        const idStr = hash.replace('#/owner/properties/', '');
+        const id = parseInt(idStr, 10);
+        if (!isNaN(id)) {
+          setSelectedPropertyId(id);
+          setCurrentPage('owner-property-detail');
+          return;
+        }
+      }
       if (hash === '#/owner/properties') { setCurrentPage('owner-properties'); return; }
       if (hash === '#/owner/listings') { setCurrentPage('owner-listings'); return; }
       if (hash === '#/owner/tenants') { setCurrentPage('owner-tenants'); return; }
@@ -82,6 +98,10 @@ const App: React.FC = () => {
     else if (currentPage === 'support') targetHash = '#/support';
     else if (currentPage === 'detail' && selectedRoomId !== null) {
       targetHash = `#/detail/${selectedRoomId}`;
+    } else if (currentPage === 'owner-properties-create') {
+      targetHash = '#/owner/properties/create';
+    } else if (currentPage === 'owner-property-detail' && selectedPropertyId !== null) {
+      targetHash = `#/owner/properties/${selectedPropertyId}`;
     } else if (currentPage.startsWith('owner-')) {
       targetHash = '#/owner/' + currentPage.replace('owner-', '');
     }
@@ -89,7 +109,7 @@ const App: React.FC = () => {
     if (window.location.hash !== targetHash) {
       window.location.hash = targetHash;
     }
-  }, [currentPage, selectedRoomId]);
+  }, [currentPage, selectedRoomId, selectedPropertyId]);
 
   // Check if it's an owner route
   const isOwnerRoute = currentPage.startsWith('owner-');
@@ -99,6 +119,12 @@ const App: React.FC = () => {
       <OwnerLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
         {currentPage === 'owner-dashboard' ? (
           <OwnerDashboard setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-properties' ? (
+          <PropertyList setCurrentPage={setCurrentPage} setSelectedPropertyId={setSelectedPropertyId} />
+        ) : currentPage === 'owner-property-detail' ? (
+          <PropertyDetail propertyId={selectedPropertyId} setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-properties-create' ? (
+          <PropertyCreate setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>
