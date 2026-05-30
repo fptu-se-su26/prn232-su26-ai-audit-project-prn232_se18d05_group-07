@@ -15,6 +15,7 @@ import PropertyCreate from './pages/owner/PropertyCreate';
 import UnitDetail from './pages/owner/UnitDetail';
 import ListingCreate from './pages/owner/ListingCreate';
 import ListingList from './pages/owner/ListingList';
+import InvoiceList from './pages/owner/InvoiceList';
 
 export type PageType = 
   | 'home' 
@@ -150,6 +151,8 @@ const App: React.FC = () => {
           <ListingCreate setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-listings' ? (
           <ListingList setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-invoices' ? (
+          <InvoiceList setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

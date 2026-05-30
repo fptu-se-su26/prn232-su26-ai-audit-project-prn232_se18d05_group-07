@@ -91,6 +91,9 @@ Nguyên tắc ghi changelog:
 - [x] Phát triển 2 View Mode linh hoạt: Table View dạng bảng SaaS và Card View dạng lưới bất động sản bo tròn mềm mại.
 - [x] Thiết kế thanh Bulk Actions Bar thông minh tự động trượt cam nhạt khi tích chọn nhiều tin trọ để Ẩn/Duyệt/Xóa hàng loạt.
 - [x] Xây dựng bộ 5 Modals tác vụ độ trung thực cao: Hide Modal, Delete Modal, Resubmit Modal, Mark Rented Modal (chốt thuê có checkbox tự ẩn tin) và Rejection Reason Modal.
+- [x] Xây dựng trang Quản lý Hóa đơn & Tài chính của Chủ nhà `InvoiceList.tsx` hỗ trợ 5 thẻ thống kê tài chính, 4 quick actions thao tác nhanh, bộ lọc tìm kiếm đa năng, 7 tabs trạng thái đồng bộ số lượng hóa đơn, view mode (Table/Card) và phân trang động.
+- [x] Xây dựng thanh Bulk Actions Bar thông minh tự động trượt cam nhạt khi chọn nhiều hóa đơn để xuất Excel, gửi thông báo nhắc nợ, ghi nhận đóng đủ (Paid) và hủy hóa đơn hàng loạt.
+- [x] Phát triển bộ 5 modals nghiệp vụ tài chính có độ trung thực cao: Record Payment (có nhập số tiền, phương thức, ngày đóng, ghi chú), Mark as Paid nhanh, Cancel Invoice (nhập lý do hủy và validation cam kết), Export Excel (phạm vi xuất và cấu hình nâng cao), và Send Notification (nhắc nợ trực tuyến kèm cảnh báo tài khoản offline).
 - [x] Chạy kiểm thử thành công biên dịch đóng gói tĩnh bằng `npm run build` đạt kết quả tối ưu, 0 lỗi TypeScript và 0 warning của trình biên dịch Vite.
 
 ## Thay đổi chi tiết
@@ -108,6 +111,7 @@ Nguyên tắc ghi changelog:
 | 9 | Ghép nối liên kết sâu các nút bấm điều hướng từ Sơ đồ Grid sang Chi tiết phòng trọ | Phan Hoài An | `src/pages/owner/PropertyDetail.tsx` | Commit Git |
 | 10 | Xây dựng trang Đăng tin cho thuê mới `ListingCreate.tsx` | Phan Hoài An | `src/pages/owner/ListingCreate.tsx` | Commit Git |
 | 11 | Xây dựng trang Quản lý tin cho thuê `ListingList.tsx` | Phan Hoài An | `src/pages/owner/ListingList.tsx` | Commit Git |
+| 12 | Xây dựng trang Quản lý Hóa đơn `InvoiceList.tsx` | Phan Hoài An | `src/pages/owner/InvoiceList.tsx` | Commit Git |
 
 ## AI có hỗ trợ không?
 
@@ -117,7 +121,7 @@ Nguyên tắc ghi changelog:
 Nếu có, mô tả AI đã hỗ trợ phần nào:
 
 ```text
-AI trợ lý Antigravity đã hỗ trợ tích hợp sâu bộ định tuyến Hash Router trong App.tsx kết nối đồng bộ cấu trúc layout Dashboard của OwnerLayout.tsx. AI đề xuất và viết mã nguồn React chi tiết cho các trang PropertyList.tsx, PropertyDetail.tsx, UnitDetail.tsx và đặc biệt là cơ chế Live Grid Generator trong PropertyCreate.tsx giúp tự động vẽ lại sơ đồ tầng phòng trọ thời gian thực. AI cũng hỗ trợ viết logic validation sức chứa tối đa trong Add Tenant Modal, cấn trừ tiền cọc trong End Tenancy và phối hợp viết liên kết sâu hai chiều thông suốt toàn bộ hệ thống.
+AI trợ lý Antigravity đã hỗ trợ tích hợp sâu bộ định tuyến Hash Router trong App.tsx kết nối đồng bộ cấu trúc layout Dashboard của OwnerLayout.tsx. AI đề xuất và viết mã nguồn React chi tiết cho các trang PropertyList.tsx, PropertyDetail.tsx, UnitDetail.tsx và đặc biệt là cơ chế Live Grid Generator trong PropertyCreate.tsx giúp tự động vẽ lại sơ đồ tầng phòng trọ thời gian thực. AI cũng hỗ trợ viết logic validation sức chứa tối đa trong Add Tenant Modal, cấn trừ tiền cọc trong End Tenancy và phối hợp viết liên kết sâu hai chiều thông suốt toàn bộ hệ thống. Thêm vào đó, AI hỗ trợ xây dựng trang ListingCreate.tsx (Live Preview, Stepper 6 bước), trang ListingList.tsx (Table/Card view, Bulk Actions, 5 modals) và trang InvoiceList.tsx (5 Financial Summary cards, 4 Quick Actions, Bulk action bar, 5 interactive modals quản lý công nợ có cảnh báo tài khoản offline).
 ```
 
 ## Commit/Screenshot minh chứng
@@ -132,7 +136,10 @@ Commit Git:
 - [DE180303] feat: implement add tenant modal with account linking and capacity validation
 - [DE180303] feat: implement end tenancy modal and change status modals
 - [DE180303] feat: link room grid and tables dynamically to unit detail hash pages
-- [DE180303] test: verify production build compiles in 880ms with 0 errors
+- [DE180303] feat: build owner listings creation page with stepper and live preview
+- [DE180303] feat: build owner listing management list page with filters and bulk actions
+- [DE180303] feat: build owner invoice management page with finance cards and 5 modals
+- [DE180303] test: verify production build compiles in 954ms with 0 errors
 ```
 
 ## Ghi chú
@@ -152,7 +159,8 @@ Các trang giao diện quản lý vận hành của Chủ nhà (Owner) được 
 | 1 | Khởi tạo cấu trúc Backend Clean Architecture & CSDL SQL Server | Completed | dotnet build thành công | Đã hoàn thành ở đợt 1 |
 | 2 | Cài đặt và cấu hình TailwindCSS v3 vào dự án Frontend | Completed | tailwind.config.js cấu hình xong | Đã hoàn thành ở đợt 2 |
 | 3 | Xây dựng giao diện công khai dành cho Khách (Homepage, Browse, RoomDetail...) | Completed | npm run build thành công | Đã hoàn thành ở đợt 2 |
-| 4 | Xây dựng giao diện Vận hành & Quản lý của Chủ nhà (Dashboard, PropertyList, Room Grid, Sinh phòng tự động, UnitDetail, ListingCreate & Modals) | Completed | npm run build thành công | Đồng bộ Hash Router, lồng ghép liên kết sâu hai chiều tương tác mượt mà và Live Preview |
+| 4 | Xây dựng giao diện Vận hành & Quản lý của Chủ nhà (Dashboard, PropertyList, Room Grid, Sinh phòng tự động, UnitDetail, ListingCreate, ListingList & Modals) | Completed | npm run build thành công | Đồng bộ Hash Router, lồng ghép liên kết sâu hai chiều tương tác mượt mà và Live Preview |
+| 5 | Xây dựng giao diện Quản lý Hóa đơn của Chủ nhà (InvoiceList.tsx & Modals nghiệp vụ tài chính) | Completed | npm run build thành công | Tích hợp 5 modals tài chính chi tiết, cảnh báo tài khoản offline, phân trang động và xuất Excel báo cáo |
 
 ---
 

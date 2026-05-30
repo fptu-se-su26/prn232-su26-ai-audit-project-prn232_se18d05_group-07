@@ -59,6 +59,7 @@ Sinh viên/nhóm cần ghi lại:
 | 5 | 30/05/2026 | Antigravity | Tối ưu | Yêu cầu liên kết sâu Grid phòng trọ sang trang chi tiết phòng | Click Grid phòng trọ re-route mượt mà sang `#/owner/units/:id` | Có | [walkthrough.md] |
 | 6 | 30/05/2026 | Antigravity | Nghiệp vụ | Yêu cầu xây dựng trang đăng tin cho thuê mới ListingCreate.tsx | Biểu mẫu Stepper 6 bước và Sticky Live Preview Card thời gian thực | Có | [walkthrough.md] |
 | 7 | 30/05/2026 | Antigravity | Nghiệp vụ | Yêu cầu xây dựng trang danh sách quản lý tin cho thuê ListingList.tsx | Bảng danh sách SaaS, Card grid toggle, Bulk actions, và 5 Action Modals | Có | [walkthrough.md] |
+| 8 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang quản lý hóa đơn InvoiceList.tsx | Thẻ summary cards thống kê, 4 quick actions, Table/Card, Bulk actions bar, và bộ 5 modals chốt công nợ | Có | [walkthrough.md] |
 
 ---
 
@@ -278,6 +279,42 @@ AI đề xuất phương án và viết tệp ListingList.tsx đầy đủ tính
 
 ```text
 Nhóm đã chạy lệnh kiểm thử đóng gói Vite thành công tĩnh 100% không phát sinh bất kỳ lỗi cảnh báo tsc nào. Nhóm cũng tối ưu thêm hiệu ứng micro-animation (animate-fadeIn) khi chuyển trang để tăng tính mượt mà khi di chuyển tabs.
+```
+
+---
+
+### Prompt số 8
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Xây dựng giao diện Quản lý Hóa đơn & Tài chính InvoiceList.tsx |
+| Phần việc liên quan | Frontend / Invoice Management / Financial Modals / Offline Warn / Pagination |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo hãy thực hiện cập nhật bổ sung tiếp trang giao diện Chặng 3 (Tài chính & Hóa đơn): 7. Invoice Management (/owner/invoices). tôi sẽ cung cấp mô tả chi tiết, và hiện tại bây giờ đang có lỗi ở file App.tsx ở dòng cụ thể là import ListingCreate... hãy thực hiện sửa chữa luôn...
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+```text
+Cần xây dựng trang quản trị tài chính, công nợ hóa đơn trọ cho Chủ nhà gồm 5 Financial cards tổng quan đầu trang, 4 Quick actions, Search & Filter nâng cao, 7 Status Tabs đồng bộ số lượng đếm, chế độ chuyển view Table/Card, Bulk Actions bar cam trượt mượt mà và bộ 5 Modals chi tiết nợ (Record Payment, Mark as Paid nhanh, Cancel Invoice, Export Excel, và Send Notification có cảnh báo tài khoản Offline).
+```
+
+#### 5.3. Kết quả AI trả về
+
+```text
+AI sửa thành công các import lỗi trong App.tsx và viết toàn bộ tệp InvoiceList.tsx đầy đủ tất cả cấu trúc giao diện CSS HSL bo góc soft-shadow chuẩn thương hiệu, cài đặt bộ 5 modals nghiệp vụ tài chính có logic validation đầy đủ và Toast success.
+```
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+```text
+Nhóm tiến hành chạy lệnh build tsc phát hiện lỗi thiếu khai báo 2 biến state là `currentPageNum` và `pageSize` trong tệp InvoiceList.tsx do AI sinh thiếu. Nhóm chủ động viết bổ sung hai state này vào đầu component giúp hệ thống chạy phân trang động mượt mà và đóng gói sản phẩm thành công tĩnh 100% không lỗi.
 ```
 
 ---
