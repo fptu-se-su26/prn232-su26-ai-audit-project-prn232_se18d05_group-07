@@ -16,6 +16,7 @@ import UnitDetail from './pages/owner/UnitDetail';
 import ListingCreate from './pages/owner/ListingCreate';
 import ListingList from './pages/owner/ListingList';
 import InvoiceList from './pages/owner/InvoiceList';
+import InvoiceCreate from './pages/owner/InvoiceCreate';
 
 export type PageType = 
   | 'home' 
@@ -33,6 +34,7 @@ export type PageType =
   | 'owner-listings-create'
   | 'owner-tenants'
   | 'owner-invoices'
+  | 'owner-invoices-create'
   | 'owner-cost-settings'
   | 'owner-notifications'
   | 'owner-profile';
@@ -91,6 +93,7 @@ const App: React.FC = () => {
       if (hash === '#/owner/listings/create') { setCurrentPage('owner-listings-create'); return; }
       if (hash === '#/owner/listings') { setCurrentPage('owner-listings'); return; }
       if (hash === '#/owner/tenants') { setCurrentPage('owner-tenants'); return; }
+      if (hash === '#/owner/invoices/create') { setCurrentPage('owner-invoices-create'); return; }
       if (hash === '#/owner/invoices') { setCurrentPage('owner-invoices'); return; }
       if (hash === '#/owner/cost-settings') { setCurrentPage('owner-cost-settings'); return; }
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
@@ -122,6 +125,8 @@ const App: React.FC = () => {
       targetHash = `#/owner/properties/${selectedPropertyId}`;
     } else if (currentPage === 'owner-unit-detail' && selectedUnitId !== null) {
       targetHash = `#/owner/units/${selectedUnitId}`;
+    } else if (currentPage === 'owner-invoices-create') {
+      targetHash = '#/owner/invoices/create';
     } else if (currentPage.startsWith('owner-')) {
       targetHash = '#/owner/' + currentPage.replace('owner-', '');
     }
@@ -153,6 +158,8 @@ const App: React.FC = () => {
           <ListingList setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-invoices' ? (
           <InvoiceList setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-invoices-create' ? (
+          <InvoiceCreate setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

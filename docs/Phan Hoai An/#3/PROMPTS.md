@@ -60,6 +60,7 @@ Sinh viên/nhóm cần ghi lại:
 | 6 | 30/05/2026 | Antigravity | Nghiệp vụ | Yêu cầu xây dựng trang đăng tin cho thuê mới ListingCreate.tsx | Biểu mẫu Stepper 6 bước và Sticky Live Preview Card thời gian thực | Có | [walkthrough.md] |
 | 7 | 30/05/2026 | Antigravity | Nghiệp vụ | Yêu cầu xây dựng trang danh sách quản lý tin cho thuê ListingList.tsx | Bảng danh sách SaaS, Card grid toggle, Bulk actions, và 5 Action Modals | Có | [walkthrough.md] |
 | 8 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang quản lý hóa đơn InvoiceList.tsx | Thẻ summary cards thống kê, 4 quick actions, Table/Card, Bulk actions bar, và bộ 5 modals chốt công nợ | Có | [walkthrough.md] |
+| 9 | 30/05/2026 | Antigravity | Tài chính | Yêu cầu xây dựng trang chốt tiền hàng loạt InvoiceCreate.tsx | Stepper 5 bước, bảng tính 16 cột realtime, Drawer và 5 Modals | Có | [walkthrough.md] |
 
 ---
 
@@ -313,8 +314,43 @@ AI sửa thành công các import lỗi trong App.tsx và viết toàn bộ tệ
 
 #### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
 
-```text
 Nhóm tiến hành chạy lệnh build tsc phát hiện lỗi thiếu khai báo 2 biến state là `currentPageNum` và `pageSize` trong tệp InvoiceList.tsx do AI sinh thiếu. Nhóm chủ động viết bổ sung hai state này vào đầu component giúp hệ thống chạy phân trang động mượt mà và đóng gói sản phẩm thành công tĩnh 100% không lỗi.
+```
+
+---
+
+### Prompt số 9
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Xây dựng biểu mẫu chốt tiền tháng hàng loạt `InvoiceCreate.tsx` có Stepper 5 bước |
+| Phần việc liên quan | Frontend / Bulk Invoicing Form / Real-time Calculations / Modals & Drawer |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo bạn hãy giúp tôi thực hineje cập nhật bổ sung giao diện trang 8. Form chốt tiền tháng hàng loạt (/owner/invoices/create) tôi sẽ cung cấp mô tả chi tiết bạn hãy thực hineje tham khảo và thực hiện cập nhật chỉnh sửa để phù hợp với dự án hiện tại: # PROMPT — RoomHub Owner Bulk Monthly Invoice Form / Chốt tiền tháng hàng loạt...
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+```text
+Cần tạo trang chốt tiền hàng loạt với Stepper 5 bước, bảng 16 cột đầy đủ cho phép nhập số điện nước trực tiếp và tự động hóa công thức tính tiền điện, nước và tổng cộng. Đồng thời cần có các modals chốt nháp, chốt xác nhận, drawer xem breakdown chi tiết từng phòng trọ và bản di động chuyển sang Card Accordion tiện lợi.
+```
+
+#### 5.3. Kết quả AI trả về
+
+```text
+AI đề xuất kế hoạch cấu trúc và viết toàn bộ component InvoiceCreate.tsx bóng bẩy với đầy đủ logic tính phí, validation mới < cũ, bulk actions bar áp dụng phụ thu hàng loạt, tóm tắt sticky panel tài chính và 5 modals tương tác chi tiết.
+```
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+```text
+Nhóm cấu hình các hash route trong App.tsx ưu tiên kiểm tra `#/owner/invoices/create` trước `#/owner/invoices` để tránh trùng chuỗi con, cập nhật activeMatches trong menu OwnerLayout.tsx giúp highlight cam đồng bộ mượt mà, và chạy biên dịch tsc đạt 100% 0 lỗi.
 ```
 
 ---
