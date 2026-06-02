@@ -1,15 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import heroApartment from '../assets/hero_apartment.png';
 import tenantBenefits from '../assets/tenant_benefits.png';
 import landlordDashboard from '../assets/landlord_dashboard.png';
 
-
-interface HomeProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
-  setSelectedRoomId: (id: number | null) => void;
-}
-
-const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
+const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const setSelectedRoomId = (_id: number | null) => {};
   const handleAlert = (message: string) => {
     alert(message);
   };
@@ -34,7 +31,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
             <div className="flex flex-col sm:flex-row gap-4">
               <a 
                 className="text-label-md font-label-md text-white bg-primary-container rounded-full px-8 py-4 text-center hover:bg-orange-600 transition-all soft-shadow hover:-translate-y-1 cursor-pointer" 
-                onClick={(e) => { e.preventDefault(); setCurrentPage('browse'); }}
+                onClick={(e) => { e.preventDefault(); navigate('/browse'); }}
               >
                 Tìm chỗ ở ngay
               </a>
@@ -172,7 +169,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
             </div>
             <button 
               className="w-full bg-primary-container text-white rounded-xl py-3 text-label-md font-label-md hover:bg-orange-600 transition-colors h-[46px] flex items-center justify-center gap-2 active:scale-98" 
-              onClick={() => setCurrentPage('browse')} 
+              onClick={() => navigate('/browse')} 
               type="button"
             >
               <span className="material-symbols-outlined">search</span> Tìm kiếm
@@ -190,7 +187,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
             {/* Category 1 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">single_bed</span>
               </div>
@@ -198,7 +195,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Tiết kiệm, cơ bản</p>
             </div>
             {/* Category 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">bed</span>
               </div>
@@ -206,7 +203,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Riêng tư 1 người</p>
             </div>
             {/* Category 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">king_bed</span>
               </div>
@@ -214,7 +211,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Cho 2 người trở lên</p>
             </div>
             {/* Category 4 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">group</span>
               </div>
@@ -222,7 +219,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Chia sẻ chi phí</p>
             </div>
             {/* Category 5 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">weekend</span>
               </div>
@@ -230,7 +227,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Thiết kế mở</p>
             </div>
             {/* Category 6 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">apartment</span>
               </div>
@@ -238,7 +235,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Đầy đủ tiện nghi</p>
             </div>
             {/* Category 7 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">location_city</span>
               </div>
@@ -246,7 +243,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
               <p className="text-xs text-gray-500">Cao cấp, an ninh</p>
             </div>
             {/* Category 8 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => setCurrentPage('browse')}>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
               <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">house</span>
               </div>
@@ -267,14 +264,14 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
             </div>
             <a 
               className="hidden md:flex items-center gap-1 text-primary-container font-semibold hover:text-orange-600 transition-colors cursor-pointer" 
-              onClick={(e) => { e.preventDefault(); setCurrentPage('browse'); }}
+              onClick={(e) => { e.preventDefault(); navigate('/browse'); }}
             >
               Xem tất cả <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </a>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Listing 1 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(1); setCurrentPage('detail'); }}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(1); navigate('/room/1'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Studio" 
@@ -318,7 +315,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
             </div>
 
             {/* Listing 2 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(2); setCurrentPage('detail'); }}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(2); navigate('/room/2'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Căn hộ" 
@@ -359,7 +356,7 @@ const Home: React.FC<HomeProps> = ({ setCurrentPage, setSelectedRoomId }) => {
             </div>
 
             {/* Listing 3 */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(3); setCurrentPage('detail'); }}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer" onClick={() => { setSelectedRoomId(3); navigate('/room/3'); }}>
               <div className="h-56 relative overflow-hidden">
                 <img 
                   alt="Phòng trọ" 

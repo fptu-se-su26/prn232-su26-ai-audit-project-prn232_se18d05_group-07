@@ -1,10 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
-interface FooterProps {
-  setCurrentPage?: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works' | 'support') => void;
-}
+const Footer: React.FC = () => {
+  const navigate = useNavigate();
 
-const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
   const handleAlert = (message: string) => {
     alert(message);
   };
@@ -23,22 +22,22 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
               Nền tảng tìm kiếm và quản lý nhà trọ, căn hộ thông minh hàng đầu tại Đà Nẵng. Kết nối trực tiếp người thuê và chủ nhà, tối ưu hóa cuộc sống thuê trọ.
             </p>
             <div className="flex gap-4">
-              <a 
-                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors" 
+              <a
+                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors"
                 href="#"
                 onClick={(e) => { e.preventDefault(); handleAlert('Website chính thức của dự án: www.roomhub.vn'); }}
               >
                 <span className="material-symbols-outlined text-[20px]">public</span>
               </a>
-              <a 
-                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors" 
+              <a
+                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors"
                 href="mailto:support@roomhub.vn"
                 onClick={(e) => { e.preventDefault(); handleAlert('Gửi email hỗ trợ tới: support@roomhub.vn'); }}
               >
                 <span className="material-symbols-outlined text-[20px]">mail</span>
               </a>
-              <a 
-                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors" 
+              <a
+                className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary-container hover:text-white transition-colors"
                 href="tel:02367300999"
                 onClick={(e) => { e.preventDefault(); handleAlert('Gọi tổng đài hỗ trợ: 0236 7300 999 (Đà Nẵng)'); }}
               >
@@ -52,8 +51,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
             <h4 className="text-white font-bold mb-6">Dành cho người thuê</h4>
             <ul className="space-y-4">
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng nhập để tìm kiếm phòng trọ tại Đà Nẵng'); }}
                 >
@@ -61,8 +60,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng nhập để tìm kiếm căn hộ dịch vụ'); }}
                 >
@@ -70,8 +69,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng nhập để tìm kiếm bạn ở ghép'); }}
                 >
@@ -79,15 +78,11 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors cursor-pointer" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    if (setCurrentPage) {
-                      setCurrentPage('how-it-works');
-                    } else {
-                      handleAlert('Cẩm nang & Hướng dẫn thuê nhà Đà Nẵng sẽ sớm ra mắt!');
-                    }
+                <a
+                  className="text-sm hover:text-primary-container transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/how-it-works');
                   }}
                 >
                   Cách hoạt động
@@ -100,8 +95,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
             <h4 className="text-white font-bold mb-6">Dành cho chủ nhà</h4>
             <ul className="space-y-4">
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Vui lòng đăng ký tài khoản chủ nhà để đăng tin cho thuê'); }}
                 >
@@ -109,8 +104,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Tính năng Phần mềm quản lý tòa nhà sẽ kích hoạt sau khi đăng nhập tài khoản Chủ nhà'); }}
                 >
@@ -118,8 +113,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Bảng giá tin đăng nổi bật Đà Nẵng sẽ sớm ra mắt!'); }}
                 >
@@ -127,8 +122,8 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
                 </a>
               </li>
               <li>
-                <a 
-                  className="text-sm hover:text-primary-container transition-colors" 
+                <a
+                  className="text-sm hover:text-primary-container transition-colors"
                   href="#"
                   onClick={(e) => { e.preventDefault(); handleAlert('Kinh nghiệm vận hành và tối ưu hóa doanh thu phòng trọ!'); }}
                 >
@@ -156,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-xs text-gray-500">
           <p>© {new Date().getFullYear()} RoomHub Đà Nẵng - Môn học PRN232 - Dự án báo cáo của Nhóm 07 (Lớp SE18D05). Bảo lưu mọi quyền.</p>
         </div>

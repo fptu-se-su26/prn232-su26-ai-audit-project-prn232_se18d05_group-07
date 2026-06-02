@@ -1,7 +1,15 @@
+using System.Text;
+using Domain.Entities;
 using Infrastructure.Persistence;
+using Infrastructure.Authentication;
+using Infrastructure.Services;
+using Application.Common.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure
 {
@@ -11,9 +19,54 @@ namespace Infrastructure
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
 
+            // Register DbContext
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString,
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+
+            // Register Memory Cache for storing OTP and register session temporarily
+            services.AddMemoryCache();
+
+            // Configure Identity
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequiredLength = 6;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireLowercase = true;
+                options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = false;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+            // Configure JWT Token Services
+            var jwtSecret = configuration["JwtSettings:Secret"] ?? "SuperSecretKeyForRoomHubSplitArchitecture2026!";
+            var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = configuration["JwtSettings:Issuer"],
+                    ValidAudience = configuration["JwtSettings:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                };
+            });
+
+            // Register Custom Services
+            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }

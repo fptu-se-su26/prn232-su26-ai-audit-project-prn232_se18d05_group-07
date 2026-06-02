@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import landlordDashboard from '../assets/landlord_dashboard.png';
 
-interface ForLandlordsProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
-}
-
-const ForLandlords: React.FC<ForLandlordsProps> = () => {
+const ForLandlords: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Scroll to top when page mounts
