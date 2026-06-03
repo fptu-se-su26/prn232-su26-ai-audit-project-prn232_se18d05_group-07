@@ -213,6 +213,10 @@ const Home: React.FC = () => {
               </div>
               <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ</h3>
               <p className="text-xs text-gray-500">Sang trọng & an ninh</p>
+            </div>
+            {/* Category 4.5 */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
+              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">group</span>
               </div>
               <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng ở ghép</h3>
