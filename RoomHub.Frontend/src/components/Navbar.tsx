@@ -89,19 +89,48 @@ const Navbar: React.FC = () => {
         {/* Actions (Web) */}
         <div className="hidden md:flex items-center gap-4">
           {isAuthenticated ? (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-orange-500">account_circle</span>
-                <span className="text-label-md font-semibold text-gray-700">
-                  {user?.fullName} ({user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'})
+            <div className="relative group">
+              <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-orange-50 transition-all cursor-pointer">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-650 font-black text-sm border border-orange-200">
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="text-sm font-semibold text-gray-700 max-w-[120px] truncate">
+                  {user?.fullName}
                 </span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="text-label-md font-label-md text-white bg-red-500 rounded-full px-5 py-2.5 hover:bg-red-650 transition-colors soft-shadow cursor-pointer font-bold"
-              >
-                Đăng xuất
+                <span className="material-symbols-outlined text-gray-400 text-[18px]">keyboard_arrow_down</span>
               </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-gray-150 rounded-2xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 py-2">
+                <div className="px-4 py-2.5 border-b border-gray-100 flex flex-col gap-0.5">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tài khoản</p>
+                  <p className="text-sm font-black text-gray-800 truncate">{user?.fullName}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  <div className="mt-1">
+                    <span className="inline-block px-2 py-0.5 bg-orange-50 border border-orange-100 text-orange-600 text-[9px] font-bold rounded-full">
+                      {user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'}
+                    </span>
+                  </div>
+                </div>
+                
+                {user?.role === 'PropertyOwner' && (
+                  <a
+                    onClick={() => { window.location.hash = '#/owner/dashboard'; }}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-gray-700 hover:bg-orange-50 hover:text-primary-container font-semibold transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-gray-400">dashboard</span>
+                    <span>Dashboard quản lý</span>
+                  </a>
+                )}
+                
+                <a
+                  onClick={handleLogout}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 font-semibold transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                  <span>Đăng xuất</span>
+                </a>
+              </div>
             </div>
           ) : (
             <>
@@ -179,11 +208,23 @@ const Navbar: React.FC = () => {
           <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100">
             {isAuthenticated ? (
               <div className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-center text-gray-700 py-1">
-                  {user?.fullName} ({user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'})
-                </span>
+                <div className="flex flex-col items-center gap-1 py-2 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-800">{user?.fullName}</span>
+                  <span className="text-xs text-gray-500">{user?.email}</span>
+                  <span className="px-2 py-0.5 bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-bold rounded-full">
+                    {user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'}
+                  </span>
+                </div>
+                {user?.role === 'PropertyOwner' && (
+                  <a
+                    className="text-center text-sm font-bold text-primary-container border border-primary-container rounded-full py-2.5 hover:bg-primary-container hover:text-white transition-colors cursor-pointer"
+                    onClick={() => { setIsMobileMenuOpen(false); window.location.hash = '#/owner/dashboard'; }}
+                  >
+                    Dashboard quản lý
+                  </a>
+                )}
                 <button
-                  className="text-center text-sm font-bold text-white bg-red-500 rounded-full py-2.5 hover:bg-red-600 transition-colors cursor-pointer"
+                  className="text-center text-sm font-bold text-white bg-red-500 rounded-full py-2.5 hover:bg-red-600 transition-colors cursor-pointer mt-1"
                   onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                 >
                   Đăng xuất
