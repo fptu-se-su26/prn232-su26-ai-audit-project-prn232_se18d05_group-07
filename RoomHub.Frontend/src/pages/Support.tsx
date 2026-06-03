@@ -1,10 +1,25 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface SupportProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works' | 'support') => void;
+  setCurrentPage?: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works' | 'support') => void;
 }
 
-const Support: React.FC<SupportProps> = ({ setCurrentPage }) => {
+const Support: React.FC<SupportProps> = ({ setCurrentPage: propSetCurrentPage }) => {
+  const navigate = useNavigate();
+
+  const setCurrentPage = (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works' | 'support') => {
+    if (propSetCurrentPage) {
+      propSetCurrentPage(page);
+    } else {
+      if (page === 'home') navigate('/');
+      else if (page === 'browse') navigate('/browse');
+      else if (page === 'landlords') navigate('/landlords');
+      else if (page === 'how-it-works') navigate('/how-it-works');
+      else if (page === 'support') navigate('/support');
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 

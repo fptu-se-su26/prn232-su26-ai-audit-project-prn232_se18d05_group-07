@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MOCK_ROOMS } from './Browse';
 
 interface RoomDetailProps {
-  selectedRoomId: number | null;
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
-  setSelectedRoomId: (id: number | null) => void;
+  selectedRoomId?: number | null;
+  setCurrentPage?: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
+  setSelectedRoomId?: (id: number | null) => void;
 }
 
 // Additional mockup interior images for the gallery grid
@@ -28,17 +29,27 @@ const getHostInfo = (roomId: number) => {
 
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { id: routeId } = useParams<{ id: string }>();
 
-  // Scroll to top when component mounts or selectedRoomId changes
+  const activeRoomId = useMemo(() => {
+    if (routeId) {
+      const parsed = parseInt(routeId, 10);
+      return isNaN(parsed) ? null : parsed;
+    }
+    return selectedRoomId ?? null;
+  }, [routeId, selectedRoomId]);
+
+  // Scroll to top when component mounts or activeRoomId changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [selectedRoomId]);
+  }, [activeRoomId]);
 
   // Find the selected room or fallback to first room
   const room = useMemo(() => {
-    const found = MOCK_ROOMS.find(r => r.id === selectedRoomId);
+    const found = MOCK_ROOMS.find(r => r.id === activeRoomId);
     return found || MOCK_ROOMS[0];
-  }, [selectedRoomId]);
+  }, [activeRoomId]);
 
   // Find similar rooms (exclude current, prefer same type or same district)
   const similarRooms = useMemo(() => {
@@ -67,7 +78,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
             <li className="inline-flex items-center">
               <a 
                 className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer" 
-                onClick={() => setCurrentPage('home')}
+                onClick={() => { if (setCurrentPage) { setCurrentPage('home'); } else { navigate('/'); } }}
               >
                 Trang chủ
               </a>
@@ -77,7 +88,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 <span className="material-symbols-outlined text-sm mx-1 text-gray-400">chevron_right</span>
                 <a 
                   className="hover:text-primary-container transition-colors cursor-pointer" 
-                  onClick={() => setCurrentPage('browse')}
+                  onClick={() => { if (setCurrentPage) { setCurrentPage('browse'); } else { navigate('/browse'); } }}
                 >
                   Tìm chỗ ở
                 </a>
@@ -344,7 +355,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               <div 
                 key={simRoom.id}
                 onClick={() => {
-                  setSelectedRoomId(simRoom.id);
+                  if (setSelectedRoomId) {
+                    setSelectedRoomId(simRoom.id);
+                  } else {
+                    navigate(`/room/${simRoom.id}`);
+                  }
                   // Auto scroll to top is handled by the useEffect above
                 }}
                 className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"

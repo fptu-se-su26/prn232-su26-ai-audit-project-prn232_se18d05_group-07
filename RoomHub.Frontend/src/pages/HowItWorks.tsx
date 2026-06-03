@@ -1,10 +1,24 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface HowItWorksProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works') => void;
+  setCurrentPage?: (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works') => void;
 }
 
-const HowItWorks: React.FC<HowItWorksProps> = ({ setCurrentPage }) => {
+const HowItWorks: React.FC<HowItWorksProps> = ({ setCurrentPage: propSetCurrentPage }) => {
+  const navigate = useNavigate();
+  
+  const setCurrentPage = (page: 'home' | 'browse' | 'detail' | 'landlords' | 'how-it-works') => {
+    if (propSetCurrentPage) {
+      propSetCurrentPage(page);
+    } else {
+      if (page === 'home') navigate('/');
+      else if (page === 'browse') navigate('/browse');
+      else if (page === 'landlords') navigate('/landlords');
+      else if (page === 'how-it-works') navigate('/how-it-works');
+    }
+  };
+
   const renterSectionRef = useRef<HTMLDivElement>(null);
   const landlordSectionRef = useRef<HTMLDivElement>(null);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);

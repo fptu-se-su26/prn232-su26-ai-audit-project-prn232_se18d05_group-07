@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -20,6 +19,14 @@ import ListingList from './pages/owner/ListingList';
 import InvoiceList from './pages/owner/InvoiceList';
 import InvoiceCreate from './pages/owner/InvoiceCreate';
 import InvoiceDetail from './pages/owner/InvoiceDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import VerifyOtp from './pages/VerifyOtp';
+import ForgotPassword from './pages/ForgotPassword';
+import VerifyResetOtp from './pages/VerifyResetOtp';
+import ResetPassword from './pages/ResetPassword';
+import VerifySuccess from './pages/VerifySuccess';
+import { AuthProvider } from './context/AuthContext';
 
 export type PageType = 
   | 'home' 
@@ -43,35 +50,19 @@ export type PageType =
   | 'owner-notifications'
   | 'owner-profile';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
-  // 1. Listen for hash changes to support direct URL typing (e.g. #/owner/dashboard)
+  // 1. Listen for hash changes to support direct URL typing for owner routes
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       if (!hash || hash === '#' || hash === '#/') {
         setCurrentPage('home');
         return;
-      }
-
-      // Public routes
-      if (hash === '#/browse') { setCurrentPage('browse'); return; }
-      if (hash === '#/landlords') { setCurrentPage('landlords'); return; }
-      if (hash === '#/how-it-works') { setCurrentPage('how-it-works'); return; }
-      if (hash === '#/support') { setCurrentPage('support'); return; }
-      if (hash.startsWith('#/detail/')) {
-        const idStr = hash.replace('#/detail/', '');
-        const id = parseInt(idStr, 10);
-        if (!isNaN(id)) {
-          setSelectedRoomId(id);
-          setCurrentPage('detail');
-          return;
-        }
       }
 
       // Owner routes
@@ -120,38 +111,31 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // 2. SynchronizecurrentPage state changes back to window hash (e.g. when clicking sidebar links)
+  // 2. Synchronize currentPage state changes back to window hash
   useEffect(() => {
-    let targetHash = '#/';
-    if (currentPage === 'home') targetHash = '#/';
-    else if (currentPage === 'browse') targetHash = '#/browse';
-    else if (currentPage === 'landlords') targetHash = '#/landlords';
-    else if (currentPage === 'how-it-works') targetHash = '#/how-it-works';
-    else if (currentPage === 'support') targetHash = '#/support';
-    else if (currentPage === 'detail' && selectedRoomId !== null) {
-      targetHash = `#/detail/${selectedRoomId}`;
-    } else if (currentPage === 'owner-properties-create') {
-      targetHash = '#/owner/properties/create';
-    } else if (currentPage === 'owner-listings-create') {
-      targetHash = '#/owner/listings/create';
-    } else if (currentPage === 'owner-property-detail' && selectedPropertyId !== null) {
-      targetHash = `#/owner/properties/${selectedPropertyId}`;
-    } else if (currentPage === 'owner-unit-detail' && selectedUnitId !== null) {
-      targetHash = `#/owner/units/${selectedUnitId}`;
-    } else if (currentPage === 'owner-invoices-create') {
-      targetHash = '#/owner/invoices/create';
-    } else if (currentPage === 'owner-invoice-detail' && selectedInvoiceId !== null) {
-      targetHash = `#/owner/invoices/${selectedInvoiceId}`;
-    } else if (currentPage.startsWith('owner-')) {
-      targetHash = '#/owner/' + currentPage.replace('owner-', '');
-    }
+    if (currentPage.startsWith('owner-')) {
+      let targetHash = '#/owner/';
+      if (currentPage === 'owner-dashboard') targetHash = '#/owner/dashboard';
+      else if (currentPage === 'owner-properties-create') targetHash = '#/owner/properties/create';
+      else if (currentPage === 'owner-listings-create') targetHash = '#/owner/listings/create';
+      else if (currentPage === 'owner-property-detail' && selectedPropertyId !== null) {
+        targetHash = `#/owner/properties/${selectedPropertyId}`;
+      } else if (currentPage === 'owner-unit-detail' && selectedUnitId !== null) {
+        targetHash = `#/owner/units/${selectedUnitId}`;
+      } else if (currentPage === 'owner-invoices-create') {
+        targetHash = '#/owner/invoices/create';
+      } else if (currentPage === 'owner-invoice-detail' && selectedInvoiceId !== null) {
+        targetHash = `#/owner/invoices/${selectedInvoiceId}`;
+      } else {
+        targetHash = '#/owner/' + currentPage.replace('owner-', '');
+      }
 
-    if (window.location.hash !== targetHash) {
-      window.location.hash = targetHash;
+      if (window.location.hash !== targetHash) {
+        window.location.hash = targetHash;
+      }
     }
-  }, [currentPage, selectedRoomId, selectedPropertyId, selectedUnitId]);
+  }, [currentPage, selectedPropertyId, selectedUnitId, selectedInvoiceId]);
 
-  // Check if it's an owner route
   const isOwnerRoute = currentPage.startsWith('owner-');
 
   if (isOwnerRoute) {
@@ -194,39 +178,6 @@ const App: React.FC = () => {
     );
   }
 
-  return (
-    <div className="bg-background text-on-surface antialiased overflow-x-hidden min-h-screen flex flex-col">
-      <Navbar currentPage={currentPage as any} setCurrentPage={setCurrentPage as any} />
-      <div className="flex-grow">
-        {currentPage === 'home' ? (
-          <Home setCurrentPage={setCurrentPage as any} setSelectedRoomId={setSelectedRoomId} />
-        ) : currentPage === 'browse' ? (
-          <Browse setCurrentPage={setCurrentPage as any} setSelectedRoomId={setSelectedRoomId} />
-        ) : currentPage === 'landlords' ? (
-          <ForLandlords setCurrentPage={setCurrentPage as any} />
-        ) : currentPage === 'how-it-works' ? (
-          <HowItWorks setCurrentPage={setCurrentPage as any} />
-        ) : currentPage === 'support' ? (
-          <Support setCurrentPage={setCurrentPage as any} />
-        ) : (
-          <RoomDetail 
-            selectedRoomId={selectedRoomId} 
-            setCurrentPage={setCurrentPage as any} 
-            setSelectedRoomId={setSelectedRoomId} 
-          />
-        )}
-      </div>
-      <Footer setCurrentPage={setCurrentPage as any} />
-import Login from './pages/Login';
-import Register from './pages/Register';
-import VerifyOtp from './pages/VerifyOtp';
-import ForgotPassword from './pages/ForgotPassword';
-import VerifyResetOtp from './pages/VerifyResetOtp';
-import ResetPassword from './pages/ResetPassword';
-import VerifySuccess from './pages/VerifySuccess';
-import { AuthProvider } from './context/AuthContext';
-
-const AppContent: React.FC = () => {
   return (
     <div className="bg-background text-on-surface antialiased overflow-x-hidden min-h-screen flex flex-col">
       <Navbar />
