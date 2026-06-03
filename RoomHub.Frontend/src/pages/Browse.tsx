@@ -72,19 +72,19 @@ export const MOCK_ROOMS: Room[] = [
   },
   {
     id: 5,
-    title: "Phòng đơn khép kín giá rẻ cho sinh viên Hoà Khánh",
-    type: "Phòng đơn",
+    title: "Phòng trọ sinh viên Hòa Khánh khép kín, gần chợ",
+    type: "Phòng trọ",
     location: "Đường Nguyễn Lương Bằng, Quận Liên Chiểu, Đà Nẵng",
     district: "Quận Liên Chiểu",
     price: 1500000,
     area: 18,
-    maxPeople: 1,
+    maxPeople: 2,
     image: "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80",
     amenities: ["Wifi miễn phí", "Chỗ để xe", "Vệ sinh khép kín"]
   },
   {
     id: 6,
-    title: "Căn hộ dịch vụ view sông Hàn cực sang trọng",
+    title: "Căn hộ cao cấp view sông Hàn cực kỳ sang trọng",
     type: "Căn hộ",
     location: "Đường Bạch Đằng, Quận Hải Châu, Đà Nẵng",
     district: "Quận Hải Châu",
@@ -97,8 +97,8 @@ export const MOCK_ROOMS: Room[] = [
   },
   {
     id: 7,
-    title: "Phòng đôi đầy đủ tiện nghi gần biển Phạm Văn Đồng",
-    type: "Phòng đôi",
+    title: "Phòng trọ rộng rãi phù hợp 2 người, gần biển Phạm Văn Đồng",
+    type: "Phòng trọ",
     location: "Đường Lê Hữu Trác, Quận Sơn Trà, Đà Nẵng",
     district: "Quận Sơn Trà",
     price: 3200000,
@@ -109,8 +109,8 @@ export const MOCK_ROOMS: Room[] = [
   },
   {
     id: 8,
-    title: "Phòng ở ghép nam nữ ký túc xá dịch vụ Cẩm Lệ",
-    type: "Phòng ở ghép",
+    title: "Phòng trọ ký túc xá dịch vụ cao cấp tại Cẩm Lệ",
+    type: "Phòng trọ",
     location: "Đường Cách Mạng Tháng 8, Quận Cẩm Lệ, Đà Nẵng",
     district: "Quận Cẩm Lệ",
     price: 1200000,
@@ -122,7 +122,7 @@ export const MOCK_ROOMS: Room[] = [
   {
     id: 9,
     title: "Căn hộ chung cư cao cấp 2PN view vịnh biển cực mát",
-    type: "Chung cư",
+    type: "Căn hộ",
     location: "Đường Lê Đức Thọ, Quận Sơn Trà, Đà Nẵng",
     district: "Quận Sơn Trà",
     price: 9000000,
@@ -134,21 +134,21 @@ export const MOCK_ROOMS: Room[] = [
   },
   {
     id: 10,
-    title: "Nhà nguyên căn 2 tầng kiệt xe hơi cực rộng Thanh Khê",
-    type: "Nhà nguyên căn",
+    title: "Căn hộ mini thông minh có gác lửng cực đẹp tại Thanh Khê",
+    type: "Căn hộ mini",
     location: "Đường Điện Biên Phủ, Quận Thanh Khê, Đà Nẵng",
     district: "Quận Thanh Khê",
-    price: 7500000,
-    area: 80,
-    maxPeople: 5,
+    price: 3800000,
+    area: 28,
+    maxPeople: 2,
     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
     amenities: ["Wifi miễn phí", "Chỗ để xe", "Ban công", "Vệ sinh khép kín"],
     isNew: true
   },
   {
     id: 11,
-    title: "Phòng đơn khép kín sinh viên Hòa Vang, an ninh tốt",
-    type: "Phòng đơn",
+    title: "Phòng trọ khép kín sinh viên Hòa Vang, an ninh tốt",
+    type: "Phòng trọ",
     location: "Đường Quốc lộ 14B, Huyện Hòa Vang, Đà Nẵng",
     district: "Huyện Hòa Vang",
     price: 1100000,
@@ -325,13 +325,9 @@ const Browse: React.FC<BrowseProps> = () => {
                   >
                     <option value="Tất cả">Tất cả loại phòng</option>
                     <option value="Phòng trọ">Phòng trọ</option>
-                    <option value="Phòng đơn">Phòng đơn</option>
-                    <option value="Phòng đôi">Phòng đôi</option>
-                    <option value="Phòng ở ghép">Phòng ở ghép</option>
                     <option value="Studio">Studio</option>
-                    <option value="Căn hộ">Căn hộ Mini</option>
-                    <option value="Chung cư">Căn hộ chung cư</option>
-                    <option value="Nhà nguyên căn">Nhà nguyên căn</option>
+                    <option value="Căn hộ mini">Căn hộ mini</option>
+                    <option value="Căn hộ">Căn hộ</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                 </div>
@@ -371,7 +367,7 @@ const Browse: React.FC<BrowseProps> = () => {
 
           {/* Quick Tabs */}
           <div className="mt-8 flex flex-wrap justify-center gap-3 w-full max-w-4xl z-10 relative">
-            {['Tất cả', 'Phòng trọ', 'Phòng đơn', 'Phòng đôi', 'Phòng ở ghép', 'Studio', 'Căn hộ', 'Chung cư', 'Nhà nguyên căn'].map((tab) => (
+            {['Tất cả', 'Phòng trọ', 'Studio', 'Căn hộ mini', 'Căn hộ'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleQuickTabSelect(tab)}
@@ -381,7 +377,7 @@ const Browse: React.FC<BrowseProps> = () => {
                     : 'bg-white text-on-surface-variant border-gray-200 hover:border-primary-container hover:text-primary-container'
                 }`}
               >
-                {tab === 'Căn hộ' ? 'Căn hộ Mini' : tab === 'Chung cư' ? 'Chung cư' : tab}
+                {tab}
               </button>
             ))}
           </div>
@@ -422,7 +418,7 @@ const Browse: React.FC<BrowseProps> = () => {
                 Loại chỗ ở
               </h3>
               <div className="space-y-2">
-                {['Phòng trọ', 'Phòng đơn', 'Phòng đôi', 'Phòng ở ghép', 'Studio', 'Căn hộ', 'Chung cư', 'Nhà nguyên căn'].map((type) => (
+                {['Phòng trọ', 'Studio', 'Căn hộ mini', 'Căn hộ'].map((type) => (
                   <label key={type} className="flex items-center gap-3 cursor-pointer group text-sm">
                     <input 
                       type="checkbox"
@@ -439,7 +435,7 @@ const Browse: React.FC<BrowseProps> = () => {
                       className="rounded border-gray-300 text-primary-container focus:ring-primary-container w-4 h-4 cursor-pointer"
                     />
                     <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">
-                      {type === 'Căn hộ' ? 'Căn hộ Mini' : type === 'Chung cư' ? 'Căn hộ chung cư' : type}
+                      {type}
                     </span>
                   </label>
                 ))}

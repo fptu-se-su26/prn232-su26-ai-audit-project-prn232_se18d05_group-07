@@ -10,21 +10,16 @@ namespace Domain.Enums
 {
     public enum RoomType
     {
-        [Display(Name = "Phòng đơn")]
-        Single,
-        [Display(Name = "Phòng đôi")]
-        Double,
-        [Display(Name = "Căn hộ Studio")]
+        [Display(Name = "Phòng trọ")]
+        BoardingHouse,
+        
+        [Display(Name = "Studio")]
         Studio,
-        [Display(Name = "Phòng ở ghép")]
-        Shared,
-        [Display(Name = "Căn hộ Duplex")]
-        Duplex,
+        
+        [Display(Name = "Căn hộ mini")]
+        MiniApartment,
+        
         [Display(Name = "Căn hộ")]
-        Apartment,  // Khớp với SQL seed data ('Apartment')
-        [Display(Name = "Nhà nguyên căn")]
-        WholeHouse,
-        [Display(Name = "Khác")]
-        Other
+        Apartment
     }
 }
