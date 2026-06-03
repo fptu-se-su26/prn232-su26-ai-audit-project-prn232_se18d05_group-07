@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export interface Room {
   id: number;
@@ -15,8 +16,7 @@ export interface Room {
 }
 
 interface BrowseProps {
-  setCurrentPage: (page: 'home' | 'browse' | 'detail' | 'landlords') => void;
-  setSelectedRoomId: (id: number | null) => void;
+  _unused?: string;
 }
 
 export const MOCK_ROOMS: Room[] = [
@@ -159,7 +159,8 @@ export const MOCK_ROOMS: Room[] = [
   }
 ];
 
-const Browse: React.FC<BrowseProps> = ({ setCurrentPage, setSelectedRoomId }) => {
+const Browse: React.FC<BrowseProps> = () => {
+  const navigate = useNavigate();
   // Search & Filters State
   const [searchKeyword, setSearchKeyword] = useState('');
   const [inputKeyword, setInputKeyword] = useState('');
@@ -269,7 +270,7 @@ const Browse: React.FC<BrowseProps> = ({ setCurrentPage, setSelectedRoomId }) =>
               <li className="inline-flex items-center">
                 <a 
                   className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer" 
-                  onClick={() => setCurrentPage('home')}
+                  onClick={() => navigate('/')}
                 >
                   Trang chủ
                 </a>
@@ -563,8 +564,7 @@ const Browse: React.FC<BrowseProps> = ({ setCurrentPage, setSelectedRoomId }) =>
                 <div 
                   key={room.id}
                   onClick={() => {
-                    setSelectedRoomId(room.id);
-                    setCurrentPage('detail');
+                    navigate(`/room/${room.id}`);
                   }}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"
                 >
