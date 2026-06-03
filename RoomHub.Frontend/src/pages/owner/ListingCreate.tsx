@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
-import { MOCK_PROPERTIES } from './PropertyList';
+import api from '../../services/api';
 
 interface ListingCreateProps {
   setCurrentPage: (page: PageType) => void;
@@ -125,35 +125,61 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('Đang lưu thông tin tin đăng...');
 
+  const [properties, setProperties] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const res = await api.get('/owner/properties');
+        setProperties(res.data);
+      } catch (err) {
+        console.error('Không thể tải danh sách tài sản:', err);
+      }
+    };
+    fetchProperties();
+  }, []);
+
   // Auto-filled info card helper
   const selectedProperty = useMemo(() => {
-    return MOCK_PROPERTIES.find(p => p.id === selectedPropertyId) || null;
-  }, [selectedPropertyId]);
+    return properties.find(p => p.id === selectedPropertyId) || null;
+  }, [properties, selectedPropertyId]);
 
   const selectedUnit = useMemo(() => {
     if (!selectedPropertyId) return null;
-    const units = MOCK_UNITS_MAP[selectedPropertyId] || [];
-    return units.find(u => u.id === selectedUnitId) || null;
-  }, [selectedPropertyId, selectedUnitId]);
+    return rooms.find(u => u.id.toString() === selectedUnitId.toString()) || null;
+  }, [rooms, selectedPropertyId, selectedUnitId]);
 
   // Effect to automatically fill listing values when Property/Unit is chosen
   const handleAutoFill = (propId: number, unitId: string) => {
-    const prop = MOCK_PROPERTIES.find(p => p.id === propId);
+    const prop = properties.find(p => p.id === propId);
     if (prop) {
       setDistrict(prop.district);
       setRentPrice(prop.basePrice);
       setDeposit(prop.basePrice);
       setDetailAddress(prop.address.replace(`, ${prop.district}, Đà Nẵng`, ''));
-      // Pre-populate title
-      setTitle(`Phòng ${unitId} cao cấp tòa ${prop.name} ${prop.district}`);
+      
+      // Find room details to set title/number
+      const room = rooms.find(r => r.id.toString() === unitId.toString());
+      const roomNum = room ? room.roomNumber : unitId;
+      setTitle(`Phòng ${roomNum} cao cấp tòa ${prop.name} ${prop.district}`);
       setDescription(`Phòng khép kín sạch sẽ tại ${prop.name}, khu vực an ninh tốt, gần các trường đại học tiện nghi đầy đủ, thích hợp cho học sinh sinh viên văn phòng.`);
     }
   };
 
-  const handlePropertyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handlePropertyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = parseInt(e.target.value, 10);
     setSelectedPropertyId(id);
     setSelectedUnitId('');
+    setRooms([]);
+    if (id) {
+      try {
+        const res = await api.get(`/owner/properties/${id}`);
+        setRooms(res.data.rooms || []);
+      } catch (err) {
+        console.error('Không thể tải sơ đồ phòng của tòa nhà:', err);
+      }
+    }
   };
 
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -450,7 +476,7 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage }) => {
                         }`}
                       >
                         <option value="">-- Chọn tài sản --</option>
-                        {MOCK_PROPERTIES.map(p => (
+                        {properties.map(p => (
                           <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.district})</option>
                         ))}
                       </select>
@@ -468,8 +494,8 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage }) => {
                         }`}
                       >
                         <option value="">-- Chọn số phòng --</option>
-                        {selectedPropertyId && (MOCK_UNITS_MAP[selectedPropertyId] || []).map(u => (
-                          <option key={u.id} value={u.id}>Phòng {u.id} — Trạng thái: {u.status}</option>
+                        {selectedPropertyId && rooms.map(u => (
+                          <option key={u.id} value={u.id}>Phòng {u.roomNumber} — Trạng thái: {u.status}</option>
                         ))}
                       </select>
                       {errors.unit && <p className="text-[10px] text-red-500 font-semibold mt-1">{errors.unit}</p>}
@@ -477,7 +503,7 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage }) => {
                   </div>
 
                   {/* Warning if selecting rented room */}
-                  {selectedUnit && selectedUnit.isRented && (
+                  {selectedUnit && (selectedUnit.status === 'Đang thuê' || selectedUnit.status === 'Quá hạn') && (
                     <div className="bg-yellow-50 border border-yellow-200 p-3.5 rounded-2xl flex items-start gap-2.5 text-yellow-800 animate-scaleUp">
                       <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5 text-yellow-600">warning</span>
                       <p className="text-[10px] leading-relaxed font-semibold">

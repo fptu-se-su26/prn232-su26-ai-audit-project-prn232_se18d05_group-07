@@ -68,6 +68,15 @@ namespace Infrastructure
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IEmailService, EmailService>();
 
+            // Register Repositories
+            services.AddScoped<IBuildingRepository, Persistence.Repositories.BuildingRepository>();
+            services.AddScoped<IRoomRepository, Persistence.Repositories.RoomRepository>();
+            services.AddScoped<IInvoiceRepository, Persistence.Repositories.InvoiceRepository>();
+            services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
+
+            // Register Business Services
+            services.AddScoped<IPropertyService, Application.Services.PropertyService>();
+
             return services;
         }
     }

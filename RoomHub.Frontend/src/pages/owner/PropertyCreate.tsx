@@ -1,11 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface PropertyCreateProps {
   setCurrentPage: (page: PageType) => void;
 }
 
 type PropertyTypeOption = 'building' | 'studio' | 'mini-apartment' | 'independent';
+
+const DANANG_WARDS_MAP: { [district: string]: string[] } = {
+  'Quận Ngũ Hành Sơn': ['Hòa Hải', 'Hòa Quý', 'Khuê Mỹ', 'Mỹ An'],
+  'Quận Hải Châu': [
+    'Bình Hiên', 'Bình Thuận', 'Hòa Cường Bắc', 'Hòa Cường Nam', 
+    'Hòa Thuận Đông', 'Hòa Thuận Tây', 'Nam Dương', 'Phước Ninh', 
+    'Thạch Thang', 'Thanh Bình', 'Thuận Phước'
+  ],
+  'Quận Sơn Trà': ['An Hải Bắc', 'An Hải Đông', 'An Hải Tây', 'Mân Thái', 'Nại Hiên Đông', 'Phước Mỹ', 'Thọ Quang'],
+  'Quận Liên Chiểu': ['Hòa Hiệp Bắc', 'Hòa Hiệp Nam', 'Hòa Khánh Bắc', 'Hòa Khánh Nam', 'Hòa Minh'],
+  'Quận Cẩm Lệ': ['Hòa An', 'Hòa Phát', 'Hòa Thọ Đông', 'Hòa Thọ Tây', 'Hòa Xuân', 'Khuê Trung'],
+  'Quận Thanh Khê': ['An Khê', 'Chính Gián', 'Hòa Khê', 'Tam Thuận', 'Tân Chính', 'Thạc Gián', 'Thanh Khê Đông', 'Thanh Khê Tây', 'Vĩnh Trung'],
+  'Huyện Hòa Vang': ['Hòa Bắc', 'Hòa Châu', 'Hòa Khương', 'Hòa Liên', 'Hòa Nhơn', 'Hòa Phong', 'Hòa Phú', 'Hòa Phước', 'Hòa Sơn', 'Hòa Tiến', 'Hòa Ninh']
+};
 
 const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   // Stepper state: 1 to 5
@@ -16,11 +31,12 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   const [propertyName, setPropertyName] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [status, setStatus] = useState<'Đang hoạt động' | 'Tạm ẩn' | 'Đang bảo trì'>('Đang hoạt động');
   
   // Address states
   const [district, setDistrict] = useState('Quận Ngũ Hành Sơn');
-  const [ward, setWard] = useState('');
+  const [ward, setWard] = useState('Hòa Hải');
   const [detailAddress, setDetailAddress] = useState('');
 
   // Default Rentals Config states
@@ -30,7 +46,7 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
 
   // Auto Room Generation config states
   const [numFloors, setNumFloors] = useState<number>(4);
-  const [numRoomsPerFloor, setNumRoomsPerFloor] = useState<number>(5);
+  const [roomsCountPerFloor, setRoomsCountPerFloor] = useState<number[]>(new Array(4).fill(5));
   const [numberingRule, setNumberingRule] = useState<'standard' | 'prefix' | 'manual'>('standard');
   const [prefixText, setPrefixText] = useState('A');
   const [startNum, setStartNum] = useState<number>(1);
@@ -46,6 +62,35 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   // Validation errors state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // Custom Room Overrides states
+  const [customRooms, setCustomRooms] = useState<{
+    [roomId: string]: {
+      price?: number;
+      area?: number;
+      maxPeople?: number;
+    }
+  }>({});
+  const [selectedRoomForEdit, setSelectedRoomForEdit] = useState<string | null>(null);
+
+  const handleUpdateCustomRoom = (roomId: string, field: 'price' | 'area' | 'maxPeople', value: number | undefined) => {
+    setCustomRooms(prev => {
+      const roomData = prev[roomId] || {};
+      const updatedRoomData = { ...roomData, [field]: value };
+      
+      const isDefault = updatedRoomData.price === undefined && 
+                        updatedRoomData.area === undefined && 
+                        updatedRoomData.maxPeople === undefined;
+      
+      const next = { ...prev };
+      if (isDefault) {
+        delete next[roomId];
+      } else {
+        next[roomId] = updatedRoomData;
+      }
+      return next;
+    });
+  };
+
   const formatPrice = (price: number) => {
     return price.toLocaleString('vi-VN') + 'đ';
   };
@@ -57,9 +102,8 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   // Computed fields
   const totalRoomsToCreate = useMemo(() => {
     if (selectedType === 'independent') return 1;
-    if (numFloors <= 0 || numRoomsPerFloor <= 0) return 0;
-    return numFloors * numRoomsPerFloor;
-  }, [selectedType, numFloors, numRoomsPerFloor]);
+    return roomsCountPerFloor.reduce((sum, count) => sum + count, 0);
+  }, [selectedType, roomsCountPerFloor]);
 
   const fullDisplayAddress = useMemo(() => {
     const detail = detailAddress ? `${detailAddress}, ` : '';
@@ -72,14 +116,15 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     if (selectedType === 'independent') {
       return [{ id: 'Căn hộ đơn lập', floor: 1 }];
     }
-    if (numFloors <= 0 || numRoomsPerFloor <= 0 || numFloors > 30 || numRoomsPerFloor > 50) {
+    if (numFloors <= 0 || roomsCountPerFloor.length !== numFloors) {
       return [];
     }
 
     const list: { id: string; floor: number }[] = [];
     // From top floor down to 1
     for (let fl = numFloors; fl >= 1; fl--) {
-      for (let r = 0; r < numRoomsPerFloor; r++) {
+      const roomsOnFloor = roomsCountPerFloor[fl - 1] || 0;
+      for (let r = 0; r < roomsOnFloor; r++) {
         const roomIndex = startNum + r;
         const indexStr = roomIndex < 10 ? `0${roomIndex}` : `${roomIndex}`;
         let roomId = '';
@@ -95,7 +140,49 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
       }
     }
     return list;
-  }, [selectedType, numFloors, numRoomsPerFloor, numberingRule, prefixText, startNum]);
+  }, [selectedType, numFloors, roomsCountPerFloor, numberingRule, prefixText, startNum]);
+
+  // Handler for synchronizing floors count with rooms per floor array
+  const handleNumFloorsChange = (val: number) => {
+    const safeVal = isNaN(val) || val < 0 ? 0 : val;
+    setNumFloors(safeVal);
+    setRoomsCountPerFloor(prev => {
+      const next = [...prev];
+      if (safeVal > prev.length) {
+        const diff = safeVal - prev.length;
+        const lastVal = prev[prev.length - 1] || 5;
+        for (let i = 0; i < diff; i++) {
+          next.push(lastVal);
+        }
+      } else if (safeVal < prev.length) {
+        next.length = safeVal;
+      }
+      return next;
+    });
+  };
+
+  // Handler for uploading thumbnail image
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setIsUploadingImage(true);
+    try {
+      const res = await api.post('/owner/properties/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setImageUrl(res.data.url);
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.response?.data?.message || 'Không thể tải ảnh lên.';
+      alert(`Lỗi: ${errMsg}`);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   // Validation checks per step
   const validateStep = (step: number): boolean => {
@@ -104,6 +191,8 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     if (step === 2) {
       if (!propertyName.trim()) errs.propertyName = 'Tên tài sản không được để trống.';
       if (!detailAddress.trim()) errs.detailAddress = 'Địa chỉ chi tiết không được để trống.';
+      if (!ward) errs.ward = 'Vui lòng chọn Phường/Xã.';
+      if (!imageUrl) errs.imageUrl = 'Vui lòng tải ảnh đại diện lên.';
     }
 
     if (step === 3) {
@@ -114,7 +203,10 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
 
     if (step === 4 && selectedType !== 'independent') {
       if (numFloors <= 0 || numFloors > 30) errs.numFloors = 'Số tầng phải từ 1 đến 30.';
-      if (numRoomsPerFloor <= 0 || numRoomsPerFloor > 50) errs.numRoomsPerFloor = 'Số phòng mỗi tầng phải từ 1 đến 50.';
+      const invalidFloorIdx = roomsCountPerFloor.findIndex(count => count <= 0 || count > 50);
+      if (invalidFloorIdx !== -1) {
+        errs.roomsCount = `Số phòng ở tầng ${invalidFloorIdx + 1} phải từ 1 đến 50.`;
+      }
     }
 
     setErrors(errs);
@@ -138,19 +230,19 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     if (type === 'building') {
       setBasePrice(2500000);
       setNumFloors(4);
-      setNumRoomsPerFloor(5);
+      setRoomsCountPerFloor(new Array(4).fill(5));
     } else if (type === 'studio') {
       setBasePrice(5500000);
       setNumFloors(2);
-      setNumRoomsPerFloor(4);
+      setRoomsCountPerFloor(new Array(2).fill(4));
     } else if (type === 'mini-apartment') {
       setBasePrice(6200000);
       setNumFloors(3);
-      setNumRoomsPerFloor(3);
+      setRoomsCountPerFloor(new Array(3).fill(3));
     } else {
       setBasePrice(8500000);
       setNumFloors(1);
-      setNumRoomsPerFloor(1);
+      setRoomsCountPerFloor([1]);
     }
   };
 
@@ -162,22 +254,47 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     }
 
     setIsSubmitting(true);
+    setSubmissionMessage('Đang khởi tạo cấu trúc tòa nhà Đà Nẵng...');
     
-    // Step-by-step simulated progress messages
-    setTimeout(() => {
-      setSubmissionMessage('Đang khởi tạo cấu trúc tòa nhà Đà Nẵng...');
-      setTimeout(() => {
-        setSubmissionMessage(`Đang tự động thiết lập và sinh ${totalRoomsToCreate} phòng dạng lưới ở trạng thái "Còn trống"...`);
-        setTimeout(() => {
-          setSubmissionMessage('Đồng bộ hệ thống chốt chỉ số điện nước & biểu phí dịch vụ mặc định...');
-          setTimeout(() => {
-            setIsSubmitting(false);
-            alert(`Chúc mừng! Đã tạo thành công tài sản "${propertyName}" và sinh tự động ${totalRoomsToCreate} phòng cho thuê. Toàn bộ sơ đồ phòng đã sẵn sàng vận hành.`);
-            setCurrentPage('owner-properties'); // Re-route to list or detail 1
-          }, 1000);
-        }, 1200);
-      }, 1200);
-    }, 800);
+    api.post('/owner/properties', {
+      name: propertyName,
+      description: description,
+      address: fullDisplayAddress,
+      district: district,
+      ward: ward,
+      imageUrl: imageUrl,
+      selectedType: selectedType,
+      basePrice: basePrice,
+      defaultArea: defaultArea,
+      maxPeople: maxPeople,
+      numFloors: numFloors,
+      numRoomsPerFloor: roomsCountPerFloor[0] || 5, // fallback for legacy logic
+      roomsCountPerFloor: roomsCountPerFloor,
+      numberingRule: numberingRule,
+      prefixText: prefixText,
+      startNum: startNum,
+      electricityPrice: elecPrice,
+      waterPrice: waterPrice,
+      internetPrice: netPrice,
+      garbagePrice: garbagePrice,
+      customRooms: Object.entries(customRooms).map(([roomId, data]) => ({
+        roomNumber: roomId,
+        floorNumber: generatedPreviewRooms.find(r => r.id === roomId)?.floor || 1,
+        basePrice: data.price,
+        surfaceArea: data.area,
+        maxCapacity: data.maxPeople
+      }))
+    })
+    .then((res) => {
+      setIsSubmitting(false);
+      alert(`Chúc mừng! Đã tạo thành công tài sản "${propertyName}" và tự động sinh ${totalRoomsToCreate} phòng cho thuê.`);
+      setCurrentPage('owner-properties');
+    })
+    .catch((err) => {
+      setIsSubmitting(false);
+      const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài sản trọ.';
+      alert(`Lỗi: ${errMsg}`);
+    });
   };
 
   return (
@@ -422,16 +539,49 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                     />
                   </div>
 
-                  {/* Image URL URL input */}
+                  {/* Image upload field */}
                   <div className="col-span-2 space-y-1">
-                    <label className="uppercase">Nhập URL hình ảnh đại diện</label>
-                    <input 
-                      type="text" 
-                      placeholder="https://images.unsplash.com/... (URL ảnh chất lượng cao)"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-gray-50/50"
-                    />
+                    <label className="uppercase">Hình ảnh đại diện tài sản <span className="text-red-500">*</span></label>
+                    <div className="flex items-center gap-4 mt-1">
+                      {imageUrl ? (
+                        <div className="relative w-24 h-24 rounded-2xl border border-gray-200 overflow-hidden shrink-0 group">
+                          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <button 
+                            type="button" 
+                            onClick={() => setImageUrl('')}
+                            className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <label 
+                          htmlFor="thumbnail-upload" 
+                          className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 hover:border-primary-container flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-gray-400 hover:text-primary-container bg-gray-50/50"
+                        >
+                          <span className="material-symbols-outlined text-[24px]">add_a_photo</span>
+                          <span className="text-[10px] font-bold">Tải ảnh lên</span>
+                        </label>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id="thumbnail-upload" 
+                        className="hidden" 
+                        onChange={handleImageUpload} 
+                      />
+                      <div className="text-[10px] text-gray-400 leading-relaxed font-semibold">
+                        {isUploadingImage ? (
+                          <span className="text-primary-container font-bold flex items-center gap-1">
+                            <span className="w-4 h-4 rounded-full border-2 border-orange-100 border-t-primary-container animate-spin"></span>
+                            Đang tải ảnh lên...
+                          </span>
+                        ) : (
+                          <span>Chọn một ảnh đẹp đại diện cho tòa nhà/khu trọ của bạn (JPG, PNG, WEBP).</span>
+                        )}
+                      </div>
+                    </div>
+                    {errors.imageUrl && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.imageUrl}</p>}
                   </div>
 
                   {/* City (Disabled) */}
@@ -450,7 +600,11 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                     <label className="uppercase">Quận/Huyện</label>
                     <select 
                       value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
+                      onChange={(e) => {
+                        const dist = e.target.value;
+                        setDistrict(dist);
+                        setWard(DANANG_WARDS_MAP[dist]?.[0] || '');
+                      }}
                       className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-white"
                     >
                       <option value="Quận Ngũ Hành Sơn">Quận Ngũ Hành Sơn</option>
@@ -465,14 +619,20 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
 
                   {/* Ward */}
                   <div className="space-y-1">
-                    <label className="uppercase">Phường/Xã</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ví dụ: Hòa Hải, Mỹ An..."
+                    <label className="uppercase">Phường/Xã <span className="text-red-500">*</span></label>
+                    <select 
                       value={ward}
                       onChange={(e) => setWard(e.target.value)}
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-gray-50/50"
-                    />
+                      className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
+                        errors.ward ? 'border-red-500 bg-red-50/10 focus:border-red-500' : 'border-gray-200 bg-white focus:border-primary-container'
+                      }`}
+                    >
+                      <option value="">-- Chọn Phường/Xã --</option>
+                      {(DANANG_WARDS_MAP[district] || []).map(w => (
+                        <option key={w} value={w}>{w}</option>
+                      ))}
+                    </select>
+                    {errors.ward && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.ward}</p>}
                   </div>
 
                   {/* Detail Address */}
@@ -582,16 +742,27 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                   {/* Capacity */}
                   <div className="space-y-1">
                     <label className="uppercase">Số người tối đa <span className="text-red-500">*</span></label>
-                    <div className="relative">
+                    <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50/50 focus-within:border-primary-container overflow-hidden h-10 w-36">
+                      <button 
+                        type="button" 
+                        onClick={() => setMaxPeople(prev => Math.max(1, prev - 1))}
+                        className="w-10 h-full hover:bg-orange-50 text-gray-500 hover:text-primary-container font-black text-sm border-r border-gray-150 transition-colors select-none cursor-pointer flex items-center justify-center"
+                      >
+                        —
+                      </button>
                       <input 
                         type="number" 
                         value={maxPeople}
-                        onChange={(e) => setMaxPeople(parseInt(e.target.value, 10))}
-                        className={`w-full pl-3 pr-16 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
-                          errors.maxPeople ? 'border-red-500 bg-red-50/10 focus:border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
-                        }`}
+                        onChange={(e) => setMaxPeople(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="flex-grow w-full text-center bg-transparent text-xs font-bold text-gray-700 focus:outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">người/phòng</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setMaxPeople(prev => prev + 1)}
+                        className="w-10 h-full hover:bg-orange-50 text-gray-500 hover:text-primary-container font-black text-sm border-l border-gray-150 transition-colors select-none cursor-pointer flex items-center justify-center"
+                      >
+                        +
+                      </button>
                     </div>
                     {errors.maxPeople && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.maxPeople}</p>}
                   </div>
@@ -645,28 +816,12 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                           min="1"
                           max="30"
                           value={numFloors}
-                          onChange={(e) => setNumFloors(parseInt(e.target.value, 10))}
+                          onChange={(e) => handleNumFloorsChange(parseInt(e.target.value, 10))}
                           className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
                             errors.numFloors ? 'border-red-500 bg-red-50/10 focus:border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                           }`}
                         />
                         {errors.numFloors && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.numFloors}</p>}
-                      </div>
-
-                      {/* Rooms per floor */}
-                      <div className="space-y-1">
-                        <label className="uppercase">Số phòng/căn mỗi tầng <span className="text-red-500">*</span></label>
-                        <input 
-                          type="number" 
-                          min="1"
-                          max="50"
-                          value={numRoomsPerFloor}
-                          onChange={(e) => setNumRoomsPerFloor(parseInt(e.target.value, 10))}
-                          className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
-                            errors.numRoomsPerFloor ? 'border-red-500 bg-red-50/10 focus:border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
-                          }`}
-                        />
-                        {errors.numRoomsPerFloor && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.numRoomsPerFloor}</p>}
                       </div>
 
                       {/* Numbering rule */}
@@ -681,6 +836,41 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                           <option value="prefix">Tiền tố tùy chỉnh (ví dụ: A101, B101...)</option>
                           <option value="manual">Tự nhập / Sửa đổi sau</option>
                         </select>
+                      </div>
+
+                      {/* Custom rooms per floor grid */}
+                      <div className="col-span-2 space-y-2 border border-gray-150 p-4 rounded-2xl bg-gray-50/50 mt-1">
+                        <label className="uppercase block text-xs font-black text-gray-500">Cấu hình số phòng cụ thể cho từng tầng</label>
+                        <p className="text-[10px] text-gray-400 font-semibold mb-2">Bạn có thể thay đổi số lượng phòng của riêng từng tầng để khớp với thiết kế thực tế.</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
+                          {Array.from({ length: numFloors }).map((_, idx) => {
+                            const floorNum = numFloors - idx;
+                            const floorIndex = floorNum - 1;
+                            const currentCount = roomsCountPerFloor[floorIndex] || 5;
+
+                            return (
+                              <div key={floorIndex} className="p-2.5 bg-white border border-gray-150 rounded-xl flex items-center justify-between gap-1.5 shadow-sm">
+                                <span className="text-[10px] font-black text-gray-600 shrink-0">Tầng {floorNum}</span>
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  max="50"
+                                  value={currentCount}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10) || 1;
+                                    setRoomsCountPerFloor(prev => {
+                                      const next = [...prev];
+                                      next[floorIndex] = Math.min(50, Math.max(1, val));
+                                      return next;
+                                    });
+                                  }}
+                                  className="w-12 text-center py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:outline-none focus:border-primary-container bg-white"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {errors.roomsCount && <p className="text-[10px] text-red-500 font-bold mt-1">{errors.roomsCount}</p>}
                       </div>
 
                       {/* Prefix (conditional) */}
@@ -713,7 +903,7 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                     <div className="bg-orange-50/30 border border-orange-100/50 p-4 rounded-2xl text-xs leading-normal">
                       <div className="flex justify-between items-center font-black mb-1">
                         <span className="text-gray-500">Tóm tắt số lượng:</span>
-                        <span className="text-primary-container">{numFloors} tầng × {numRoomsPerFloor} phòng = {totalRoomsToCreate} phòng cho thuê</span>
+                        <span className="text-primary-container">{numFloors} tầng · Tổng cộng {totalRoomsToCreate} phòng cho thuê</span>
                       </div>
                       <p className="text-[10px] text-gray-400 font-medium leading-relaxed">
                         Toàn bộ {totalRoomsToCreate} phòng sau khi sinh tự động sẽ được gán ở trạng thái **"Còn trống"** (Vacant), cài đặt các chi phí mặc định của chủ nhà.
@@ -965,23 +1155,42 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                       
                       {/* Floor rooms row */}
                       <div className="flex-grow grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                        {generatedPreviewRooms.filter(r => r.floor === fl).map((room, idx) => (
-                          <div 
-                            key={idx} 
-                            className="p-1.5 bg-green-50/70 border border-green-200 text-green-800 text-[10px] font-black rounded-lg text-center truncate cursor-not-allowed"
-                            title={`Phòng ${room.id} - Sẵn sàng (Còn trống)`}
-                          >
-                            {room.id}
-                          </div>
-                        ))}
+                        {generatedPreviewRooms.filter(r => r.floor === fl).map((room, idx) => {
+                          const isCustomized = !!customRooms[room.id];
+                          const isSelected = selectedRoomForEdit === room.id;
+                          return (
+                            <div 
+                              key={idx} 
+                              onClick={() => setSelectedRoomForEdit(room.id)}
+                              className={`p-1.5 text-[10px] font-black rounded-lg text-center truncate cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-amber-100 border-2 border-amber-500 text-amber-950 shadow'
+                                  : isCustomized
+                                  ? 'bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100'
+                                  : 'bg-green-50/70 border border-green-200 text-green-800 hover:bg-green-100'
+                              }`}
+                              title={`Phòng ${room.id} - ${isCustomized ? 'Đã tùy chỉnh' : 'Sẵn sàng'} (Bấm để thiết lập riêng)`}
+                            >
+                              <div className="flex items-center justify-center gap-0.5">
+                                {room.id}
+                                {isCustomized && (
+                                  <span className="material-symbols-outlined text-[10px] text-amber-600 font-bold">settings</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
                   
                   {/* Grid legends */}
-                  <div className="flex gap-2 text-[9px] font-bold text-gray-400 pt-2 border-t border-gray-100 justify-end">
+                  <div className="flex gap-2 text-[9px] font-bold text-gray-400 pt-2 border-t border-gray-100 justify-end flex-wrap">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-green-500"></span> Còn trống
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span> Đã tùy chỉnh
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-gray-300"></span> Đã thuê
@@ -989,6 +1198,102 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Custom Room Editor Panel */}
+          {selectedRoomForEdit && (
+            <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl space-y-3 animate-scaleUp text-xs mt-4">
+              <div className="flex justify-between items-center border-b border-amber-200 pb-2">
+                <span className="font-black text-amber-900 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px] text-amber-700">edit_note</span>
+                  Tùy chỉnh phòng {selectedRoomForEdit}
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => setSelectedRoomForEdit(null)}
+                  className="text-amber-700 hover:text-amber-950 font-bold hover:underline"
+                >
+                  Đóng
+                </button>
+              </div>
+
+              <div className="space-y-3 font-bold text-gray-600">
+                {/* Custom Price */}
+                <div className="space-y-1">
+                  <label className="uppercase text-[9px] text-gray-500 tracking-wider">Giá thuê riêng (đ/tháng)</label>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      placeholder={`Mặc định: ${basePrice.toLocaleString('vi-VN')}đ`}
+                      value={customRooms[selectedRoomForEdit]?.price ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                        handleUpdateCustomRoom(selectedRoomForEdit, 'price', val);
+                      }}
+                      className="w-full pl-3 pr-16 py-2 border border-amber-200 focus:border-amber-400 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">đ</span>
+                  </div>
+                </div>
+
+                {/* Custom Area */}
+                <div className="space-y-1">
+                  <label className="uppercase text-[9px] text-gray-500 tracking-wider">Diện tích riêng (m²)</label>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      placeholder={`Mặc định: ${defaultArea} m²`}
+                      value={customRooms[selectedRoomForEdit]?.area ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                        handleUpdateCustomRoom(selectedRoomForEdit, 'area', val);
+                      }}
+                      className="w-full pl-3 pr-12 py-2 border border-amber-200 focus:border-amber-400 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">m²</span>
+                  </div>
+                </div>
+
+                {/* Custom Max People */}
+                <div className="space-y-1">
+                  <label className="uppercase text-[9px] text-gray-500 tracking-wider">Số người tối đa riêng</label>
+                  <input 
+                    type="number"
+                    placeholder={`Mặc định: ${maxPeople} người`}
+                    value={customRooms[selectedRoomForEdit]?.maxPeople ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                      handleUpdateCustomRoom(selectedRoomForEdit, 'maxPeople', val);
+                    }}
+                    className="w-full px-3 py-2 border border-amber-200 focus:border-amber-400 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-amber-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomRooms(prev => {
+                      const next = { ...prev };
+                      delete next[selectedRoomForEdit];
+                      return next;
+                    });
+                    setSelectedRoomForEdit(null);
+                  }}
+                  className="text-[10px] text-red-600 hover:underline font-bold"
+                >
+                  Xóa tùy chỉnh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRoomForEdit(null)}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold transition-colors"
+                >
+                  Xác nhận
+                </button>
+              </div>
             </div>
           )}
 
