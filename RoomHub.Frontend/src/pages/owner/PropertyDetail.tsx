@@ -1,15 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
-import { MOCK_PROPERTIES } from './PropertyList';
+import api from '../../services/api';
 
 interface PropertyDetailProps {
   propertyId: number | null;
   setCurrentPage: (page: PageType) => void;
 }
 
-// Mock room models and statuses
+// Room models and statuses
 export interface RoomUnit {
-  id: string; // e.g. '401'
+  id: string; // Database ID
+  roomNumber: string; // Display number (e.g. '101')
   floor: number;
   type: 'Phòng trọ' | 'Studio' | 'Căn hộ mini' | 'Căn hộ';
   area: number;
@@ -23,40 +24,13 @@ export interface RoomUnit {
   outstandingBillAmount?: number;
 }
 
-// Generate rich mock rooms for FPT House (ID 1)
-const ROOMS_FPT_HOUSE: RoomUnit[] = [
-  // Floor 4
-  { id: '401', floor: 4, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  { id: '402', floor: 4, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Nguyễn Văn An', tenantPhone: '0905 123 456', tenantStartDate: '01/03/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '403', floor: 4, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Trần Thị Bình', tenantPhone: '0914 987 654', tenantStartDate: '15/02/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '404', floor: 4, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Bảo trì' },
-  { id: '405', floor: 4, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  // Floor 3
-  { id: '301', floor: 3, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Lê Văn Cường', tenantPhone: '0988 555 444', tenantStartDate: '01/04/2026', deposit: 2500000, outstandingBillStatus: 'Chưa thanh toán', outstandingBillAmount: 3200000 },
-  { id: '302', floor: 3, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Quá hạn', tenantName: 'Phạm Thị Dung', tenantPhone: '0909 777 888', tenantStartDate: '01/01/2026', deposit: 5000000, outstandingBillStatus: 'Quá hạn', outstandingBillAmount: 3450000 },
-  { id: '303', floor: 3, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Hoàng Văn Em', tenantPhone: '0977 111 222', tenantStartDate: '10/03/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '304', floor: 3, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  { id: '305', floor: 3, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Ngô Quốc Khánh', tenantPhone: '0935 444 888', tenantStartDate: '05/04/2026', deposit: 2500000, outstandingBillStatus: 'Chưa thanh toán', outstandingBillAmount: 3120000 },
-  // Floor 2
-  { id: '201', floor: 2, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Trịnh Hoài Nam', tenantPhone: '0905 555 666', tenantStartDate: '01/03/2026', deposit: 2500000, outstandingBillStatus: 'Chưa thanh toán', outstandingBillAmount: 3310000 },
-  { id: '202', floor: 2, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  { id: '203', floor: 2, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Quá hạn', tenantName: 'Vũ Thị Quỳnh', tenantPhone: '0912 333 444', tenantStartDate: '01/12/2025', deposit: 2500000, outstandingBillStatus: 'Quá hạn', outstandingBillAmount: 3500000 },
-  { id: '204', floor: 2, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Phạm Minh Đức', tenantPhone: '0966 888 999', tenantStartDate: '15/02/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '205', floor: 2, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  // Floor 1
-  { id: '101', floor: 1, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Đặng Ngọc Ánh', tenantPhone: '0905 888 777', tenantStartDate: '01/02/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '102', floor: 1, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Đang thuê', tenantName: 'Trần Minh Hoàng', tenantPhone: '0979 222 333', tenantStartDate: '01/03/2026', deposit: 2500000, outstandingBillStatus: 'Đã thanh toán', outstandingBillAmount: 0 },
-  { id: '103', floor: 1, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' },
-  { id: '104', floor: 1, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Bảo trì' },
-  { id: '105', floor: 1, type: 'Phòng trọ', area: 25, price: 2500000, status: 'Còn trống' }
-];
-
 const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentPage }) => {
-  // Use either selected property or default to ID 1 (FPT House) for detail rendering
+  // Use either selected property or default to ID 1
   const activePropertyId = propertyId || 1;
-  const property = useMemo(() => {
-    return MOCK_PROPERTIES.find(p => p.id === activePropertyId) || MOCK_PROPERTIES[0];
-  }, [activePropertyId]);
+  const [property, setProperty] = useState<any>(null);
+  const [rooms, setRooms] = useState<RoomUnit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'tenants' | 'invoices' | 'listings' | 'settings'>('grid');
@@ -65,76 +39,106 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
   // Selected Room for Quick Detail Drawer
   const [selectedRoom, setSelectedRoom] = useState<RoomUnit | null>(null);
 
-  // Settings Configuration Form Binding Mock State
-  const [priceElec, setPriceElec] = useState(property.electricityPrice);
-  const [priceWater, setPriceWater] = useState(property.waterPrice);
-  const [priceNet, setPriceNet] = useState(property.internetPrice);
-  const [priceGarbage, setPriceGarbage] = useState(property.garbagePrice);
-  const [priceParking, setPriceParking] = useState(property.parkingPrice);
-  const [priceService, setPriceService] = useState(property.servicePrice);
+  // Settings Configuration Form Binding
+  const [priceElec, setPriceElec] = useState(0);
+  const [priceWater, setPriceWater] = useState(0);
+  const [priceNet, setPriceNet] = useState(0);
+  const [priceGarbage, setPriceGarbage] = useState(0);
+  const [priceParking, setPriceParking] = useState(50000);
+  const [priceService, setPriceService] = useState(0);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
+  const fetchPropertyDetail = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/owner/properties/${activePropertyId}`);
+      setProperty(res.data.property);
+      setRooms(res.data.rooms);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError('Không thể tải thông tin chi tiết tài sản này.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPropertyDetail();
+  }, [activePropertyId]);
+
+  useEffect(() => {
+    if (property) {
+      setPriceElec(property.electricityPrice);
+      setPriceWater(property.waterPrice);
+      setPriceNet(property.internetPrice);
+      setPriceGarbage(property.garbagePrice);
+      setPriceParking(property.parkingPrice || 50000);
+      setPriceService(property.servicePrice || 0);
+    }
+  }, [property]);
+
   // Group rooms by floor (Highest to Lowest floor)
   const groupedRoomsByFloor = useMemo(() => {
     const floorsMap: { [floor: number]: RoomUnit[] } = {};
-    ROOMS_FPT_HOUSE.forEach(room => {
+    rooms.forEach(room => {
       if (!floorsMap[room.floor]) {
         floorsMap[room.floor] = [];
       }
       floorsMap[room.floor].push(room);
     });
 
-    // Sort rooms in each floor ascending by id
+    // Sort rooms in each floor ascending by roomNumber
     Object.keys(floorsMap).forEach(fl => {
-      floorsMap[parseInt(fl, 10)].sort((a, b) => a.id.localeCompare(b.id));
+      floorsMap[parseInt(fl, 10)].sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
     });
 
     // Return entries sorted descending by floor number
     return Object.entries(floorsMap)
       .map(([floor, rooms]) => ({ floorNumber: parseInt(floor, 10), rooms }))
       .sort((a, b) => b.floorNumber - a.floorNumber);
-  }, []);
+  }, [rooms]);
 
   // Summary Metrics calculations
   const stats = useMemo(() => {
-    const total = ROOMS_FPT_HOUSE.length;
-    const vacant = ROOMS_FPT_HOUSE.filter(r => r.status === 'Còn trống').length;
-    const occupied = ROOMS_FPT_HOUSE.filter(r => r.status === 'Đang thuê' || r.status === 'Quá hạn').length;
-    const maintenance = ROOMS_FPT_HOUSE.filter(r => r.status === 'Bảo trì').length;
-    const unpaidInvoices = ROOMS_FPT_HOUSE.filter(r => r.outstandingBillStatus === 'Chưa thanh toán').length;
-    const overdueInvoices = ROOMS_FPT_HOUSE.filter(r => r.outstandingBillStatus === 'Quá hạn').length;
+    const total = rooms.length;
+    const vacant = rooms.filter(r => r.status === 'Còn trống').length;
+    const occupied = rooms.filter(r => r.status === 'Đang thuê' || r.status === 'Quá hạn').length;
+    const maintenance = rooms.filter(r => r.status === 'Bảo trì').length;
+    const unpaidInvoices = rooms.filter(r => r.outstandingBillStatus === 'Chưa thanh toán').length;
+    const overdueInvoices = rooms.filter(r => r.outstandingBillStatus === 'Quá hạn').length;
     const totalUnpaid = unpaidInvoices + overdueInvoices;
 
     return { total, vacant, occupied, maintenance, unpaidInvoices, overdueInvoices, totalUnpaid };
-  }, []);
+  }, [rooms]);
 
   // Filter lists based on the selected month/property
   const activeTenants = useMemo(() => {
-    return ROOMS_FPT_HOUSE.filter(r => r.tenantName).map(r => ({
+    return rooms.filter(r => r.tenantName).map(r => ({
       name: r.tenantName!,
       phone: r.tenantPhone!,
-      room: r.id,
+      room: r.roomNumber,
       startDate: r.tenantStartDate!,
       deposit: r.deposit!,
       status: r.status === 'Quá hạn' ? 'Chưa đóng tiền' : 'Đang thuê',
       unpaidAmount: r.outstandingBillAmount || 0
     }));
-  }, []);
+  }, [rooms]);
 
   const activeInvoices = useMemo(() => {
-    return ROOMS_FPT_HOUSE.filter(r => r.tenantName).map((r) => ({
-      id: `HD-FPTH-${r.id}-0526`,
+    return rooms.filter(r => r.tenantName).map((r) => ({
+      id: `HD-FPTH-${r.roomNumber}-0526`,
       month: '05/2026',
-      room: r.id,
+      room: r.roomNumber,
       tenant: r.tenantName!,
-      total: r.price + (r.outstandingBillAmount ? r.outstandingBillAmount - r.price : 810000), // Rent + Electric (200kWh) + Water (10m3) + Net
+      total: r.price + (r.outstandingBillAmount ? r.outstandingBillAmount - r.price : 810000),
       status: r.outstandingBillStatus || 'Đã thanh toán',
       dueDate: '10/05/2026'
     }));
-  }, []);
+  }, [rooms]);
 
   const activeListings = useMemo(() => {
     return [
@@ -176,6 +180,29 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
       setSelectedRoom(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+        <p className="text-xs font-bold text-gray-500">Đang tải sơ đồ phòng...</p>
+      </div>
+    );
+  }
+
+  if (error || !property) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center space-y-3 max-w-md mx-auto mt-12 shadow-sm">
+        <span className="material-symbols-outlined text-[36px] text-red-500 block">error</span>
+        <h3 className="text-sm font-bold">{error || 'Không tìm thấy thông tin tòa nhà.'}</h3>
+        <button onClick={fetchPropertyDetail} className="px-4 py-2 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="space-y-6 relative pb-12">
@@ -484,7 +511,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                           }`}
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-black">{room.id}</span>
+                            <span className="text-sm font-black">{room.roomNumber}</span>
                             
                             {/* Warnings/Status mini icons */}
                             {isOverdue && (
@@ -545,9 +572,9 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 font-semibold text-gray-700">
-                  {ROOMS_FPT_HOUSE.map((room) => (
+                  {rooms.map((room) => (
                     <tr key={room.id} className="hover:bg-orange-50/20 transition-colors">
-                      <td className="p-4 font-black text-on-surface">{room.id}</td>
+                      <td className="p-4 font-black text-on-surface">{room.roomNumber}</td>
                       <td className="p-4">Tầng {room.floor}</td>
                       <td className="p-4 text-gray-500">{room.type}</td>
                       <td className="p-4">{room.area} m²</td>

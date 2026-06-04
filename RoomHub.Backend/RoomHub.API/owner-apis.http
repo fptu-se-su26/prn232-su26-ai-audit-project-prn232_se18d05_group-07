@@ -1,0 +1,82 @@
+### RoomHub Owner APIs Test Suite
+@baseUrl = http://localhost:5143/api
+@ownerEmail = owner@roomhub.vn
+@password = Password123!
+
+### 1. LOGIN TO OBTAIN JWT TOKEN
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{ownerEmail}}",
+  "password": "{{password}}"
+}
+
+### Save the Token from the login response
+@token = {{login.response.body.token}}
+
+### 2. GET OWNER DASHBOARD SUMMARY
+GET {{baseUrl}}/owner/dashboard
+Authorization: Bearer {{token}}
+
+### 3. GET OWNER PROPERTY LIST
+GET {{baseUrl}}/owner/properties
+Authorization: Bearer {{token}}
+
+### 4. GET SINGLE PROPERTY DETAIL (FPT House ID=1)
+GET {{baseUrl}}/owner/properties/1
+Authorization: Bearer {{token}}
+
+### 5. GET UNIT DETAIL (Room 101 ID=1, which is rented to Nguyễn Văn A)
+GET {{baseUrl}}/owner/units/1
+Authorization: Bearer {{token}}
+
+### 6. UPDATE UNIT OPERATIONAL STATUS (To Maintenance)
+PUT {{baseUrl}}/owner/units/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "Bảo trì"
+}
+
+### 7. UPDATE INTERNAL NOTES ON ROOM
+POST {{baseUrl}}/owner/units/1/notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "notes": "Khách báo sẽ đóng tiền muộn 2 ngày"
+}
+
+### 8. SEARCH ROOMHUB ACCOUNT FOR TENANT LINKING (Search tenant1@gmail.com)
+GET {{baseUrl}}/owner/tenants/search?query=tenant1@gmail.com
+Authorization: Bearer {{token}}
+
+### 9. GET ALL INVOICES FOR OWNER
+GET {{baseUrl}}/owner/invoices
+Authorization: Bearer {{token}}
+
+### 10. GET SINGLE INVOICE DETAIL (Invoice ID=1, Month -2 paid invoice)
+GET {{baseUrl}}/owner/invoices/1
+Authorization: Bearer {{token}}
+
+### 11. GET INVOICE DETAIL (Invoice ID=2, Month -1 unpaid invoice)
+GET {{baseUrl}}/owner/invoices/2
+Authorization: Bearer {{token}}
+
+### 12. RECORD MANUAL PAYMENT (Ghi nhận thanh toán thủ công)
+POST {{baseUrl}}/owner/invoices/2/payment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 3500000,
+  "paymentMethod": "BankTransfer",
+  "transactionId": "FTX1293810238"
+}
+
+### 13. GET OWNER LISTINGS
+GET {{baseUrl}}/owner/listings
+Authorization: Bearer {{token}}

@@ -29,6 +29,7 @@ namespace Domain.Entities
         public bool IsDeleted { get; set; }
 
         public bool IsPublished { get; set; } = false;
+        public bool HasListing { get; set; } = false;
         public decimal? ElectricityPrice { get; set; }
         public decimal? WaterPrice { get; set; }
         public decimal? InternetPrice { get; set; }
