@@ -27,6 +27,22 @@ import VerifyResetOtp from './pages/VerifyResetOtp';
 import ResetPassword from './pages/ResetPassword';
 import VerifySuccess from './pages/VerifySuccess';
 import { AuthProvider } from './context/AuthContext';
+import TenantLayout from './components/tenant/TenantLayout';
+import TenantDashboard from './pages/tenant/Dashboard';
+import TenantMyRoom from './pages/tenant/MyRoom';
+import TenantMyInvoices from './pages/tenant/MyInvoices';
+import TenantInvoiceDetail from './pages/tenant/InvoiceDetail';
+import TenantFavorites from './pages/tenant/Favorites';
+import TenantMaintenance from './pages/tenant/Maintenance';
+import TenantMessages from './pages/tenant/Messages';
+import TenantProfile from './pages/tenant/Profile';
+import AdminLayout from './components/admin/AdminLayout';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminUsers from './pages/admin/Users';
+import AdminBuildings from './pages/admin/Buildings';
+import AdminRooms from './pages/admin/Rooms';
+import AdminModeration from './pages/admin/Moderation';
+import AdminSubscriptions from './pages/admin/Subscriptions';
 
 export type PageType = 
   | 'home' 
@@ -48,7 +64,21 @@ export type PageType =
   | 'owner-invoice-detail'
   | 'owner-cost-settings'
   | 'owner-notifications'
-  | 'owner-profile';
+  | 'owner-profile'
+  | 'tenant-dashboard'
+  | 'tenant-room'
+  | 'tenant-invoices'
+  | 'tenant-invoice-detail'
+  | 'tenant-favorites'
+  | 'tenant-maintenance'
+  | 'tenant-messages'
+  | 'tenant-profile'
+  | 'admin-dashboard'
+  | 'admin-users'
+  | 'admin-buildings'
+  | 'admin-rooms'
+  | 'admin-moderation'
+  | 'admin-subscriptions';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
@@ -63,6 +93,36 @@ const AppContent: React.FC = () => {
       if (!hash || hash === '#' || hash === '#/') {
         setCurrentPage('home');
         return;
+      }
+
+      // Tenant routes
+      if (hash.startsWith('#/tenant/')) {
+        const sub = hash.replace('#/tenant/', '');
+        const tenantMap: Record<string, PageType> = {
+          'dashboard': 'tenant-dashboard',
+          'room': 'tenant-room',
+          'invoices': 'tenant-invoices',
+          'invoices/detail': 'tenant-invoice-detail',
+          'favorites': 'tenant-favorites',
+          'maintenance': 'tenant-maintenance',
+          'messages': 'tenant-messages',
+          'profile': 'tenant-profile',
+        };
+        if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
+      }
+
+      // Admin routes
+      if (hash.startsWith('#/admin/')) {
+        const sub = hash.replace('#/admin/', '');
+        const adminMap: Record<string, PageType> = {
+          'dashboard': 'admin-dashboard',
+          'users': 'admin-users',
+          'buildings': 'admin-buildings',
+          'rooms': 'admin-rooms',
+          'moderation': 'admin-moderation',
+          'subscriptions': 'admin-subscriptions',
+        };
+        if (adminMap[sub]) { setCurrentPage(adminMap[sub]); return; }
       }
 
       // Owner routes
@@ -134,7 +194,65 @@ const AppContent: React.FC = () => {
         window.location.hash = targetHash;
       }
     }
+
+    if (currentPage.startsWith('tenant-')) {
+      const sub = currentPage === 'tenant-invoice-detail' ? 'invoices/detail' : currentPage.replace('tenant-', '');
+      const targetHash = '#/tenant/' + sub;
+      if (window.location.hash !== targetHash) window.location.hash = targetHash;
+    }
+
+    if (currentPage.startsWith('admin-')) {
+      const targetHash = '#/admin/' + currentPage.replace('admin-', '');
+      if (window.location.hash !== targetHash) window.location.hash = targetHash;
+    }
   }, [currentPage, selectedPropertyId, selectedUnitId, selectedInvoiceId]);
+
+  const isTenantRoute = currentPage.startsWith('tenant-');
+  const isAdminRoute = currentPage.startsWith('admin-');
+
+  if (isAdminRoute) {
+    return (
+      <AdminLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
+        {currentPage === 'admin-users' ? (
+          <AdminUsers />
+        ) : currentPage === 'admin-buildings' ? (
+          <AdminBuildings />
+        ) : currentPage === 'admin-rooms' ? (
+          <AdminRooms />
+        ) : currentPage === 'admin-moderation' ? (
+          <AdminModeration />
+        ) : currentPage === 'admin-subscriptions' ? (
+          <AdminSubscriptions />
+        ) : (
+          <AdminDashboard setCurrentPage={setCurrentPage} />
+        )}
+      </AdminLayout>
+    );
+  }
+
+  if (isTenantRoute) {
+    return (
+      <TenantLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
+        {currentPage === 'tenant-room' ? (
+          <TenantMyRoom setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-invoices' ? (
+          <TenantMyInvoices setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-invoice-detail' ? (
+          <TenantInvoiceDetail setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-favorites' ? (
+          <TenantFavorites setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-maintenance' ? (
+          <TenantMaintenance />
+        ) : currentPage === 'tenant-messages' ? (
+          <TenantMessages />
+        ) : currentPage === 'tenant-profile' ? (
+          <TenantProfile />
+        ) : (
+          <TenantDashboard setCurrentPage={setCurrentPage} />
+        )}
+      </TenantLayout>
+    );
+  }
 
   const isOwnerRoute = currentPage.startsWith('owner-');
 
