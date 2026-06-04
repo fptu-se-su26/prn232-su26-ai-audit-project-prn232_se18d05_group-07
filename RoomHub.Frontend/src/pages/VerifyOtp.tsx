@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const VerifyOtp: React.FC = () => {
   const { verifyOtp, resendOtp } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [otpValues, setOtpValues] = useState<string[]>(Array(6).fill(''));
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +13,10 @@ const VerifyOtp: React.FC = () => {
 
   // Resend OTP state
   const [resendBtnText, setResendBtnText] = useState('Gửi lại mã');
-  const [resendMsg, setResendMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const initialMessage = location.state?.message || '';
+  const [resendMsg, setResendMsg] = useState<{ text: string; isError: boolean } | null>(
+    initialMessage ? { text: initialMessage, isError: false } : null
+  );
   const [cooldown, setCooldown] = useState(0);
 
   const inputRefs = useRef<HTMLInputElement[]>([]);

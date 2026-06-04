@@ -85,6 +85,7 @@ const AppContent: React.FC = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
 
   // 1. Listen for hash changes to support direct URL typing for owner routes
   useEffect(() => {
@@ -146,7 +147,20 @@ const AppContent: React.FC = () => {
           return;
         }
       }
-      if (hash === '#/owner/listings/create') { setCurrentPage('owner-listings-create'); return; }
+      if (hash.startsWith('#/owner/listings/edit/')) {
+        const idStr = hash.replace('#/owner/listings/edit/', '');
+        const id = parseInt(idStr, 10);
+        if (!isNaN(id)) {
+          setSelectedListingId(id);
+          setCurrentPage('owner-listings-create');
+          return;
+        }
+      }
+      if (hash === '#/owner/listings/create') {
+        setSelectedListingId(null);
+        setCurrentPage('owner-listings-create');
+        return;
+      }
       if (hash === '#/owner/listings') { setCurrentPage('owner-listings'); return; }
       if (hash === '#/owner/tenants') { setCurrentPage('owner-tenants'); return; }
       if (hash === '#/owner/invoices/create') { setCurrentPage('owner-invoices-create'); return; }
@@ -177,7 +191,13 @@ const AppContent: React.FC = () => {
       let targetHash = '#/owner/';
       if (currentPage === 'owner-dashboard') targetHash = '#/owner/dashboard';
       else if (currentPage === 'owner-properties-create') targetHash = '#/owner/properties/create';
-      else if (currentPage === 'owner-listings-create') targetHash = '#/owner/listings/create';
+      else if (currentPage === 'owner-listings-create') {
+        if (selectedListingId !== null) {
+          targetHash = `#/owner/listings/edit/${selectedListingId}`;
+        } else {
+          targetHash = '#/owner/listings/create';
+        }
+      }
       else if (currentPage === 'owner-property-detail' && selectedPropertyId !== null) {
         targetHash = `#/owner/properties/${selectedPropertyId}`;
       } else if (currentPage === 'owner-unit-detail' && selectedUnitId !== null) {
@@ -260,7 +280,7 @@ const AppContent: React.FC = () => {
     return (
       <OwnerLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
         {currentPage === 'owner-dashboard' ? (
-          <OwnerDashboard setCurrentPage={setCurrentPage} />
+          <OwnerDashboard setCurrentPage={setCurrentPage} setSelectedListingId={setSelectedListingId} />
         ) : currentPage === 'owner-properties' ? (
           <PropertyList setCurrentPage={setCurrentPage} setSelectedPropertyId={setSelectedPropertyId} />
         ) : currentPage === 'owner-property-detail' ? (
@@ -268,11 +288,11 @@ const AppContent: React.FC = () => {
         ) : currentPage === 'owner-properties-create' ? (
           <PropertyCreate setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-unit-detail' ? (
-          <UnitDetail unitId={selectedUnitId} setCurrentPage={setCurrentPage} />
+          <UnitDetail unitId={selectedUnitId} setCurrentPage={setCurrentPage} setSelectedListingId={setSelectedListingId} />
         ) : currentPage === 'owner-listings-create' ? (
-          <ListingCreate setCurrentPage={setCurrentPage} />
+          <ListingCreate setCurrentPage={setCurrentPage} roomId={selectedListingId} setSelectedRoomId={setSelectedListingId} />
         ) : currentPage === 'owner-listings' ? (
-          <ListingList setCurrentPage={setCurrentPage} />
+          <ListingList setCurrentPage={setCurrentPage} setSelectedListingId={setSelectedListingId} />
         ) : currentPage === 'owner-invoices' ? (
           <InvoiceList setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-invoices-create' ? (

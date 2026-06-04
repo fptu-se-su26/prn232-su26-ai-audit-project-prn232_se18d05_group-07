@@ -214,46 +214,6 @@ const Home: React.FC = () => {
               <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ</h3>
               <p className="text-xs text-gray-500">Sang trọng & an ninh</p>
             </div>
-            {/* Category 4.5 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">group</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Phòng ở ghép</h3>
-              <p className="text-xs text-gray-500">Chia sẻ chi phí</p>
-            </div>
-            {/* Category 5 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">weekend</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Studio</h3>
-              <p className="text-xs text-gray-500">Thiết kế mở</p>
-            </div>
-            {/* Category 6 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">apartment</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ Mini</h3>
-              <p className="text-xs text-gray-500">Đầy đủ tiện nghi</p>
-            </div>
-            {/* Category 7 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">location_city</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Căn hộ chung cư</h3>
-              <p className="text-xs text-gray-500">Cao cấp, an ninh</p>
-            </div>
-            {/* Category 8 */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center hover-lift cursor-pointer group" onClick={() => navigate('/browse')}>
-              <div className="w-14 h-14 mx-auto bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[28px] text-primary-container group-hover:text-white transition-colors">house</span>
-              </div>
-              <h3 className="text-label-md font-label-md text-on-surface mb-1">Nhà nguyên căn</h3>
-              <p className="text-xs text-gray-500">Phù hợp gia đình</p>
-            </div>
           </div>
         </div>
       </section>

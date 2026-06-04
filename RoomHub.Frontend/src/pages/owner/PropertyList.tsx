@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface PropertyListProps {
   setCurrentPage: (page: PageType) => void;
@@ -27,111 +28,10 @@ export interface Property {
   status: 'Đang hoạt động' | 'Đang bảo trì' | 'Ngừng hoạt động';
 }
 
-export const MOCK_PROPERTIES: Property[] = [
-  {
-    id: 1,
-    name: 'FPT House',
-    type: 'Phòng trọ',
-    address: 'Đường Nam Kỳ Khởi Nghĩa, Hòa Hải, Ngũ Hành Sơn, Đà Nẵng',
-    district: 'Quận Ngũ Hành Sơn',
-    floors: 4,
-    roomsPerFloor: 5,
-    totalRooms: 20,
-    occupiedRooms: 15,
-    basePrice: 2500000,
-    electricityPrice: 3500,
-    waterPrice: 15000,
-    internetPrice: 100000,
-    garbagePrice: 30000,
-    parkingPrice: 50000,
-    servicePrice: 50000,
-    image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
-    status: 'Đang hoạt động'
-  },
-  {
-    id: 2,
-    name: 'Mỹ Khê Sea View Studio',
-    type: 'Studio',
-    address: 'Đường Võ Nguyên Giáp, Phước Mỹ, Sơn Trà, Đà Nẵng',
-    district: 'Quận Sơn Trà',
-    floors: 1,
-    roomsPerFloor: 4,
-    totalRooms: 4,
-    occupiedRooms: 2,
-    basePrice: 5500000,
-    electricityPrice: 3800,
-    waterPrice: 18000,
-    internetPrice: 120000,
-    garbagePrice: 40000,
-    parkingPrice: 80000,
-    servicePrice: 100000,
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-    status: 'Đang hoạt động'
-  },
-  {
-    id: 3,
-    name: 'Liên Chiểu Campus House',
-    type: 'Phòng trọ',
-    address: 'Đường Ngô Sĩ Liên, Hòa Khánh Bắc, Liên Chiểu, Đà Nẵng',
-    district: 'Quận Liên Chiểu',
-    floors: 1,
-    roomsPerFloor: 3,
-    totalRooms: 3,
-    occupiedRooms: 2,
-    basePrice: 2000000,
-    electricityPrice: 3000,
-    waterPrice: 12000,
-    internetPrice: 80000,
-    garbagePrice: 20000,
-    parkingPrice: 30000,
-    servicePrice: 30000,
-    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=800&q=80',
-    status: 'Đang hoạt động'
-  },
-  {
-    id: 4,
-    name: 'Hải Châu Central Mini Apartment',
-    type: 'Căn hộ mini',
-    address: 'Đường Nguyễn Chí Thanh, Thạch Thang, Hải Châu, Đà Nẵng',
-    district: 'Quận Hải Châu',
-    floors: 1,
-    roomsPerFloor: 2,
-    totalRooms: 2,
-    occupiedRooms: 2,
-    basePrice: 6200000,
-    electricityPrice: 3500,
-    waterPrice: 15000,
-    internetPrice: 100000,
-    garbagePrice: 30000,
-    parkingPrice: 50000,
-    servicePrice: 80000,
-    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-    status: 'Đang hoạt động'
-  },
-  {
-    id: 5,
-    name: 'Sông Hàn Luxury Apartment',
-    type: 'Căn hộ',
-    address: 'Đường Bạch Đằng, Bình Hiên, Hải Châu, Đà Nẵng',
-    district: 'Quận Hải Châu',
-    floors: 1,
-    roomsPerFloor: 1,
-    totalRooms: 1,
-    occupiedRooms: 0,
-    basePrice: 8500000,
-    electricityPrice: 4000,
-    waterPrice: 20000,
-    internetPrice: 150000,
-    garbagePrice: 50000,
-    parkingPrice: 100000,
-    servicePrice: 120000,
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80',
-    status: 'Đang bảo trì'
-  }
-];
-
 const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelectedPropertyId }) => {
-  const [demoMode, setDemoMode] = useState<'loaded' | 'empty'>('loaded');
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Tất cả');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -149,29 +49,42 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
-  const filteredProperties = useMemo(() => {
-    if (demoMode === 'empty') return [];
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/owner/properties');
+      setProperties(res.data);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError('Không thể kết nối danh sách tài sản. Vui lòng đăng nhập lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return MOCK_PROPERTIES.filter(prop => {
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const filteredProperties = useMemo(() => {
+    return properties.filter(prop => {
       const matchesSearch = prop.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             prop.address.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = selectedTypeFilter === 'Tất cả' || prop.type === selectedTypeFilter;
       return matchesSearch && matchesType;
     });
-  }, [demoMode, searchQuery, selectedTypeFilter]);
+  }, [properties, searchQuery, selectedTypeFilter]);
 
   // Calculations for loaded state
   const metrics = useMemo(() => {
-    if (demoMode === 'empty') {
-      return { total: 0, active: 0, totalRooms: 0, occupied: 0, rate: 0 };
-    }
-    const total = MOCK_PROPERTIES.length;
-    const active = MOCK_PROPERTIES.filter(p => p.status === 'Đang hoạt động').length;
-    const totalRooms = MOCK_PROPERTIES.reduce((acc, p) => acc + p.totalRooms, 0);
-    const occupied = MOCK_PROPERTIES.reduce((acc, p) => acc + p.occupiedRooms, 0);
+    const total = properties.length;
+    const active = properties.filter(p => p.status === 'Đang hoạt động').length;
+    const totalRooms = properties.reduce((acc, p) => acc + p.totalRooms, 0);
+    const occupied = properties.reduce((acc, p) => acc + p.occupiedRooms, 0);
     const rate = totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0;
     return { total, active, totalRooms, occupied, rate };
-  }, [demoMode]);
+  }, [properties]);
 
   const handleManageRooms = (id: number) => {
     setSelectedPropertyId(id);
@@ -186,27 +99,32 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
     }
     alert(`Mô phỏng thành công! Đã tạo cấu trúc toà nhà "${newPropName}" với ${newPropFloors} tầng, tổng ${newPropFloors * newPropRoomsPerFloor} phòng cho thuê. Danh sách sơ đồ phòng đã được khởi tạo tự động.`);
     setIsAddModalOpen(false);
-    // Switch to loaded if it was empty
-    if (demoMode === 'empty') {
-      setDemoMode('loaded');
-    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+        <p className="text-xs font-bold text-gray-500">Đang tải danh sách tài sản trọ...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center space-y-3 max-w-md mx-auto mt-12 shadow-sm">
+        <span className="material-symbols-outlined text-[36px] text-red-500 block">error</span>
+        <h3 className="text-sm font-bold">{error}</h3>
+        <button onClick={fetchProperties} className="px-4 py-2 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Toggle Mode Banner */}
-      <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary-container">science</span>
-          <span className="text-xs font-bold text-gray-700">Chế độ Demo: Bạn đang kiểm nghiệm danh sách Tài sản của Chủ nhà.</span>
-        </div>
-        <button 
-          onClick={() => setDemoMode(demoMode === 'loaded' ? 'empty' : 'loaded')}
-          className="px-4 py-2 bg-white text-xs font-bold text-primary-container border border-orange-200 rounded-xl hover:bg-orange-100/50 transition-all cursor-pointer shadow-sm active:scale-95"
-        >
-          {demoMode === 'loaded' ? 'Chuyển sang "Chế độ tài khoản mới trống"' : 'Chuyển sang "Chế độ có sẵn dữ liệu mẫu"'}
-        </button>
-      </div>
+
 
       {/* Page Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">

@@ -105,7 +105,7 @@ const Register: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate('/verify-otp');
+      navigate('/verify-otp', { state: { message: result.message } });
     } else {
       setFormError(result.message);
     }
