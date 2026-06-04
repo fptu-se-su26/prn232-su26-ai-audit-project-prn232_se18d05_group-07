@@ -20,6 +20,16 @@ const Navbar: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const roleLabel =
+    user?.role === 'Administrator' ? 'Quản trị' : user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê';
+
+  const goDashboard = () => {
+    if (user?.role === 'Administrator') window.location.hash = '#/admin/dashboard';
+    else if (user?.role === 'PropertyOwner') window.location.hash = '#/owner/dashboard';
+    else window.location.hash = '#/tenant/dashboard';
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <nav className="bg-surface dark:bg-on-background docked full-width top-0 sticky z-50 transition-all duration-300 shadow-sm">
       <div className="flex justify-between items-center px-margin-desktop h-20 w-full max-w-container-max mx-auto md:px-margin-desktop px-margin-mobile">
@@ -108,20 +118,18 @@ const Navbar: React.FC = () => {
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                   <div className="mt-1">
                     <span className="inline-block px-2 py-0.5 bg-orange-50 border border-orange-100 text-orange-600 text-[9px] font-bold rounded-full">
-                      {user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'}
+                      {roleLabel}
                     </span>
                   </div>
                 </div>
                 
-                {user?.role === 'PropertyOwner' && (
-                  <a
-                    onClick={() => { window.location.hash = '#/owner/dashboard'; }}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-gray-700 hover:bg-orange-50 hover:text-primary-container font-semibold transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-gray-400">dashboard</span>
-                    <span>Dashboard quản lý</span>
-                  </a>
-                )}
+                <a
+                  onClick={goDashboard}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-gray-700 hover:bg-orange-50 hover:text-primary-container font-semibold transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-gray-400">space_dashboard</span>
+                  <span>Bảng điều khiển</span>
+                </a>
                 
                 <a
                   onClick={handleLogout}
@@ -212,17 +220,15 @@ const Navbar: React.FC = () => {
                   <span className="text-sm font-bold text-gray-800">{user?.fullName}</span>
                   <span className="text-xs text-gray-500">{user?.email}</span>
                   <span className="px-2 py-0.5 bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-bold rounded-full">
-                    {user?.role === 'PropertyOwner' ? 'Chủ nhà' : 'Khách thuê'}
+                    {roleLabel}
                   </span>
                 </div>
-                {user?.role === 'PropertyOwner' && (
-                  <a
-                    className="text-center text-sm font-bold text-primary-container border border-primary-container rounded-full py-2.5 hover:bg-primary-container hover:text-white transition-colors cursor-pointer"
-                    onClick={() => { setIsMobileMenuOpen(false); window.location.hash = '#/owner/dashboard'; }}
-                  >
-                    Dashboard quản lý
-                  </a>
-                )}
+                <button
+                  className="text-center text-sm font-bold text-primary-container border border-primary-container rounded-full py-2.5 hover:bg-primary-container hover:text-white transition-colors cursor-pointer"
+                  onClick={goDashboard}
+                >
+                  Bảng điều khiển
+                </button>
                 <button
                   className="text-center text-sm font-bold text-white bg-red-500 rounded-full py-2.5 hover:bg-red-600 transition-colors cursor-pointer mt-1"
                   onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}

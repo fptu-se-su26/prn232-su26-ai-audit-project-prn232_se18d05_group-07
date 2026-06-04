@@ -39,5 +39,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Secrets / Local Configs
+# Secrets / Local app settings (keep out of git)
 **/appsettings.Development.json
+**/appsettings.*.Local.json
