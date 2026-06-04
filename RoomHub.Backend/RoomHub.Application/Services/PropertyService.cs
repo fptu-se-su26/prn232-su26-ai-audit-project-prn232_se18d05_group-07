@@ -113,6 +113,29 @@ namespace Application.Services
                     _ => "Còn trống"
                 };
 
+                decimal oldElectricity = 0;
+                decimal oldWater = 0;
+                if (activeContract != null)
+                {
+                    var latestElecReading = activeContract.UtilityReadings
+                        .Where(ur => ur.UtilityType == UtilityType.Electricity)
+                        .OrderByDescending(ur => ur.ReadingDate)
+                        .FirstOrDefault();
+                    if (latestElecReading != null)
+                    {
+                        oldElectricity = latestElecReading.NewIndex ?? 0;
+                    }
+
+                    var latestWaterReading = activeContract.UtilityReadings
+                        .Where(ur => ur.UtilityType == UtilityType.Water)
+                        .OrderByDescending(ur => ur.ReadingDate)
+                        .FirstOrDefault();
+                    if (latestWaterReading != null)
+                    {
+                        oldWater = latestWaterReading.NewIndex ?? 0;
+                    }
+                }
+
                 roomUnits.Add(new RoomUnitDto
                 {
                     Id = room.Id.ToString(),
@@ -133,7 +156,13 @@ namespace Application.Services
                     TenantStartDate = tenantStartDate,
                     Deposit = deposit,
                     OutstandingBillStatus = outstandingBillStatus,
-                    OutstandingBillAmount = outstandingBillAmount
+                    OutstandingBillAmount = outstandingBillAmount,
+                    OldElectricity = oldElectricity,
+                    OldWater = oldWater,
+                    ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
+                    WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                    InternetPrice = room.InternetPrice ?? building.InternetPrice,
+                    GarbagePrice = room.GarbagePrice ?? building.GarbagePrice
                 });
             }
 
@@ -234,7 +263,7 @@ namespace Application.Services
                         Status = RoomStatus.Available,
                         LandlordId = ownerId,
                         Title = $"Căn hộ độc lập {request.Name}",
-                        IsPublished = true,
+                        IsPublished = false,
                         CreatedAt = DateTime.UtcNow
                     };
                     floor.Rooms.Add(room);
@@ -290,7 +319,7 @@ namespace Application.Services
                                 Status = RoomStatus.Available,
                                 LandlordId = ownerId,
                                 Title = $"Phòng {roomNumber} tại {request.Name}",
-                                IsPublished = true,
+                                IsPublished = false,
                                 CreatedAt = DateTime.UtcNow
                             };
                             rooms.Add(room);
@@ -308,6 +337,160 @@ namespace Application.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<UnitDetailDto?> GetUnitDetailAsync(int roomId, string ownerId)
+        {
+            var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
+            if (room == null || room.Floor.Building.OwnerId != ownerId)
+                return null;
+
+            var building = room.Floor.Building;
+            var activeContract = room.Contracts.FirstOrDefault(c => c.Status == ContractStatus.Active && !c.IsDeleted);
+
+            var dto = new UnitDetailDto
+            {
+                Id = room.Id.ToString(),
+                RoomNumber = room.RoomNumber,
+                Floor = room.Floor.FloorNumber,
+                Type = room.RoomType switch
+                {
+                    RoomType.Studio => "Studio",
+                    RoomType.MiniApartment => "Căn hộ mini",
+                    RoomType.Apartment => "Căn hộ",
+                    _ => "Phòng trọ"
+                },
+                Area = room.SurfaceArea ?? 25,
+                Price = room.BasePrice,
+                Status = room.Status switch
+                {
+                    RoomStatus.Occupied => "Đang thuê",
+                    RoomStatus.Maintenance => "Bảo trì",
+                    RoomStatus.UnderMaintenance => "Bảo trì",
+                    _ => "Còn trống"
+                },
+                BuildingName = building.Name,
+                BuildingAddress = building.Address,
+                BuildingId = building.Id,
+                Description = room.Description ?? "",
+                IsFurnished = room.IsFurnished,
+                MaxCapacity = room.MaxCapacity,
+                ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
+                WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                InternetPrice = room.InternetPrice ?? building.InternetPrice,
+                GarbagePrice = room.GarbagePrice ?? building.GarbagePrice,
+                InternalNotes = room.Description ?? "",
+                ImageUrls = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).ToList()
+            };
+
+            if (activeContract != null)
+            {
+                var tenantUser = activeContract.Tenant;
+                dto.Tenant = new UnitTenantDto
+                {
+                    Name = activeContract.TemporaryTenantName ?? tenantUser?.FullName ?? "Chưa rõ",
+                    Email = activeContract.TemporaryTenantEmail ?? tenantUser?.Email ?? "",
+                    Phone = activeContract.TemporaryTenantPhone ?? tenantUser?.PhoneNumber ?? "",
+                    Cccd = tenantUser?.TenantProfile?.CCCDNumber ?? "",
+                    Address = tenantUser?.Address ?? "",
+                    StartDate = activeContract.StartDate.ToString("dd/MM/yyyy"),
+                    EndDate = activeContract.EndDate.ToString("dd/MM/yyyy"),
+                    Deposit = activeContract.DepositAmount,
+                    AgreementPrice = activeContract.RentAmount,
+                    PeopleCount = 1, // Defaulting as Contract model has no PeopleCount
+                    IsLinkedAccount = tenantUser != null
+                };
+
+                 foreach (var invoice in activeContract.Invoices.OrderByDescending(i => i.InvoiceDate))
+                {
+                    dto.Invoices.Add(new UnitInvoiceDto
+                    {
+                        Id = invoice.Id.ToString(),
+                        Month = invoice.InvoiceDate.ToString("MM/yyyy"),
+                        RentPrice = activeContract.RentAmount,
+                        UtilitiesPrice = invoice.TotalAmount - activeContract.RentAmount,
+                        Total = invoice.TotalAmount,
+                        Status = invoice.Status switch
+                        {
+                            InvoiceStatus.Paid => "Đã thanh toán",
+                            InvoiceStatus.Unpaid => "Chưa thanh toán",
+                            InvoiceStatus.Overdue => "Quá hạn",
+                            InvoiceStatus.Pending => "Chờ xử lý",
+                            InvoiceStatus.Cancelled => "Đã hủy",
+                            _ => "Chưa thanh toán"
+                        },
+                        DueDate = invoice.DueDate.ToString("dd/MM/yyyy")
+                    });
+                }
+            }
+
+            if (room.IsPublished)
+            {
+                dto.Listing = new UnitListingDto
+                {
+                    Id = $"LIST-{room.Id}",
+                    Title = room.Title ?? $"Phòng {room.RoomNumber} tại {building.Name}",
+                    Price = room.BasePrice,
+                    Status = "Đang hiển thị",
+                    CreatedDate = room.CreatedAt.ToString("dd/MM/yyyy"),
+                    Views = (room.Id * 47) % 180 + 35
+                };
+            }
+
+            dto.Logs.Add(new UnitActivityLogDto
+            {
+                Text = $"Khởi tạo thông tin phòng {room.RoomNumber}",
+                Time = room.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+            });
+
+            if (activeContract != null)
+            {
+                dto.Logs.Add(new UnitActivityLogDto
+                {
+                    Text = $"Ký hợp đồng thuê phòng với khách hàng {dto.Tenant?.Name}",
+                    Time = activeContract.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                });
+            }
+
+            return dto;
+        }
+
+        public async Task<bool> UpdateUnitStatusAsync(int roomId, string status, string ownerId)
+        {
+            var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
+            if (room == null || room.Floor.Building.OwnerId != ownerId)
+                return false;
+
+            room.Status = status switch
+            {
+                "Còn trống" => RoomStatus.Available,
+                "Trống" => RoomStatus.Available,
+                "Available" => RoomStatus.Available,
+                "Đang thuê" => RoomStatus.Occupied,
+                "Thuê" => RoomStatus.Occupied,
+                "Occupied" => RoomStatus.Occupied,
+                "Bảo trì" => RoomStatus.Maintenance,
+                "Maintenance" => RoomStatus.Maintenance,
+                _ => RoomStatus.Available
+            };
+
+            room.UpdatedAt = DateTime.UtcNow;
+            await _roomRepository.UpdateAsync(room);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateUnitNotesAsync(int roomId, string notes, string ownerId)
+        {
+            var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
+            if (room == null || room.Floor.Building.OwnerId != ownerId)
+                return false;
+
+            room.Description = notes;
+            room.UpdatedAt = DateTime.UtcNow;
+            await _roomRepository.UpdateAsync(room);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
         }
     }
 }

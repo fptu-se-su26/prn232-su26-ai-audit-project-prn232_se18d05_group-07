@@ -36,6 +36,7 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Buildings
                 .Include(b => b.Floors)
                     .ThenInclude(f => f.Rooms)
+                        .ThenInclude(r => r.RoomPhotos)
                 .Where(b => b.OwnerId == ownerId && !b.IsDeleted)
                 .ToListAsync();
         }

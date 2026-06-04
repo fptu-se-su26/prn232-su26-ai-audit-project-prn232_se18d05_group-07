@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface ListingListProps {
   setCurrentPage: (page: PageType) => void;
+  setSelectedListingId: (id: number | null) => void;
 }
 
 type PropertyType = 'Phòng trọ' | 'Studio' | 'Căn hộ mini' | 'Căn hộ';
@@ -29,148 +31,56 @@ interface ListingItem {
   area: number;
   maxPeople: number;
 }
-
-const INITIAL_MOCK_LISTINGS: ListingItem[] = [
-  {
-    id: '1',
-    code: 'RH-LST-1024',
-    title: 'Phòng trọ có gác gần FPT University',
-    type: 'Phòng trọ',
-    price: 2500000,
-    linkedAsset: 'FPT House',
-    linkedUnit: '201',
-    source: 'existing',
-    status: 'Đang hiển thị',
-    views: 256,
-    saves: 18,
-    requests: 7,
-    createdDate: '2026-05-25',
-    address: 'Hòa Hải, Ngũ Hành Sơn, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
-    area: 25,
-    maxPeople: 2
-  },
-  {
-    id: '2',
-    code: 'RH-LST-1025',
-    title: 'Studio full nội thất tại Hòa Hải',
-    type: 'Studio',
-    price: 4500000,
-    linkedAsset: 'Hòa Hải Studio',
-    linkedUnit: '302',
-    source: 'existing',
-    status: 'Chờ duyệt',
-    views: 0,
-    saves: 0,
-    requests: 0,
-    createdDate: '2026-05-28',
-    address: 'Khu đô thị FPT City, Ngũ Hành Sơn, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80',
-    area: 32,
-    maxPeople: 2
-  },
-  {
-    id: '3',
-    code: 'RH-LST-1026',
-    title: 'Căn hộ mini 1PN gần biển Mỹ Khê',
-    type: 'Căn hộ mini',
-    price: 6000000,
-    linkedAsset: 'Sơn Trà Mini Apartment',
-    linkedUnit: 'Căn 105',
-    source: 'existing',
-    status: 'Đang hiển thị',
-    views: 480,
-    saves: 35,
-    requests: 12,
-    createdDate: '2026-05-20',
-    address: 'Phước Mỹ, Sơn Trà, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=600&q=80',
-    area: 40,
-    maxPeople: 3
-  },
-  {
-    id: '4',
-    code: 'RH-LST-1027',
-    title: 'Căn hộ 2PN đầy đủ nội thất tại Hải Châu',
-    type: 'Căn hộ',
-    price: 9000000,
-    linkedAsset: 'Tin độc lập',
-    linkedUnit: '',
-    source: 'independent',
-    status: 'Nháp',
-    views: 0,
-    saves: 0,
-    requests: 0,
-    createdDate: '2026-05-29',
-    address: 'Hòa Cường Bắc, Hải Châu, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80',
-    area: 75,
-    maxPeople: 4
-  },
-  {
-    id: '5',
-    code: 'RH-LST-1028',
-    title: 'Phòng trọ giá tốt khu Ngũ Hành Sơn',
-    type: 'Phòng trọ',
-    price: 2200000,
-    linkedAsset: 'Ngũ Hành Sơn Rooms',
-    linkedUnit: 'Phòng 103',
-    source: 'existing',
-    status: 'Bị từ chối',
-    rejectionReason: 'Ảnh chưa rõ và thiếu thông tin địa chỉ. Vui lòng cập nhật ảnh thực tế và bổ sung địa chỉ khu vực.',
-    views: 0,
-    saves: 0,
-    requests: 0,
-    createdDate: '2026-05-22',
-    address: 'Hòa Quý, Ngũ Hành Sơn, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=600&q=80',
-    area: 20,
-    maxPeople: 2
-  },
-  {
-    id: '6',
-    code: 'RH-LST-1029',
-    title: 'Studio ban công rộng gần khu FPT',
-    type: 'Studio',
-    price: 4800000,
-    linkedAsset: 'Hòa Hải Studio',
-    linkedUnit: 'Studio 401',
-    source: 'existing',
-    status: 'Đã ẩn',
-    views: 112,
-    saves: 9,
-    requests: 2,
-    createdDate: '2026-05-10',
-    address: 'Hòa Hải, Ngũ Hành Sơn, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80',
-    area: 35,
-    maxPeople: 2
-  },
-  {
-    id: '7',
-    code: 'RH-LST-1030',
-    title: 'Căn hộ mini ban công Mỹ Khê view đẹp',
-    type: 'Căn hộ mini',
-    price: 5500000,
-    linkedAsset: 'Tin độc lập',
-    linkedUnit: '',
-    source: 'independent',
-    status: 'Đã thuê',
-    views: 320,
-    saves: 15,
-    requests: 4,
-    createdDate: '2026-05-15',
-    address: 'Mỹ An, Ngũ Hành Sơn, Đà Nẵng',
-    thumbnail: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
-    area: 30,
-    maxPeople: 2
-  }
-];
-
-const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
-  const [listings, setListings] = useState<ListingItem[]>(INITIAL_MOCK_LISTINGS);
+const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedListingId }) => {
+  const [listings, setListings] = useState<ListingItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/owner/listings');
+      const mappedListings = res.data.map((item: any) => ({
+        id: item.roomId.toString(),
+        code: `RH-LST-${1000 + item.roomId}`,
+        title: item.title,
+        type: item.type as PropertyType,
+        price: item.price,
+        linkedAsset: item.buildingName,
+        linkedUnit: item.roomNumber,
+        source: 'existing' as SourceType,
+        status: item.isPublished ? ('Đang hiển thị' as ListingStatus) : ('Nháp' as ListingStatus),
+        views: item.views || 0,
+        saves: Math.floor((item.views || 0) * (0.08 + (item.roomId % 5) * 0.01)),
+        requests: Math.floor((item.views || 0) * (0.03 + (item.roomId % 3) * 0.01)),
+        createdDate: item.createdDate || new Date().toISOString(),
+        address: item.buildingName + ', Đà Nẵng',
+        thumbnail: (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
+        area: item.area || 25,
+        maxPeople: item.capacity || 2
+      }));
+      setListings(mappedListings);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách tin đăng:', err);
+      triggerToast('Không thể tải danh sách tin đăng từ server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setActiveDropdownId(null);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -327,22 +237,36 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
   };
 
   // Bulk Actions Handlers
-  const handleBulkHide = () => {
+  const handleBulkHide = async () => {
     if (selectedIds.length === 0) return;
-    setListings(prev =>
-      prev.map(l => (selectedIds.includes(l.id) && l.status === 'Đang hiển thị' ? { ...l, status: 'Đã ẩn' as const } : l))
-    );
-    triggerToast(`Đã tạm ẩn thành công ${selectedIds.length} tin cho thuê`);
-    setSelectedIds([]);
+    try {
+      await Promise.all(selectedIds.map(id => api.put(`/owner/listings/${id}/publish`, { isPublished: false })));
+      setListings(prev =>
+        prev.map(l => (selectedIds.includes(l.id) && l.status === 'Đang hiển thị' ? { ...l, status: 'Đã ẩn' as const } : l))
+      );
+      triggerToast(`Đã tạm ẩn thành công ${selectedIds.length} tin cho thuê`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi tạm ẩn hàng loạt.');
+    } finally {
+      setSelectedIds([]);
+    }
   };
 
-  const handleBulkResubmit = () => {
+  const handleBulkResubmit = async () => {
     if (selectedIds.length === 0) return;
-    setListings(prev =>
-      prev.map(l => (selectedIds.includes(l.id) && (l.status === 'Nháp' || l.status === 'Bị từ chối') ? { ...l, status: 'Chờ duyệt' as const } : l))
-    );
-    triggerToast(`Đã gửi duyệt thành công ${selectedIds.length} tin cho thuê`);
-    setSelectedIds([]);
+    try {
+      await Promise.all(selectedIds.map(id => api.put(`/owner/listings/${id}/publish`, { isPublished: true })));
+      setListings(prev =>
+        prev.map(l => (selectedIds.includes(l.id) && (l.status === 'Nháp' || l.status === 'Bị từ chối') ? { ...l, status: 'Chờ duyệt' as const } : l))
+      );
+      triggerToast(`Đã gửi duyệt thành công ${selectedIds.length} tin cho thuê`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi gửi duyệt hàng loạt.');
+    } finally {
+      setSelectedIds([]);
+    }
   };
 
   const handleBulkDelete = () => {
@@ -360,14 +284,21 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
     setIsHideModalOpen(true);
   };
 
-  const confirmHideListing = () => {
+  const confirmHideListing = async () => {
     if (!activeListing) return;
-    setListings(prev =>
-      prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Đã ẩn' as const } : l))
-    );
-    triggerToast('Tin cho thuê đã được ẩn khỏi sàn public thành công');
-    setIsHideModalOpen(false);
-    setActiveListing(null);
+    try {
+      await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: false });
+      setListings(prev =>
+        prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Đã ẩn' as const } : l))
+      );
+      triggerToast('Tin cho thuê đã được ẩn khỏi sàn public thành công');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi ẩn tin.');
+    } finally {
+      setIsHideModalOpen(false);
+      setActiveListing(null);
+    }
   };
 
   const openDeleteModal = (listing: ListingItem) => {
@@ -388,14 +319,21 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
     setIsResubmitModalOpen(true);
   };
 
-  const confirmResubmitListing = () => {
+  const confirmResubmitListing = async () => {
     if (!activeListing) return;
-    setListings(prev =>
-      prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
-    );
-    triggerToast('Đã gửi yêu cầu phê duyệt lại tin trọ thành công');
-    setIsResubmitModalOpen(false);
-    setActiveListing(null);
+    try {
+      await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: true });
+      setListings(prev =>
+        prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
+      );
+      triggerToast('Đã gửi yêu cầu phê duyệt lại tin trọ thành công');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi gửi yêu cầu duyệt.');
+    } finally {
+      setIsResubmitModalOpen(false);
+      setActiveListing(null);
+    }
   };
 
   const openReasonModal = (listing: ListingItem) => {
@@ -408,21 +346,36 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
     setIsMarkRentedModalOpen(true);
   };
 
-  const confirmMarkRentedListing = () => {
+  const confirmMarkRentedListing = async () => {
     if (!activeListing) return;
-    setListings(prev =>
-      prev.map(l => (l.id === activeListing.id ? { ...l, status: hidePublicAfterRent ? 'Đã thuê' as const : 'Đang hiển thị' as const } : l))
-    );
-    triggerToast(hidePublicAfterRent ? 'Đã đánh dấu đã thuê và tạm ẩn tin đăng' : 'Đã đánh dấu đã thuê thành công');
-    setIsMarkRentedModalOpen(false);
-    setActiveListing(null);
+    try {
+      if (hidePublicAfterRent) {
+        await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: false });
+      }
+      setListings(prev =>
+        prev.map(l => (l.id === activeListing.id ? { ...l, status: hidePublicAfterRent ? 'Đã thuê' as const : 'Đang hiển thị' as const } : l))
+      );
+      triggerToast(hidePublicAfterRent ? 'Đã đánh dấu đã thuê và tạm ẩn tin đăng' : 'Đã đánh dấu đã thuê thành công');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi đánh dấu đã thuê.');
+    } finally {
+      setIsMarkRentedModalOpen(false);
+      setActiveListing(null);
+    }
   };
 
-  const handleShowAgain = (listing: ListingItem) => {
-    setListings(prev =>
-      prev.map(l => (l.id === listing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
-    );
-    triggerToast('Đã gửi lại duyệt để khôi phục trạng thái hiển thị');
+  const handleShowAgain = async (listing: ListingItem) => {
+    try {
+      await api.put(`/owner/listings/${listing.id}/publish`, { isPublished: true });
+      setListings(prev =>
+        prev.map(l => (l.id === listing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
+      );
+      triggerToast('Đã gửi lại duyệt để khôi phục trạng thái hiển thị');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi hiển thị lại tin.');
+    }
   };
 
   // Dynamic Badges Render Helpers
@@ -493,7 +446,10 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
             <span className="material-symbols-outlined text-[16px]">visibility</span> Xem trang public
           </button>
           <button 
-            onClick={() => setCurrentPage('owner-listings-create')}
+            onClick={() => {
+              setSelectedListingId(null);
+              setCurrentPage('owner-listings-create');
+            }}
             className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px] font-bold">add</span> Đăng tin mới
@@ -782,7 +738,12 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
       )}
 
       {/* 6. LISTINGS RESULTS CONTAINER */}
-      {filteredListings.length === 0 ? (
+      {loading ? (
+        <div className="min-h-[350px] bg-white rounded-3xl border border-gray-150 soft-shadow flex flex-col items-center justify-center space-y-4 animate-fadeIn">
+          <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+          <p className="text-xs font-bold text-gray-500">Đang tải danh sách tin cho thuê...</p>
+        </div>
+      ) : filteredListings.length === 0 ? (
         
         /* EMPTY STATE */
         <div className="bg-white p-12 rounded-3xl border border-gray-150 soft-shadow text-center flex flex-col items-center justify-center space-y-4 min-h-[350px] animate-scaleUp">
@@ -819,7 +780,10 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
                   Tạo từ phòng có sẵn
                 </button>
                 <button 
-                  onClick={() => setCurrentPage('owner-listings-create')}
+                  onClick={() => {
+                    setSelectedListingId(null);
+                    setCurrentPage('owner-listings-create');
+                  }}
                   className="px-5 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[16px] font-bold">add</span> Đăng tin mới
@@ -885,7 +849,10 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
                           />
                           <div className="space-y-0.5">
                             <span 
-                              onClick={() => alert(`Xem chi tiết tin đăng: ${list.title}`)}
+                              onClick={() => {
+                                setSelectedListingId(parseInt(list.id, 10));
+                                setCurrentPage('owner-listings-create');
+                              }}
                               className="font-bold text-gray-800 line-clamp-1 hover:text-primary-container cursor-pointer text-xs"
                             >
                               {list.title}
@@ -1018,70 +985,83 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
                             </button>
                           )}
 
-                          {/* Edit button (available for editable statuses) */}
-                          {(list.status === 'Nháp' || list.status === 'Đang hiển thị' || list.status === 'Bị từ chối' || list.status === 'Đã ẩn') && (
-                            <button 
-                              onClick={() => alert(`Chuyển sang trang sửa tin đăng ${list.code}`)}
-                              className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:border-orange-200 hover:bg-orange-50/20 text-gray-500 hover:text-primary-container rounded-lg transition-colors cursor-pointer"
-                              title="Chỉnh sửa tin đăng"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">edit</span>
-                            </button>
-                          )}
+                           {(list.status === 'Nháp' || list.status === 'Đang hiển thị' || list.status === 'Bị từ chối' || list.status === 'Đã ẩn') && (
+                             <button 
+                               onClick={() => {
+                                 setSelectedListingId(parseInt(list.id, 10));
+                                 setCurrentPage('owner-listings-create');
+                               }}
+                               className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:border-orange-200 hover:bg-orange-50/20 text-gray-500 hover:text-primary-container rounded-lg transition-colors cursor-pointer"
+                               title="Chỉnh sửa tin đăng"
+                             >
+                               <span className="material-symbols-outlined text-[16px]">edit</span>
+                             </button>
+                           )}
 
                           {/* More Context actions Dropdown menu trigger */}
-                          <div className="relative group/actions">
+                          <div className="relative">
                             <button 
-                              className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveDropdownId(prev => prev === list.id ? null : list.id);
+                              }}
+                              className={`w-7 h-7 flex items-center justify-center border rounded-lg cursor-pointer transition-colors ${
+                                activeDropdownId === list.id
+                                  ? 'bg-orange-50 border-primary-container text-primary-container font-black'
+                                  : 'border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600'
+                              }`}
+                              title="Thao tác"
                             >
                               <span className="material-symbols-outlined text-[16px]">more_vert</span>
                             </button>
-                            <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-36 z-[1000] hidden group-hover/actions:block text-left text-[11px] font-bold text-gray-600">
-                              
-                              <button 
-                                onClick={() => alert(`Xem chi tiết tin trọ: ${list.title}`)}
-                                className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
-                              </button>
-                              
-                              {list.status === 'Đang hiển thị' && (
+                            {activeDropdownId === list.id && (
+                              <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-36 z-[1000] text-left text-[11px] font-bold text-gray-600 animate-fadeIn">
+                                
                                 <button 
-                                  onClick={() => openHideModal(list)}
+                                  onClick={() => alert(`Xem chi tiết tin trọ: ${list.title}`)}
                                   className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <span className="material-symbols-outlined text-[14px]">visibility_off</span> Ẩn tin
+                                  <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
                                 </button>
-                              )}
+                                
+                                {list.status === 'Đang hiển thị' && (
+                                  <button 
+                                    onClick={() => openHideModal(list)}
+                                    className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">visibility_off</span> Ẩn tin
+                                  </button>
+                                )}
 
-                              {list.status === 'Đang hiển thị' && (
+                                {list.status === 'Đang hiển thị' && (
+                                  <button 
+                                    onClick={() => alert(`Xem trang public bài đăng ${list.code}`)}
+                                    className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">visibility</span> Xem public
+                                  </button>
+                                )}
+
                                 <button 
-                                  onClick={() => alert(`Xem trang public bài đăng ${list.code}`)}
+                                  onClick={() => {
+                                    const clone = { ...list, id: Math.random().toString(), code: `RH-LST-${Math.floor(1000 + Math.random() * 9000)}`, title: `${list.title} (Bản sao)`, status: 'Nháp' as const, views: 0, saves: 0, requests: 0, createdDate: new Date().toISOString().split('T')[0] };
+                                    setListings(prev => [clone, ...prev]);
+                                    triggerToast('Đã nhân bản thành công tin trọ mới lưu nháp');
+                                  }}
                                   className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
                                 >
-                                  <span className="material-symbols-outlined text-[14px]">visibility</span> Xem public
+                                  <span className="material-symbols-outlined text-[14px]">content_copy</span> Nhân bản tin
                                 </button>
-                              )}
 
-                              <button 
-                                onClick={() => {
-                                  const clone = { ...list, id: Math.random().toString(), code: `RH-LST-${Math.floor(1000 + Math.random() * 9000)}`, title: `${list.title} (Bản sao)`, status: 'Nháp' as const, views: 0, saves: 0, requests: 0, createdDate: new Date().toISOString().split('T')[0] };
-                                  setListings(prev => [clone, ...prev]);
-                                  triggerToast('Đã nhân bản thành công tin trọ mới lưu nháp');
-                                }}
-                                className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">content_copy</span> Nhân bản tin
-                              </button>
+                                <button 
+                                  onClick={() => openDeleteModal(list)}
+                                  className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">delete</span> Xóa vĩnh viễn
+                                </button>
 
-                              <button 
-                                onClick={() => openDeleteModal(list)}
-                                className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">delete</span> Xóa vĩnh viễn
-                              </button>
-
-                            </div>
+                              </div>
+                            )}
                           </div>
 
                         </div>
@@ -1197,7 +1177,10 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage }) => {
                       
                       {/* Secondary dropdown actions trigger */}
                       <button 
-                        onClick={() => alert(`Chuyển sang trang sửa tin đăng ${list.code}`)}
+                        onClick={() => {
+                          setSelectedListingId(parseInt(list.id, 10));
+                          setCurrentPage('owner-listings-create');
+                        }}
                         className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:border-orange-200 hover:bg-orange-50/20 text-gray-500 hover:text-primary-container rounded-lg cursor-pointer"
                         title="Chỉnh sửa tin đăng"
                       >

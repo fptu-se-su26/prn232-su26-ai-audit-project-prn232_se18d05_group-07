@@ -9,5 +9,8 @@ namespace Application.Common.Interfaces
         Task<List<PropertyDto>> GetPropertiesByOwnerAsync(string ownerId);
         Task<PropertyDetailDto?> GetPropertyDetailWithOwnerAsync(int propertyId, string ownerId);
         Task<bool> CreatePropertyWithOwnerAsync(CreatePropertyRequestDto request, string ownerId);
+        Task<UnitDetailDto?> GetUnitDetailAsync(int roomId, string ownerId);
+        Task<bool> UpdateUnitStatusAsync(int roomId, string status, string ownerId);
+        Task<bool> UpdateUnitNotesAsync(int roomId, string notes, string ownerId);
     }
 }

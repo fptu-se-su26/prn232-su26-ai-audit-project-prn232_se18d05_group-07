@@ -164,6 +164,7 @@ namespace Infrastructure.Persistence
                             LandlordId = owner.Id,
                             Title = $"Phòng trọ {roomNumber} tại FPT House",
                             IsPublished = true,
+                            HasListing = true,
                             CreatedAt = DateTime.UtcNow
                         };
                         context.Rooms.Add(room);
@@ -219,6 +220,7 @@ namespace Infrastructure.Persistence
                         LandlordId = owner.Id,
                         Title = $"Studio view biển Mỹ Khê {roomNumber}",
                         IsPublished = true,
+                        HasListing = true,
                         CreatedAt = DateTime.UtcNow
                     };
                     context.Rooms.Add(room);

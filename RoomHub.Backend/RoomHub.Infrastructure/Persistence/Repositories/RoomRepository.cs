@@ -29,6 +29,22 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Room?> GetRoomWithDetailsAsync(int id)
+        {
+            return await _context.Rooms
+                .Include(r => r.Floor)
+                    .ThenInclude(f => f.Building)
+                        .ThenInclude(b => b.Owner)
+                .Include(r => r.Contracts)
+                    .ThenInclude(c => c.Tenant)
+                        .ThenInclude(u => u.TenantProfile)
+                .Include(r => r.Contracts)
+                    .ThenInclude(c => c.Invoices)
+                .Include(r => r.RoomPhotos)
+                .Include(r => r.RoomAmenities)
+                .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+        }
+
         public async Task AddAsync(Room room)
         {
             await _context.Rooms.AddAsync(room);

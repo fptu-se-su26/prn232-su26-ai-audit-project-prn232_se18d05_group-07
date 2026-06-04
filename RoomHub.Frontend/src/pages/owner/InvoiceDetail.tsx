@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface InvoiceDetailProps {
   invoiceId: string | null;
@@ -37,69 +38,20 @@ interface InvoiceState {
   paymentHistory: PaymentHistoryItem[];
 }
 
-// Initial Mock Invoice Data matching Part S
-const INITIAL_INVOICE: InvoiceState = {
-  id: 'INV-0526-001',
-  billingMonth: '05/2026',
-  createdDate: '25/05/2026',
-  dueDate: '05/06/2026',
-  status: 'Chưa thanh toán',
-  paidAmount: 0,
-  rentPrice: 2500000,
-  oldElectric: 120,
-  newElectric: 240,
-  oldWater: 30,
-  newWater: 34,
-  fixedFeesBreakdown: [
-    { label: 'Internet', amount: 100000 },
-    { label: 'Phí rác', amount: 30000 },
-    { label: 'Phí giữ xe', amount: 50000 }
-  ],
-  surcharge: 150000,
-  surchargeNote: 'Phí vệ sinh cuối tháng',
-  discount: 0,
-  notes: 'Người thuê xin thanh toán trễ 2 ngày để nhận lương.',
-  lastUpdatedNote: 'Cập nhật lần cuối bởi Nguyễn Văn Owner vào 30/05/2026.',
-  paymentHistory: []
-};
-
 const OWNER_INFO = {
-  name: 'Nguyễn Văn Owner',
+  name: 'Chủ nhà RoomHub',
   phone: '0909 999 999',
-  email: 'owner@roomhub.com'
+  email: 'owner@roomhub.vn'
 };
-
-const TENANT_INFO = {
-  name: 'Nguyễn Văn A',
-  email: 'nguyenvana@gmail.com',
-  phone: '0909 123 456',
-  status: 'Đang thuê',
-  isLinked: true,
-  startDate: '01/03/2026'
-};
-
-const UNIT_INFO = {
-  propertyName: 'FPT House',
-  unitName: 'Phòng 201',
-  unitType: 'Phòng trọ',
-  area: 25,
-  rentPrice: 2500000,
-  status: 'Đang thuê',
-  address: 'Hòa Hải, Ngũ Hành Sơn, Đà Nẵng'
-};
-
-const ELECTRIC_PRICE = 3500;
-const WATER_PRICE = 15000;
 
 export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurrentPage }) => {
-  // We use our local state to allow simulation and demoing of payments, updates, notes, etc.
-  const [invoice, setInvoice] = useState<InvoiceState>({
-    ...INITIAL_INVOICE,
-    id: invoiceId || INITIAL_INVOICE.id
-  });
+  const [invoice, setInvoice] = useState<InvoiceState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAddLoading, setIsAddLoading] = useState(false);
 
   // User input note states
-  const [editingNote, setEditingNote] = useState<string>(invoice.notes);
+  const [editingNote, setEditingNote] = useState<string>('');
   
   // Modals visibility
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -119,7 +71,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
     includeNotes: true,
     includePaymentHistory: true
   });
-  const [fileName, setFileName] = useState(`HoaDon_${invoice.id}_NguyenVanA_05-2026.xlsx`);
+  const [fileName, setFileName] = useState('');
   const [exportModel, setExportModel] = useState<'detail' | 'compact' | 'tenant'>('detail');
   const [exportProgress, setExportProgress] = useState<'idle' | 'generating' | 'success'>('idle');
 
@@ -140,9 +92,182 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
   // Toast state
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
 
+  const [tenantDetails, setTenantDetails] = useState({
+    name: 'Khách thuê',
+    email: 'N/A',
+    phone: 'Chưa rõ',
+    status: 'Đang thuê',
+    isLinked: false,
+    startDate: ''
+  });
+
+  const [unitDetails, setUnitDetails] = useState({
+    propertyName: '',
+    unitName: '',
+    unitType: 'Phòng trọ',
+    area: 25,
+    rentPrice: 0,
+    status: 'Đang thuê',
+    address: ''
+  });
+
+  const [electricPrice, setElectricPrice] = useState(3500);
+  const [waterPrice, setWaterPrice] = useState(15000);
+
   const triggerToast = (text: string, type: 'success' | 'warning' | 'error' = 'success') => {
     setToast({ text, type });
   };
+
+  const fetchInvoiceDetail = async () => {
+    if (!invoiceId) {
+      setError('Mã hóa đơn không hợp lệ.');
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get(`/owner/invoices/${invoiceId}`);
+      const data = response.data;
+      
+      const rentItem = data.items.find((item: any) => item.itemType === 'Rent');
+      const elecItem = data.items.find((item: any) => item.itemType === 'Electricity');
+      const waterItem = data.items.find((item: any) => item.itemType === 'Water');
+      const addItems = data.items.filter((item: any) => item.itemType === 'Add');
+      const reduceItems = data.items.filter((item: any) => item.itemType === 'Reduce');
+      
+      const rentPrice = rentItem ? rentItem.amount : 0;
+      
+      // Parse elec
+      let oldElectric = 0;
+      let newElectric = 0;
+      let elecUsage = 0;
+      if (elecItem) {
+        const match = elecItem.description.match(/Chỉ số:\s*([\d.]+)\s*->\s*([\d.]+)/);
+        if (match) {
+          oldElectric = parseFloat(match[1]);
+          newElectric = parseFloat(match[2]);
+        }
+        const usageMatch = elecItem.description.match(/Sử dụng:\s*([\d.]+)\s*kWh/);
+        if (usageMatch) {
+          elecUsage = parseFloat(usageMatch[1]);
+        } else {
+          elecUsage = newElectric - oldElectric;
+        }
+        if (elecUsage > 0) {
+          setElectricPrice(elecItem.amount / elecUsage);
+        }
+      }
+      
+      // Parse water
+      let oldWater = 0;
+      let newWater = 0;
+      let waterUsage = 0;
+      if (waterItem) {
+        const match = waterItem.description.match(/Chỉ số:\s*([\d.]+)\s*->\s*([\d.]+)/);
+        if (match) {
+          oldWater = parseFloat(match[1]);
+          newWater = parseFloat(match[2]);
+        }
+        const usageMatch = waterItem.description.match(/Sử dụng:\s*([\d.]+)\s*m³/);
+        if (usageMatch) {
+          waterUsage = parseFloat(usageMatch[1]);
+        } else {
+          waterUsage = newWater - oldWater;
+        }
+        if (waterUsage > 0) {
+          setWaterPrice(waterItem.amount / waterUsage);
+        }
+      }
+      
+      const fixedFeesBreakdown = data.items
+        .filter((item: any) => !['Rent', 'Electricity', 'Water', 'Add', 'Reduce'].includes(item.itemType))
+        .map((item: any) => ({
+          label: item.description,
+          amount: item.amount
+        }));
+        
+      const surcharge = addItems.reduce((sum: number, item: any) => sum + item.amount, 0);
+      const surchargeNote = addItems.map((item: any) => item.description.replace(/^Phụ thu:\s*/, '')).join(', ');
+      
+      const discount = reduceItems.reduce((sum: number, item: any) => sum + Math.abs(item.amount), 0);
+      
+      const paidAmount = data.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
+      
+      const paymentHistory = data.payments.map((p: any) => {
+        let methodMapped: 'Tiền mặt' | 'Chuyển khoản' | 'Ví điện tử' | 'Khác' = 'Chuyển khoản';
+        if (p.paymentMethod === 'Tiền mặt' || p.paymentMethod === 'Cash') {
+          methodMapped = 'Tiền mặt';
+        } else if (p.paymentMethod === 'Ví điện tử' || p.paymentMethod === 'EWallet') {
+          methodMapped = 'Ví điện tử';
+        }
+        
+        return {
+          id: p.transactionId || `PAY-${Date.now()}`,
+          date: p.paidAt ? p.paidAt.split(' ')[0] : '', 
+          amount: p.amount,
+          method: methodMapped,
+          recordedBy: 'Hệ thống',
+          notes: 'Thanh toán đã được xác nhận',
+          type: paidAmount >= data.totalAmount ? 'Thanh toán toàn bộ' : 'Thanh toán một phần'
+        };
+      });
+      
+      const savedNote = localStorage.getItem(`invoice_note_${data.id}`) || '';
+      
+      setInvoice({
+        id: data.id.toString(),
+        billingMonth: data.month,
+        createdDate: data.invoiceDate,
+        dueDate: data.dueDate,
+        status: data.status,
+        paidAmount: paidAmount,
+        rentPrice: rentPrice,
+        oldElectric: oldElectric,
+        newElectric: newElectric,
+        oldWater: oldWater,
+        newWater: newWater,
+        fixedFeesBreakdown: fixedFeesBreakdown,
+        surcharge: surcharge,
+        surchargeNote: surchargeNote,
+        discount: discount,
+        notes: savedNote,
+        lastUpdatedNote: savedNote ? 'Ghi chú được lưu trữ cục bộ trên trình duyệt.' : undefined,
+        paymentHistory: paymentHistory
+      });
+      
+      setEditingNote(savedNote);
+      setFileName(`HoaDon_${data.id}_${(data.tenantName || 'KhachThue').replace(/\s+/g, '')}_${data.month.replace('/', '-')}.xlsx`);
+      
+      setTenantDetails({
+        name: data.tenantName || 'Khách thuê',
+        phone: data.tenantPhone || 'Chưa rõ',
+        email: data.tenantPhone ? `${data.tenantPhone}@roomhub.vn` : 'N/A',
+        status: 'Đang thuê',
+        isLinked: data.isLinkedAccount || false,
+        startDate: data.invoiceDate
+      });
+      
+      setUnitDetails({
+        propertyName: data.buildingName,
+        unitName: `Phòng ${data.roomNumber}`,
+        unitType: 'Phòng trọ',
+        area: 25,
+        rentPrice: rentPrice,
+        status: 'Đang thuê',
+        address: data.buildingAddress
+      });
+    } catch (err: any) {
+      console.error(err);
+      setError('Không thể tải chi tiết hóa đơn từ hệ thống.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoiceDetail();
+  }, [invoiceId]);
 
   useEffect(() => {
     if (toast) {
@@ -153,26 +278,29 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
 
   // Synchronize dynamic defaults when modal opens
   useEffect(() => {
-    if (isRecordModalOpen) {
+    if (isRecordModalOpen && invoice) {
       setPaymentAmount((calculateTotal() - invoice.paidAmount).toString());
     }
-  }, [isRecordModalOpen, invoice.paidAmount]);
+  }, [isRecordModalOpen, invoice?.paidAmount]);
 
   useEffect(() => {
-    setNotificationMsg(
-      `Chào bạn, RoomHub đã cập nhật hóa đơn thuê tháng ${invoice.billingMonth} của bạn. Vui lòng kiểm tra chi tiết trong ứng dụng RoomHub để thanh toán trước ngày ${invoice.dueDate}. Cảm ơn bạn!`
-    );
-  }, [invoice.billingMonth, invoice.dueDate]);
+    if (invoice) {
+      setNotificationMsg(
+        `Chào bạn, RoomHub đã cập nhật hóa đơn thuê tháng ${invoice.billingMonth} của bạn. Vui lòng kiểm tra chi tiết trong ứng dụng RoomHub để thanh toán trước ngày ${invoice.dueDate}. Cảm ơn bạn!`
+      );
+    }
+  }, [invoice?.billingMonth, invoice?.dueDate]);
 
   // Calculators matching prompt details
-  const getElectricUsage = () => invoice.newElectric - invoice.oldElectric;
-  const getWaterUsage = () => invoice.newWater - invoice.oldWater;
+  const getElectricUsage = () => invoice ? invoice.newElectric - invoice.oldElectric : 0;
+  const getWaterUsage = () => invoice ? invoice.newWater - invoice.oldWater : 0;
 
-  const calculateElectricCost = () => getElectricUsage() * ELECTRIC_PRICE;
-  const calculateWaterCost = () => getWaterUsage() * WATER_PRICE;
-  const calculateFixedFeesSum = () => invoice.fixedFeesBreakdown.reduce((acc, curr) => acc + curr.amount, 0);
+  const calculateElectricCost = () => getElectricUsage() * electricPrice;
+  const calculateWaterCost = () => getWaterUsage() * waterPrice;
+  const calculateFixedFeesSum = () => invoice ? invoice.fixedFeesBreakdown.reduce((acc, curr) => acc + curr.amount, 0) : 0;
 
   const calculateTotal = () => {
+    if (!invoice) return 0;
     if (invoice.status === 'Đã hủy') return 0;
     const rent = invoice.rentPrice;
     const elec = calculateElectricCost();
@@ -184,23 +312,25 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
   };
 
   const getRemainingBalance = () => {
+    if (!invoice) return 0;
     const total = calculateTotal();
     return Math.max(0, total - invoice.paidAmount);
   };
 
-  // State manipulation handlers (Simulating backend updates for demonstration)
+  // State manipulation handlers 
   const saveNoteHandler = () => {
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} ngày ${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
-    setInvoice(prev => ({
+    if (!invoice) return;
+    localStorage.setItem(`invoice_note_${invoice.id}`, editingNote);
+    setInvoice(prev => prev ? ({
       ...prev,
       notes: editingNote,
-      lastUpdatedNote: `Cập nhật lần cuối bởi Nguyễn Văn Owner vào lúc ${timeStr}.`
-    }));
+      lastUpdatedNote: `Ghi chú được lưu trữ cục bộ trên trình duyệt.`
+    }) : null);
     triggerToast('Đã lưu ghi chú hóa đơn thành công!');
   };
 
-  const recordPaymentHandler = () => {
+  const recordPaymentHandler = async () => {
+    if (!invoice) return;
     const amt = Number(paymentAmount);
     if (isNaN(amt) || amt <= 0) {
       alert('Vui lòng nhập số tiền thanh toán hợp lệ.');
@@ -208,84 +338,103 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
     }
 
     const total = calculateTotal();
-    const newPaidAmount = invoice.paidAmount + amt;
-    const remaining = Math.max(0, total - newPaidAmount);
-
-    let newStatus: InvoiceState['status'] = 'Thanh toán một phần';
-    let paymentType: PaymentHistoryItem['type'] = 'Thanh toán một phần';
-
-    if (remaining === 0 || (markPaidIfEnough && newPaidAmount >= total)) {
-      newStatus = 'Đã thanh toán';
-      paymentType = invoice.paidAmount === 0 ? 'Thanh toán toàn bộ' : 'Thanh toán phần còn lại';
+    const remaining = Math.max(0, total - invoice.paidAmount);
+    if (amt > remaining) {
+      alert('Số tiền thanh toán không được vượt quá dư nợ còn lại.');
+      return;
     }
 
-    const newPayment: PaymentHistoryItem = {
-      id: `PAY-${Date.now().toString().substring(8)}`,
-      date: paymentDate.split('-').reverse().join('/'),
-      amount: amt,
-      method: paymentMethod,
-      recordedBy: OWNER_INFO.name,
-      notes: paymentNotes || 'Ghi nhận thanh toán ngoài hệ thống',
-      type: paymentType
-    };
+    try {
+      setIsAddLoading(true);
+      await api.post(`/owner/invoices/${invoice.id}/payment`, {
+        amount: amt,
+        paymentMethod: paymentMethod === 'Chuyển khoản' ? 'BankTransfer' : paymentMethod === 'Ví điện tử' ? 'EWallet' : 'Cash',
+        transactionId: `PAY-${Date.now()}`
+      });
 
-    setInvoice(prev => ({
-      ...prev,
-      paidAmount: Math.min(total, newPaidAmount),
-      status: newStatus,
-      paymentHistory: [...prev.paymentHistory, newPayment]
-    }));
-
-    setIsRecordModalOpen(false);
-    setPaymentNotes('');
-    triggerToast(`Ghi nhận thanh toán ${amt.toLocaleString()}đ thành công!`);
+      triggerToast(`Ghi nhận thanh toán ${amt.toLocaleString()}đ thành công!`);
+      setIsRecordModalOpen(false);
+      setPaymentNotes('');
+      fetchInvoiceDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi ghi nhận thanh toán.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  const cancelInvoiceHandler = () => {
+  const cancelInvoiceHandler = async () => {
+    if (!invoice) return;
     if (!confirmCancelCheck) {
       alert('Vui lòng tích chọn xác nhận hủy hóa đơn.');
       return;
     }
-    setInvoice(prev => ({
-      ...prev,
-      status: 'Đã hủy',
-      paidAmount: 0
-    }));
-    setIsCancelModalOpen(false);
-    setCancelReason('');
-    setConfirmCancelCheck(false);
-    triggerToast('Đã hủy hóa đơn trọ thành công!', 'warning');
+    try {
+      setIsAddLoading(true);
+      await api.put(`/owner/invoices/${invoice.id}/cancel`);
+      triggerToast('Đã hủy hóa đơn trọ thành công!', 'warning');
+      setIsCancelModalOpen(false);
+      setCancelReason('');
+      setConfirmCancelCheck(false);
+      fetchInvoiceDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi hủy hóa đơn.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  const markQuickPaid = () => {
+  const markQuickPaid = async () => {
+    if (!invoice) return;
     const balance = getRemainingBalance();
     if (balance <= 0) return;
     
-    const quickPayment: PaymentHistoryItem = {
-      id: `PAY-${Date.now().toString().substring(8)}`,
-      date: new Date().toLocaleDateString('vi-VN'),
-      amount: balance,
-      method: 'Chuyển khoản',
-      recordedBy: OWNER_INFO.name,
-      notes: 'Đánh dấu đã thanh toán 1-click đóng đủ',
-      type: invoice.paidAmount === 0 ? 'Thanh toán toàn bộ' : 'Thanh toán phần còn lại'
-    };
-
-    setInvoice(prev => ({
-      ...prev,
-      paidAmount: calculateTotal(),
-      status: 'Đã thanh toán',
-      paymentHistory: [...prev.paymentHistory, quickPayment]
-    }));
-
-    triggerToast('Đã đánh dấu thanh toán thành công hóa đơn!');
+    try {
+      setIsAddLoading(true);
+      await api.post(`/owner/invoices/${invoice.id}/payment`, {
+        amount: balance,
+        paymentMethod: 'Cash',
+        transactionId: `CASH-${Date.now()}`
+      });
+      triggerToast('Đã đánh dấu thanh toán thành công hóa đơn!');
+      fetchInvoiceDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi ghi nhận thanh toán.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  const handleExportSubmit = () => {
+  const handleExportSingleExcel = async () => {
+    if (!invoice) return;
+    try {
+      setIsAddLoading(true);
+      const response = await api.get(`/owner/invoices/${invoice.id}/export`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || `HoaDon_${invoice.id}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      triggerToast(`Đã tải file Excel hóa đơn ${invoice.id} thành công!`);
+    } catch (err: any) {
+      console.error(err);
+      alert('Không thể xuất file Excel hóa đơn này.');
+    } finally {
+      setIsAddLoading(false);
+    }
+  };
+
+  const handleExportSubmit = async () => {
     setExportProgress('generating');
-    setTimeout(() => {
-      setExportProgress('success');
-    }, 2000);
+    await handleExportSingleExcel();
+    setExportProgress('success');
   };
 
   // Determine status color configurations for badges
@@ -305,6 +454,30 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
         return { bg: 'bg-gray-200 border-gray-300 text-gray-500 line-through', text: 'Đã hủy bỏ', labelBg: 'bg-gray-400' };
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+        <p className="text-xs font-bold text-gray-500">Đang tải chi tiết hóa đơn...</p>
+      </div>
+    );
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+        <span className="material-symbols-outlined text-[48px] text-red-500">error</span>
+        <p className="text-sm font-bold text-gray-700">{error || 'Không tìm thấy thông tin hóa đơn.'}</p>
+        <button 
+          onClick={() => setCurrentPage('owner-invoices')}
+          className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all"
+        >
+          Quay lại danh sách
+        </button>
+      </div>
+    );
+  }
 
   const statusStyle = getStatusConfig(invoice.status);
 
@@ -345,14 +518,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              Kỳ thanh toán tháng {invoice.billingMonth} · {UNIT_INFO.unitName} · {UNIT_INFO.propertyName}
+              Kỳ thanh toán tháng {invoice.billingMonth} · {unitDetails.unitName} · {unitDetails.propertyName}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-gray-500 font-bold">
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px] text-gray-400">person</span>
-              Người thuê: <span className="text-on-surface">{TENANT_INFO.name}</span>
+              Người thuê: <span className="text-on-surface">{tenantDetails.name}</span>
             </span>
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px] text-gray-400">calendar_today</span>
@@ -381,13 +554,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
             </button>
           ) : (
             <button
-              onClick={() => {
-                if (invoice.status === 'Đã hủy') {
-                  triggerToast('Hóa đơn đã bị hủy bỏ!', 'warning');
-                  return;
-                }
-                markQuickPaid();
-              }}
               disabled={invoice.status === 'Đã thanh toán'}
               className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 disabled:bg-green-50 disabled:text-green-700 disabled:border-green-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 cursor-pointer disabled:cursor-default"
             >
@@ -440,7 +606,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
           <div className="flex items-start gap-2.5">
             <span className="material-symbols-outlined text-red-500 text-[22px] font-bold">error_outline</span>
             <div>
-              <h4 className="text-xs font-extrabold text-red-800">Hóa đơn đã quá hạn 5 ngày!</h4>
+              <h4 className="text-xs font-extrabold text-red-800">Hóa đơn đã quá hạn!</h4>
               <p className="text-[10px] text-red-600 mt-0.5">Thời hạn thanh toán đã trễ từ ngày {invoice.dueDate}. Hãy liên hệ trực tiếp hoặc gửi thông báo cảnh cáo đóng tiền trọ.</p>
             </div>
           </div>
@@ -563,7 +729,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
             <p className="text-[10px] font-bold text-gray-400 uppercase">Hạn đóng</p>
             <p className="text-xs font-bold text-on-surface mt-0.5">{invoice.dueDate}</p>
             <p className="text-[8px] text-gray-400 font-medium">
-              {invoice.status === 'Đã thanh toán' ? 'Đã thu xong' : invoice.status === 'Quá hạn' ? 'Đã trễ 5 ngày' : 'Còn lại 6 ngày'}
+              {invoice.status === 'Đã thanh toán' ? 'Đã thu xong' : invoice.status === 'Quá hạn' ? 'Đã trễ' : 'Đang trong kỳ'}
             </p>
           </div>
         </div>
@@ -612,7 +778,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                   <div>
                     <span className="text-[10px] block font-bold">RoomHub</span>
                     <span>ĐÃ THU</span>
-                    <span className="text-[8px] block font-medium mt-0.5">03/06/2026</span>
+                    <span className="text-[8px] block font-medium mt-0.5">{invoice.dueDate}</span>
                   </div>
                 </div>
               )}
@@ -653,10 +819,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
 
                 <div className="space-y-1">
                   <h4 className="font-bold text-gray-400 uppercase text-[10px] tracking-wider mb-1.5">Thông tin khách thuê</h4>
-                  <p className="font-extrabold text-on-surface text-sm">{TENANT_INFO.name}</p>
-                  <p><span className="text-gray-500 font-semibold">Điện thoại:</span> {TENANT_INFO.phone}</p>
-                  <p><span className="text-gray-500 font-semibold">Căn phòng:</span> <span className="font-bold">{UNIT_INFO.unitName} · {UNIT_INFO.propertyName}</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium italic">{UNIT_INFO.address}</p>
+                  <p className="font-extrabold text-on-surface text-sm">{tenantDetails.name}</p>
+                  <p><span className="text-gray-500 font-semibold">Điện thoại:</span> {tenantDetails.phone}</p>
+                  <p><span className="text-gray-500 font-semibold">Căn phòng:</span> <span className="font-bold">{unitDetails.unitName} · {unitDetails.propertyName}</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium italic">{unitDetails.address}</p>
                 </div>
               </div>
 
@@ -690,7 +856,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                         <p className="text-[9px] text-gray-400 font-medium italic mt-0.5">(Chỉ số điện: Cũ: {invoice.oldElectric} - Mới: {invoice.newElectric})</p>
                       </td>
                       <td className="py-3 text-center font-mono">{getElectricUsage()} kWh</td>
-                      <td className="py-3 text-right font-mono">{ELECTRIC_PRICE.toLocaleString()}</td>
+                      <td className="py-3 text-right font-mono">{electricPrice.toLocaleString()}</td>
                       <td className="py-3 text-right text-on-surface font-extrabold font-mono">{calculateElectricCost().toLocaleString()}</td>
                     </tr>
 
@@ -702,7 +868,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                         <p className="text-[9px] text-gray-400 font-medium italic mt-0.5">(Chỉ số nước: Cũ: {invoice.oldWater} - Mới: {invoice.newWater})</p>
                       </td>
                       <td className="py-3 text-center font-mono">{getWaterUsage()} m³</td>
-                      <td className="py-3 text-right font-mono">{WATER_PRICE.toLocaleString()}</td>
+                      <td className="py-3 text-right font-mono">{waterPrice.toLocaleString()}</td>
                       <td className="py-3 text-right text-on-surface font-extrabold font-mono">{calculateWaterCost().toLocaleString()}</td>
                     </tr>
 
@@ -768,7 +934,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 <div className="space-y-12">
                   <p className="font-bold text-gray-500 uppercase text-[9px] tracking-wider">Khách ký nhận</p>
                   <div>
-                    <p className="font-extrabold text-on-surface">{TENANT_INFO.name}</p>
+                    <p className="font-extrabold text-on-surface">{tenantDetails.name}</p>
                     <p className="text-[10px] text-gray-400">Ngày ký: .../..../2026</p>
                   </div>
                 </div>
@@ -818,7 +984,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                   </div>
                   <div className="flex justify-between border-t border-gray-200/50 pt-1.5 text-on-surface">
                     <span>Đơn giá:</span>
-                    <span>{ELECTRIC_PRICE.toLocaleString()}đ/kWh</span>
+                    <span>{electricPrice.toLocaleString()}đ/kWh</span>
                   </div>
                 </div>
               </div>
@@ -841,7 +1007,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                   </div>
                   <div className="flex justify-between border-t border-gray-200/50 pt-1.5 text-on-surface">
                     <span>Đơn giá:</span>
-                    <span>{WATER_PRICE.toLocaleString()}đ/m³</span>
+                    <span>{waterPrice.toLocaleString()}đ/m³</span>
                   </div>
                 </div>
               </div>
@@ -1017,19 +1183,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 </button>
               )}
 
-              {invoice.status === 'Nháp' && (
-                <button
-                  onClick={() => {
-                    setInvoice(prev => ({ ...prev, status: 'Chưa thanh toán' }));
-                    triggerToast('Đã phát hành hóa đơn thành công!');
-                  }}
-                  className="w-full py-2.5 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-[18px]">publish</span>
-                  <span>Phát hành hóa đơn</span>
-                </button>
-              )}
-
               {invoice.status !== 'Đã hủy' && invoice.status !== 'Đã thanh toán' && (
                 <button
                   onClick={() => setIsCancelModalOpen(true)}
@@ -1061,12 +1214,12 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
 
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-orange-100 text-primary-container font-black text-sm flex items-center justify-center">
-                {TENANT_INFO.name.split(' ').pop()?.substring(0, 2).toUpperCase()}
+                {tenantDetails.name.split(' ').pop()?.substring(0, 2).toUpperCase()}
               </div>
               <div>
-                <p className="font-extrabold text-on-surface text-sm">{TENANT_INFO.name}</p>
+                <p className="font-extrabold text-on-surface text-sm">{tenantDetails.name}</p>
                 <span className="inline-block px-1.5 py-0.5 rounded bg-green-50 text-green-700 text-[8px] font-extrabold border border-green-100 mt-0.5">
-                  {TENANT_INFO.isLinked ? 'Liên kết RoomHub' : 'Khách Offline'}
+                  {tenantDetails.isLinked ? 'Liên kết RoomHub' : 'Khách Offline'}
                 </span>
               </div>
             </div>
@@ -1074,26 +1227,19 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
             <div className="text-xs font-bold text-gray-600 space-y-2 pt-1.5">
               <div className="flex justify-between">
                 <span className="text-gray-400">Số điện thoại:</span>
-                <span className="text-on-surface">{TENANT_INFO.phone}</span>
+                <span className="text-on-surface">{tenantDetails.phone}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Email:</span>
-                <span className="text-on-surface text-[10px] truncate max-w-[150px]" title={TENANT_INFO.email}>
-                  {TENANT_INFO.email}
+                <span className="text-on-surface text-[10px] truncate max-w-[150px]" title={tenantDetails.email}>
+                  {tenantDetails.email}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Ngày dọn vào:</span>
-                <span className="text-on-surface">{TENANT_INFO.startDate}</span>
+                <span className="text-gray-400">Ngày lập đơn:</span>
+                <span className="text-on-surface">{invoice.createdDate}</span>
               </div>
             </div>
-
-            <button
-              onClick={() => alert('Mở chi tiết khách thuê...')}
-              className="w-full py-2 bg-gray-50 hover:bg-orange-50 text-[10px] font-extrabold text-primary-container border border-gray-150 rounded-xl transition-all cursor-pointer text-center"
-            >
-              Xem hồ sơ người thuê
-            </button>
           </div>
 
           {/* PART H: Unit Info Card */}
@@ -1104,29 +1250,29 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
             </h3>
 
             <div className="space-y-1">
-              <h4 className="font-extrabold text-on-surface text-sm">{UNIT_INFO.unitName} · {UNIT_INFO.propertyName}</h4>
-              <p className="text-[10px] text-gray-500 font-medium">{UNIT_INFO.address}</p>
+              <h4 className="font-extrabold text-on-surface text-sm">{unitDetails.unitName} · {unitDetails.propertyName}</h4>
+              <p className="text-[10px] text-gray-500 font-medium">{unitDetails.address}</p>
             </div>
 
             <div className="text-xs font-bold text-gray-600 space-y-2 pt-1">
               <div className="flex justify-between">
                 <span className="text-gray-400">Loại bất động sản:</span>
-                <span className="text-on-surface">{UNIT_INFO.unitType}</span>
+                <span className="text-on-surface">{unitDetails.unitType}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Diện tích phòng:</span>
-                <span className="text-on-surface font-mono">{UNIT_INFO.area} m²</span>
+                <span className="text-on-surface font-mono">{unitDetails.area} m²</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Giá thuê gốc:</span>
-                <span className="text-on-surface font-mono">{UNIT_INFO.rentPrice.toLocaleString()}đ/tháng</span>
+                <span className="text-on-surface font-mono">{unitDetails.rentPrice.toLocaleString()}đ/tháng</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
-                  window.location.hash = `#/owner/units/unit-1`;
+                  window.location.hash = `#/owner/properties`;
                 }}
                 className="py-2 bg-gray-50 hover:bg-orange-50 text-[9px] font-extrabold text-primary-container border border-gray-150 rounded-xl transition-all cursor-pointer text-center"
               >
@@ -1134,7 +1280,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
               </button>
               <button
                 onClick={() => {
-                  window.location.hash = `#/owner/properties/1`;
+                  window.location.hash = `#/owner/properties`;
                 }}
                 className="py-2 bg-gray-50 hover:bg-orange-50 text-[9px] font-extrabold text-primary-container border border-gray-150 rounded-xl transition-all cursor-pointer text-center"
               >
@@ -1146,7 +1292,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
         </div>
 
       </div>
-
 
       {/* --- TASK MODALS SYSTEM --- */}
 
@@ -1314,7 +1459,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                   <div className="space-y-1">
                     <p className="text-xs font-extrabold text-green-700">Xuất Excel thành công!</p>
                     <p className="text-[10px] text-gray-500 max-w-xs">{fileName}</p>
-                    <p className="text-[9px] text-gray-400 font-semibold mt-1">Dung lượng: <span className="font-bold font-mono">24 KB</span></p>
                   </div>
                   
                   <div className="pt-2">
@@ -1322,12 +1466,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                       onClick={() => {
                         setIsExportModalOpen(false);
                         setExportProgress('idle');
-                        triggerToast('Tải xuống file Excel thành công!');
                       }}
                       className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5 mx-auto"
                     >
                       <span className="material-symbols-outlined text-[16px] font-bold">download_for_offline</span>
-                      Tải xuống máy tính
+                      Hoàn thành
                     </button>
                   </div>
                 </div>
@@ -1368,37 +1511,37 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                     </div>
                     {exportOptions.includeTenant && (
                       <div className="text-[8px] text-gray-600 py-1 bg-orange-50/20 px-1 border border-orange-100/40 rounded">
-                        Khách: {TENANT_INFO.name} ({TENANT_INFO.phone})
+                        Khách: {tenantDetails.name} ({tenantDetails.phone})
                       </div>
                     )}
                     {/* Fee lines simulation */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex justify-between text-gray-500">
                         <span>1. Tiền phòng:</span>
-                        <span className="font-bold">2.500.000đ</span>
+                        <span className="font-bold">{invoice.rentPrice.toLocaleString()}đ</span>
                       </div>
                       {exportOptions.includeElectricWater && (
                         <>
                           <div className="flex justify-between text-gray-500">
                             <span>2. Tiền điện:</span>
-                            <span className="font-bold">420.000đ</span>
+                            <span className="font-bold">{calculateElectricCost().toLocaleString()}đ</span>
                           </div>
                           <div className="flex justify-between text-gray-500">
                             <span>3. Tiền nước:</span>
-                            <span className="font-bold">60.000đ</span>
+                            <span className="font-bold">{calculateWaterCost().toLocaleString()}đ</span>
                           </div>
                         </>
                       )}
                       {exportOptions.includeFixedFees && (
                         <div className="flex justify-between text-gray-500">
-                          <span>4. Dịch vụ wifi/rác:</span>
-                          <span className="font-bold">180.000đ</span>
+                          <span>4. Dịch vụ cố định:</span>
+                          <span className="font-bold">{calculateFixedFeesSum().toLocaleString()}đ</span>
                         </div>
                       )}
                       {exportOptions.includeSurchargeDiscount && invoice.surcharge > 0 && (
                         <div className="flex justify-between text-green-600 font-bold">
                           <span>5. Phụ thu:</span>
-                          <span>+150.000đ</span>
+                          <span>+{invoice.surcharge.toLocaleString()}đ</span>
                         </div>
                       )}
                     </div>
@@ -1547,10 +1690,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 Hủy
               </button>
               <button
+                disabled={isAddLoading}
                 onClick={recordPaymentHandler}
-                className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Ghi nhận giao dịch
+                {isAddLoading ? 'Đang lưu...' : 'Ghi nhận giao dịch'}
               </button>
             </div>
           </div>
@@ -1577,7 +1721,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
               <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-gray-700">
                 <div className="flex justify-between">
                   <span>Khách trọ:</span>
-                  <span className="text-on-surface">{TENANT_INFO.name}</span>
+                  <span className="text-on-surface">{tenantDetails.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Mã hóa đơn:</span>
@@ -1593,7 +1737,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 </div>
               </div>
 
-              {!TENANT_INFO.isLinked && (
+              {!tenantDetails.isLinked && (
                 /* PART M: Offline Warning */
                 <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2 text-[10px] text-red-800 font-bold leading-normal">
                   <span className="material-symbols-outlined text-[16px] text-red-500 font-bold flex-shrink-0">warning</span>
@@ -1607,7 +1751,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 <label className="text-xs font-bold text-on-surface">Mẫu văn bản thông báo gửi đi</label>
                 <textarea
                   rows={4}
-                  disabled={!TENANT_INFO.isLinked}
+                  disabled={!tenantDetails.isLinked}
                   value={notificationMsg}
                   onChange={(e) => setNotificationMsg(e.target.value)}
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:outline-none focus:bg-white focus:border-primary-container disabled:bg-gray-100 disabled:opacity-50"
@@ -1623,10 +1767,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 Hủy bỏ
               </button>
               <button
-                disabled={!TENANT_INFO.isLinked}
+                disabled={!tenantDetails.isLinked}
                 onClick={() => {
                   setIsNotifyModalOpen(false);
-                  triggerToast(`Đã gửi thông báo nhắc đóng tiền thành công tới khách hàng ${TENANT_INFO.name}!`);
+                  triggerToast(`Đã gửi thông báo nhắc đóng tiền thành công tới khách hàng ${tenantDetails.name}!`);
                 }}
                 className="px-4 py-2 bg-primary-container disabled:bg-gray-200 disabled:text-gray-400 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
               >
@@ -1688,11 +1832,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
                 Không hủy
               </button>
               <button
-                disabled={!confirmCancelCheck || !cancelReason}
+                disabled={!confirmCancelCheck || !cancelReason || isAddLoading}
                 onClick={cancelInvoiceHandler}
                 className="px-4 py-2 bg-red-600 disabled:bg-gray-200 disabled:text-gray-400 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
               >
-                Hủy hóa đơn
+                {isAddLoading ? 'Đang xử lý...' : 'Hủy hóa đơn'}
               </button>
             </div>
           </div>

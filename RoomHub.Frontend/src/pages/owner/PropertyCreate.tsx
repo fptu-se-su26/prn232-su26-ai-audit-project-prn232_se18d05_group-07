@@ -99,6 +99,30 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionMessage, setSubmissionMessage] = useState('Đang chốt cấu trúc sơ đồ...');
 
+  // Custom Alert state
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', onConfirm?: () => void) => {
+    setAlertConfig({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm
+    });
+  };
+
   // Computed fields
   const totalRoomsToCreate = useMemo(() => {
     if (selectedType === 'independent') return 1;
@@ -178,7 +202,7 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     } catch (err: any) {
       console.error(err);
       const errMsg = err.response?.data?.message || 'Không thể tải ảnh lên.';
-      alert(`Lỗi: ${errMsg}`);
+      showAlert('Lỗi tải ảnh', errMsg, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -285,15 +309,21 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
         maxCapacity: data.maxPeople
       }))
     })
-    .then((res) => {
+    .then(() => {
       setIsSubmitting(false);
-      alert(`Chúc mừng! Đã tạo thành công tài sản "${propertyName}" và tự động sinh ${totalRoomsToCreate} phòng cho thuê.`);
-      setCurrentPage('owner-properties');
+      showAlert(
+        'Tạo tài sản thành công',
+        `Chúc mừng! Đã tạo thành công tài sản "${propertyName}" và tự động sinh ${totalRoomsToCreate} phòng cho thuê.`,
+        'success',
+        () => {
+          setCurrentPage('owner-properties');
+        }
+      );
     })
     .catch((err) => {
       setIsSubmitting(false);
       const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài sản trọ.';
-      alert(`Lỗi: ${errMsg}`);
+      showAlert('Lỗi tạo tài sản', errMsg, 'error');
     });
   };
 
@@ -1315,6 +1345,42 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
             <div className="bg-orange-50 border border-orange-100 p-2.5 rounded-xl w-full">
               <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider block">Tiến độ thiết lập</span>
               <span className="text-[10px] text-gray-600 font-bold block mt-0.5">Sinh tự động sơ đồ bản đồ {totalRoomsToCreate} phòng cho thuê.</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alert Modal */}
+      {alertConfig.isOpen && (
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center z-[9999] p-4 text-center animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 soft-shadow flex flex-col space-y-4 animate-scaleUp max-w-sm w-full border border-gray-100">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-1 animate-bounce ${
+              alertConfig.type === 'success' ? 'bg-green-50 text-green-600' :
+              alertConfig.type === 'error' ? 'bg-red-50 text-red-600 animate-shake' :
+              alertConfig.type === 'warning' ? 'bg-yellow-50 text-yellow-600' : 'bg-blue-50 text-blue-600'
+            }`}>
+              <span className="material-symbols-outlined text-[28px]">
+                {alertConfig.type === 'success' ? 'check_circle' :
+                 alertConfig.type === 'error' ? 'error' :
+                 alertConfig.type === 'warning' ? 'warning' : 'info'}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-on-surface uppercase tracking-wide">{alertConfig.title}</h3>
+              <p className="text-[11px] text-gray-400 font-semibold mt-1 leading-relaxed">
+                {alertConfig.message}
+              </p>
+            </div>
+            <div className="pt-1">
+              <button 
+                onClick={() => {
+                  setAlertConfig(prev => ({ ...prev, isOpen: false }));
+                  if (alertConfig.onConfirm) alertConfig.onConfirm();
+                }}
+                className="w-full py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                Xác nhận
+              </button>
             </div>
           </div>
         </div>

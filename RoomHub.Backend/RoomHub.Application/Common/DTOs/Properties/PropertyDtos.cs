@@ -40,6 +40,12 @@ namespace Application.Common.DTOs.Properties
         public decimal Deposit { get; set; }
         public string OutstandingBillStatus { get; set; } = null!;
         public decimal OutstandingBillAmount { get; set; }
+        public decimal OldElectricity { get; set; }
+        public decimal OldWater { get; set; }
+        public decimal ElectricityPrice { get; set; }
+        public decimal WaterPrice { get; set; }
+        public decimal InternetPrice { get; set; }
+        public decimal GarbagePrice { get; set; }
     }
 
     public class PropertyDetailDto
