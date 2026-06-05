@@ -958,6 +958,9 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Property<decimal?>("GarbagePrice")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<bool>("HasListing")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("InternetPrice")
                         .HasColumnType("decimal(18, 2)");
 

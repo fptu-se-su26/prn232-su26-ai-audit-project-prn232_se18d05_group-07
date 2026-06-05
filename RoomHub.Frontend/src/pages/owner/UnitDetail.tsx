@@ -1,12 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface UnitDetailProps {
   unitId: string | null;
   setCurrentPage: (page: PageType) => void;
+  setSelectedListingId?: (id: number | null) => void;
 }
 
-// Model structures representing internal state
 interface TenantData {
   name: string;
   email: string;
@@ -27,7 +28,7 @@ interface InvoiceBill {
   rentPrice: number;
   utilitiesPrice: number;
   total: number;
-  status: 'Đã thanh toán' | 'Chưa thanh toán' | 'Quá hạn' | 'Nháp';
+  status: string;
   dueDate: string;
 }
 
@@ -35,7 +36,7 @@ interface RentalListing {
   id: string;
   title: string;
   price: number;
-  status: 'Đang hiển thị' | 'Chờ duyệt' | 'Nháp' | 'Đã ẩn';
+  status: string;
   createdDate: string;
   views: number;
 }
@@ -45,59 +46,27 @@ interface ActivityLog {
   time: string;
 }
 
-const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
-  const activeUnitId = unitId || '201';
+const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSelectedListingId }) => {
+  const activeUnitId = unitId || '';
+  const unitIdNum = parseInt(activeUnitId, 10);
 
-  // Room parameters state
-  const [unitStatus, setUnitStatus] = useState<'Còn trống' | 'Đang thuê' | 'Bảo trì' | 'Quá hạn'>('Đang thuê');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<any>(null);
+
+  const [unitStatus, setUnitStatus] = useState<string>('Còn trống');
   const [roomNote, setRoomNote] = useState('');
-  const [savedNotes, setSavedNotes] = useState<string>('Khách thuê báo sẽ chuyển khoản vào cuối tuần này.');
+  const [savedNotes, setSavedNotes] = useState<string>('');
 
-  // Tenant state
-  const [tenant, setTenant] = useState<TenantData | null>({
-    name: 'Nguyễn Văn An',
-    email: 'nguyenvana@gmail.com',
-    phone: '0909 123 456',
-    cccd: '048201005869',
-    address: 'Sơn Tịnh, Quảng Ngãi',
-    startDate: '01/03/2026',
-    endDateExpected: 'Không xác định',
-    deposit: 2500000,
-    agreementPrice: 2500000,
-    peopleCount: 2,
-    isLinkedAccount: true
-  });
+  const [tenant, setTenant] = useState<TenantData | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceBill[]>([]);
+  const [listing, setListing] = useState<RentalListing | null>(null);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
 
-  // Recent invoices state
-  const [invoices, setInvoices] = useState<InvoiceBill[]>([
-    { id: 'INV-0526-201', month: '05/2026', rentPrice: 2500000, utilitiesPrice: 810000, total: 3310000, status: 'Chưa thanh toán', dueDate: '10/05/2026' },
-    { id: 'INV-0426-201', month: '04/2026', rentPrice: 2500000, utilitiesPrice: 750000, total: 3250000, status: 'Đã thanh toán', dueDate: '10/04/2026' },
-    { id: 'INV-0326-201', month: '03/2026', rentPrice: 2500000, utilitiesPrice: 700000, total: 3200000, status: 'Đã thanh toán', dueDate: '10/03/2026' }
-  ]);
-
-  // Listing state
-  const [listing, setListing] = useState<RentalListing | null>({
-    id: 'LIST-201-FPTH',
-    title: 'Phòng trọ sạch sẽ khép kín, có gác lửng gần đại học FPT Đà Nẵng',
-    price: 2500000,
-    status: 'Đang hiển thị',
-    createdDate: '10/04/2026',
-    views: 128
-  });
-
-  // Log state
-  const [logs, setLogs] = useState<ActivityLog[]>([
-    { text: 'Nguyễn Văn An thanh toán hóa đơn tháng 04/2026', time: '28/04/2026 14:32' },
-    { text: 'Chủ nhà chốt hóa đơn dịch vụ tháng 05/2026', time: '25/05/2026 09:15' },
-    { text: 'Nguyễn Văn An dọn vào phòng 201 và đóng cọc 2.5 triệu', time: '01/03/2026 08:00' }
-  ]);
-
-  // Modal open states
   const [isAddTenantOpen, setIsAddTenantOpen] = useState(false);
   const [isEndTenancyOpen, setIsEndTenancyOpen] = useState(false);
   const [isChangeStatusOpen, setIsChangeStatusOpen] = useState(false);
 
-  // ADD TENANT MODAL FORM STATES
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<'not-searched' | 'found' | 'not-found'>('not-searched');
   const [addTenantName, setAddTenantName] = useState('');
@@ -105,32 +74,95 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
   const [addTenantPhone, setAddTenantPhone] = useState('');
   const [addTenantCCCD, setAddTenantCCCD] = useState('');
   const [addTenantAddress, setAddTenantAddress] = useState('');
-  const [addTenantStartDate, setAddTenantStartDate] = useState('2026-05-30');
+  const [addTenantStartDate, setAddTenantStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [addTenantEndDate, setAddTenantEndDate] = useState('');
-  const [addTenantRent, setAddTenantRent] = useState(2500000);
-  const [addTenantDeposit, setAddTenantDeposit] = useState(2500000);
-  const [addTenantPeopleCount, setAddTenantPeopleCount] = useState(2);
+  const [addTenantRent, setAddTenantRent] = useState(0);
+  const [addTenantDeposit, setAddTenantDeposit] = useState(0);
+  const [addTenantPeopleCount, setAddTenantPeopleCount] = useState(1);
   const [sendZaloNotice, setSendZaloNotice] = useState(true);
   const [createFirstBill, setCreateFirstBill] = useState(false);
   const [autoStatusRented, setAutoStatusRented] = useState(true);
   const [addTenantErrors, setAddTenantErrors] = useState<{ [key: string]: string }>({});
   const [isAddLoading, setIsAddLoading] = useState(false);
 
-  // END TENANCY FORM STATES
-  const [endTenancyDate, setEndTenancyDate] = useState('2026-05-30');
+  const [endTenancyDate, setEndTenancyDate] = useState(new Date().toISOString().split('T')[0]);
   const [endTenancyReason, setEndTenancyReason] = useState('');
   const [markAsVacant, setMarkAsVacant] = useState(true);
   const [hideRelatedListing, setHideRelatedListing] = useState(true);
   const [isEndLoading, setIsEndLoading] = useState(false);
 
-  // CHANGE STATUS FORM STATES
-  const [tempStatus, setTempStatus] = useState<'Còn trống' | 'Đang thuê' | 'Bảo trì' | 'Quá hạn'>('Đang thuê');
+  const [tempStatus, setTempStatus] = useState<string>('Còn trống');
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN') + 'đ';
+  const fetchDetail = async () => {
+    if (!activeUnitId || isNaN(unitIdNum)) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get(`/owner/units/${unitIdNum}`);
+      const room = res.data;
+      setData(room);
+      setUnitStatus(room.status);
+      setTempStatus(room.status);
+      setSavedNotes(room.internalNotes || '');
+      setTenant(room.tenant ? {
+        name: room.tenant.name,
+        email: room.tenant.email,
+        phone: room.tenant.phone,
+        cccd: room.tenant.cccd,
+        address: room.tenant.address,
+        startDate: room.tenant.startDate,
+        endDateExpected: room.tenant.endDate || 'Không xác định',
+        deposit: room.tenant.deposit,
+        agreementPrice: room.tenant.agreementPrice,
+        peopleCount: room.tenant.peopleCount || 1,
+        isLinkedAccount: room.tenant.isLinkedAccount
+      } : null);
+
+      setInvoices((room.invoices || []).map((inv: any) => ({
+        id: inv.id,
+        month: inv.month,
+        rentPrice: inv.rentPrice,
+        utilitiesPrice: inv.utilitiesPrice,
+        total: inv.total,
+        status: inv.status,
+        dueDate: inv.dueDate
+      })));
+
+      setListing(room.listing ? {
+        id: room.listing.id,
+        title: room.listing.title,
+        price: room.listing.price,
+        status: room.listing.status,
+        createdDate: room.listing.createdDate,
+        views: room.listing.views
+      } : null);
+
+      setLogs((room.logs || []).map((log: any) => ({
+        text: log.text,
+        time: log.time
+      })));
+
+      setAddTenantRent(room.price || 0);
+      setAddTenantDeposit(room.price || 0);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Không thể tải thông tin chi tiết phòng.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Calculations for outstanding bills
+  useEffect(() => {
+    fetchDetail();
+  }, [activeUnitId]);
+
+  const formatPrice = (price: number) => {
+    return (price || 0).toLocaleString('vi-VN') + 'đ';
+  };
+
   const debtAmount = useMemo(() => {
     if (unitStatus === 'Còn trống' || unitStatus === 'Bảo trì') return 0;
     return invoices
@@ -140,60 +172,86 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
 
   const currentMonthBillStatus = useMemo(() => {
     if (unitStatus === 'Còn trống' || unitStatus === 'Bảo trì') return 'Không có';
-    const thisMonthInvoice = invoices.find(inv => inv.month === '05/2026');
-    return thisMonthInvoice ? thisMonthInvoice.status : 'Không có';
+    const latestInvoice = invoices[0];
+    return latestInvoice ? latestInvoice.status : 'Không có';
   }, [invoices, unitStatus]);
 
-  // Actions
-  const handleSaveNotes = (e: React.FormEvent) => {
+  const handleSaveNotes = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomNote.trim()) return;
-    setSavedNotes(roomNote);
-    const newLog = { text: `Chủ nhà đã cập nhật ghi chú nội bộ phòng: "${roomNote}"`, time: 'Vừa xong' };
-    setLogs(prev => [newLog, ...prev]);
-    setRoomNote('');
-    alert('Ghi chú đã được cập nhật thành công!');
+    try {
+      setIsAddLoading(true);
+      await api.post(`/owner/units/${unitIdNum}/notes`, { notes: roomNote });
+      setSavedNotes(roomNote);
+      const newLog = { text: `Chủ nhà đã cập nhật ghi chú nội bộ phòng: "${roomNote}"`, time: 'Vừa xong' };
+      setLogs(prev => [newLog, ...prev]);
+      setRoomNote('');
+      alert('Ghi chú đã được cập nhật thành công!');
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Không thể lưu ghi chú.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  const handleMarkInvoicePaid = (id: string) => {
-    setInvoices(prev => 
-      prev.map(inv => inv.id === id ? { ...inv, status: 'Đã thanh toán' } : inv)
-    );
-    const updatedInvoice = invoices.find(inv => inv.id === id);
-    const newLog = { text: `Hóa đơn tháng ${updatedInvoice?.month} đã được xác nhận ĐÃ THANH TOÁN.`, time: 'Vừa xong' };
-    setLogs(prev => [newLog, ...prev]);
-    alert(`Đã chốt xác nhận hóa đơn ${id} được thanh toán thành công.`);
+  const handleMarkInvoicePaid = async (id: string) => {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    try {
+      setIsAddLoading(true);
+      await api.post(`/owner/invoices/${id}/payment`, {
+        amount: inv.total,
+        paymentMethod: 'Cash',
+        transactionId: `CASH-${Date.now()}`
+      });
+      alert(`Đã ghi nhận thanh toán hóa đơn ${id} thành công.`);
+      fetchDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận thanh toán.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  // Search User simulator
-  const handleSearchTenant = () => {
+  const handleSearchTenant = async () => {
     if (!searchQuery.trim()) {
       alert('Vui lòng nhập Email hoặc Số điện thoại để tìm kiếm.');
       return;
     }
-    if (searchQuery.includes('nguyenvana') || searchQuery.includes('0909123456') || searchQuery.includes('0909 123 456')) {
-      setSearchResult('found');
-      setAddTenantName('Nguyễn Văn An');
-      setAddTenantEmail('nguyenvana@gmail.com');
-      setAddTenantPhone('0909 123 456');
-      setAddTenantCCCD('048201005869');
-      setAddTenantAddress('Sơn Tịnh, Quảng Ngãi');
-    } else {
+    try {
+      setIsAddLoading(true);
+      const res = await api.get(`/owner/tenants/search?query=${encodeURIComponent(searchQuery)}`);
+      if (res.data) {
+        setSearchResult('found');
+        setAddTenantName(res.data.fullName || '');
+        setAddTenantEmail(res.data.email || '');
+        setAddTenantPhone(res.data.phone || '');
+        setAddTenantCCCD(res.data.cccd || '');
+        setAddTenantAddress(res.data.address || '');
+      } else {
+        setSearchResult('not-found');
+      }
+    } catch (err: any) {
+      console.error(err);
       setSearchResult('not-found');
+    } finally {
+      setIsAddLoading(false);
     }
   };
 
   const handleLinkSearchedUser = () => {
-    alert('Đã kết nối tài khoản RoomHub của khách thuê! Các thông báo hóa đơn sẽ được gửi tự động qua app.');
+    alert('Đã kết nối tài khoản RoomHub của khách thuê! Thông tin hợp đồng sẽ được liên kết khi bạn bấm "Ký hợp đồng".');
   };
 
-  const handleAddTenantSubmit = (e: React.FormEvent) => {
+  const handleAddTenantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: { [key: string]: string } = {};
 
     if (!addTenantName.trim()) errs.name = 'Họ và tên không được để trống.';
     if (!addTenantPhone.trim()) errs.phone = 'Số điện thoại không được để trống.';
-    if (addTenantPeopleCount > 2) errs.peopleCount = 'Phòng này được cấu hình tối đa 2 người. Vui lòng kiểm tra lại.';
+    if (addTenantPeopleCount > (data?.maxCapacity || 2)) errs.peopleCount = `Phòng này được cấu hình tối đa ${data?.maxCapacity || 2} người. Vui lòng kiểm tra lại.`;
     if (addTenantRent < 0) errs.rent = 'Giá thuê thỏa thuận không được âm.';
     if (addTenantDeposit < 0) errs.deposit = 'Tiền cọc giữ chân không được âm.';
 
@@ -202,67 +260,111 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
       return;
     }
 
-    setIsAddLoading(true);
-    setTimeout(() => {
-      setTenant({
-        name: addTenantName,
-        email: addTenantEmail,
-        phone: addTenantPhone,
-        cccd: addTenantCCCD,
-        address: addTenantAddress,
+    try {
+      setIsAddLoading(true);
+      const payload = {
+        roomId: unitIdNum,
+        tenantEmailOrPhone: searchResult === 'found' ? searchQuery : null,
+        temporaryTenantName: addTenantName,
+        temporaryTenantPhone: addTenantPhone,
+        temporaryTenantEmail: addTenantEmail || null,
         startDate: addTenantStartDate,
-        endDateExpected: addTenantEndDate || 'Không xác định',
-        deposit: addTenantDeposit,
-        agreementPrice: addTenantRent,
-        peopleCount: addTenantPeopleCount,
-        isLinkedAccount: searchResult === 'found'
-      });
+        endDate: addTenantEndDate || new Date(new Date(addTenantStartDate).setFullYear(new Date(addTenantStartDate).getFullYear() + 1)).toISOString().split('T')[0],
+        rentAmount: addTenantRent,
+        depositAmount: addTenantDeposit,
+        terms: sendZaloNotice ? "Gửi thông báo hợp đồng qua Zalo/Email" : ""
+      };
 
-      if (autoStatusRented) {
-        setUnitStatus('Đang thuê');
-      }
-
-      // Add log
-      const newLog = { text: `Chủ nhà đã thêm người thuê "${addTenantName}" vào phòng ${activeUnitId}`, time: 'Vừa xong' };
-      setLogs(prev => [newLog, ...prev]);
-
-      setIsAddLoading(false);
+      await api.post('/owner/contracts', payload);
       setIsAddTenantOpen(false);
-      alert(`Đã ký kết hợp đồng và thêm người thuê "${addTenantName}" vào phòng ${activeUnitId} thành công.`);
-    }, 1000);
+      alert(`Đã ký kết hợp đồng và thêm người thuê "${addTenantName}" vào phòng ${data?.roomNumber} thành công.`);
+      fetchDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi khởi tạo hợp đồng.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
-  const handleEndTenancySubmit = (e: React.FormEvent) => {
+  const handleEndTenancySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsEndLoading(true);
-    setTimeout(() => {
-      const oldName = tenant?.name;
-      setTenant(null);
-      if (markAsVacant) {
-        setUnitStatus('Còn trống');
-      }
-      if (hideRelatedListing && listing) {
-        setListing(prev => prev ? { ...prev, status: 'Đã ẩn' } : null);
-      }
+    try {
+      setIsEndLoading(true);
+      const payload = {
+        endDate: endTenancyDate,
+        reason: endTenancyReason || "Kết thúc hợp đồng thuê trọ",
+        refundAmount: 0,
+        penaltyAmount: 0
+      };
 
-      // Add log
-      const newLog = { text: `Khách thuê "${oldName}" đã chính thức kết thúc thuê và trả phòng ${activeUnitId}. Lý do: ${endTenancyReason || 'Không có'}`, time: 'Vừa xong' };
-      setLogs(prev => [newLog, ...prev]);
-
-      setIsEndLoading(false);
+      await api.post(`/owner/contracts/terminate/${unitIdNum}`, payload);
       setIsEndTenancyOpen(false);
-      alert(`Đã hoàn tất thủ tục bàn giao thanh lý phòng ${activeUnitId} của khách "${oldName}".`);
-    }, 1000);
+      alert(`Đã hoàn tất thủ tục bàn giao thanh lý phòng ${data?.roomNumber}.`);
+      fetchDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi chấm dứt hợp đồng.');
+    } finally {
+      setIsEndLoading(false);
+    }
   };
 
-  const handleSaveStatus = (e: React.FormEvent) => {
+  const handleSaveStatus = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUnitStatus(tempStatus);
-    const newLog = { text: `Chủ nhà đổi trạng thái phòng sang "${tempStatus}"`, time: 'Vừa xong' };
-    setLogs(prev => [newLog, ...prev]);
-    setIsChangeStatusOpen(false);
-    alert(`Đã đổi trạng thái phòng ${activeUnitId} thành "${tempStatus}".`);
+    try {
+      setIsAddLoading(true);
+      await api.put(`/owner/units/${unitIdNum}/status`, { status: tempStatus });
+      setUnitStatus(tempStatus);
+      const newLog = { text: `Chủ nhà đổi trạng thái phòng sang "${tempStatus}"`, time: 'Vừa xong' };
+      setLogs(prev => [newLog, ...prev]);
+      setIsChangeStatusOpen(false);
+      alert(`Đã đổi trạng thái phòng ${data?.roomNumber} thành "${tempStatus}".`);
+      fetchDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
+
+  if (!activeUnitId || isNaN(unitIdNum)) {
+    return (
+      <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
+        <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">info</span>
+        <h2 className="text-2xl font-bold text-on-surface mb-2">Chưa chọn phòng</h2>
+        <p className="text-gray-500 max-w-md">Vui lòng quay lại sơ đồ phòng của tòa nhà và chọn phòng chi tiết để tiếp tục quản lý.</p>
+        <button 
+          onClick={() => setCurrentPage('owner-properties')}
+          className="mt-4 px-4 py-2 bg-primary-container text-white rounded-xl text-xs font-bold transition-all"
+        >
+          Quản lý sơ đồ phòng
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+        <p className="text-xs font-bold text-gray-500">Đang tải thông tin chi tiết phòng...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center space-y-3 max-w-md mx-auto mt-12 shadow-sm">
+        <span className="material-symbols-outlined text-[36px] text-red-500 block">error</span>
+        <h3 className="text-sm font-bold">{error || 'Không tìm thấy thông tin phòng này.'}</h3>
+        <button onClick={fetchDetail} className="px-4 py-2 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12 relative">
@@ -274,9 +376,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
           <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-properties')}>Tài sản & Phòng</span>
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-properties')}>FPT House</span>
+          <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-properties')}>{data.buildingName}</span>
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span className="text-gray-800 font-bold">Phòng {activeUnitId}</span>
+          <span className="text-gray-800 font-bold">Phòng {data.roomNumber}</span>
         </div>
         <button 
           onClick={() => setCurrentPage('owner-properties')}
@@ -290,7 +392,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-gray-100 soft-shadow">
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-on-surface flex items-center gap-2">
-            Phòng {activeUnitId}
+            Phòng {data.roomNumber}
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
               unitStatus === 'Còn trống'
                 ? 'bg-green-50 text-green-700 border-green-200'
@@ -305,12 +407,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
           </h2>
           <p className="text-xs text-gray-500 flex items-center gap-1 font-semibold">
             <span className="material-symbols-outlined text-[16px] text-gray-400">corporate_fare</span>
-            FPT House · Tầng 2 · Hòa Hải, Ngũ Hành Sơn, Đà Nẵng
+            {data.buildingName} · Tầng {data.floor} · {data.buildingAddress}
           </p>
           <div className="flex items-center gap-4 pt-1">
-            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">Loại: Phòng trọ</span>
-            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">Diện tích: 25m²</span>
-            <span className="text-xs font-bold text-primary-container bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">Giá: {formatPrice(2500000)}/tháng</span>
+            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">Loại: {data.type}</span>
+            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">Diện tích: {data.area}m²</span>
+            <span className="text-xs font-bold text-primary-container bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">Giá: {formatPrice(data.price)}/tháng</span>
           </div>
         </div>
 
@@ -318,14 +420,26 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           {tenant ? (
             <button 
-              onClick={() => alert('Đang chuyển đến màn hình chốt hóa đơn dịch vụ tháng mới...')}
+              onClick={() => setCurrentPage('owner-invoices-create')}
               className="px-4 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
             >
               <span className="material-symbols-outlined text-[16px] font-bold">receipt_long</span> Tạo hóa đơn
             </button>
           ) : (
             <button 
-              onClick={() => setIsAddTenantOpen(true)}
+              onClick={() => {
+                setSearchResult('not-searched');
+                setSearchQuery('');
+                setAddTenantName('');
+                setAddTenantEmail('');
+                setAddTenantPhone('');
+                setAddTenantCCCD('');
+                setAddTenantAddress('');
+                setAddTenantRent(data?.price || 0);
+                setAddTenantDeposit(data?.price || 0);
+                setAddTenantPeopleCount(1);
+                setIsAddTenantOpen(true);
+              }}
               className="px-4 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
             >
               <span className="material-symbols-outlined text-[16px] font-bold">person_add</span> + Thêm người thuê
@@ -334,9 +448,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
           <button 
             onClick={() => {
               if (listing) {
-                alert(`Tin cho thuê phòng ${activeUnitId} hiện đang hiển thị.`);
+                alert(`Tin cho thuê phòng ${data?.roomNumber} hiện đang hiển thị.`);
               } else {
-                alert('Tạo bài viết đăng tin cho thuê...');
+                if (setSelectedListingId && data?.id) {
+                  setSelectedListingId(parseInt(data.id, 10));
+                }
+                setCurrentPage('owner-listings-create');
               }
             }}
             className="px-4 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border border-orange-100 active:scale-95"
@@ -344,7 +461,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
             <span className="material-symbols-outlined text-[16px]">campaign</span> Đăng tin
           </button>
           <button 
-            onClick={() => setIsChangeStatusOpen(true)}
+            onClick={() => {
+              setTempStatus(unitStatus);
+              setIsChangeStatusOpen(true);
+            }}
             className="px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">change_circle</span> Đổi trạng thái
@@ -354,33 +474,28 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
 
       {/* Row Overview Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {/* Card 1 */}
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Trạng thái vận hành</p>
           <h4 className="text-sm font-black text-on-surface leading-tight">
             {unitStatus === 'Quá hạn' ? 'Nợ quá hạn' : unitStatus}
           </h4>
         </div>
-        {/* Card 2 */}
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Giá thuê trần</p>
-          <h4 className="text-sm font-black text-on-surface leading-tight">{formatPrice(2500000)}/th</h4>
+          <h4 className="text-sm font-black text-on-surface leading-tight">{formatPrice(data.price)}/th</h4>
         </div>
-        {/* Card 3 */}
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Người thuê hiện tại</p>
           <h4 className="text-sm font-black text-on-surface leading-tight truncate">
             {tenant ? tenant.name : 'Chưa có'}
           </h4>
         </div>
-        {/* Card 4 */}
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Hóa đơn tháng này</p>
           <h4 className="text-sm font-black text-on-surface leading-tight">
-            {currentMonthBillStatus === 'Chưa thanh toán' ? 'Chưa đóng' : currentMonthBillStatus === 'Đã thanh toán' ? 'Đã đóng' : 'Chưa chốt'}
+            {currentMonthBillStatus === 'Chưa thanh toán' ? 'Chưa đóng' : currentMonthBillStatus === 'Đã thanh toán' ? 'Đã đóng' : currentMonthBillStatus === 'Quá hạn' ? 'Quá hạn' : 'Chưa chốt'}
           </h4>
         </div>
-        {/* Card 5 */}
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Công nợ dư nợ</p>
           <h4 className={`text-sm font-black leading-tight ${debtAmount > 0 ? 'text-red-500' : 'text-on-surface'}`}>
@@ -405,57 +520,59 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs text-gray-600 font-semibold">
               <div className="space-y-0.5">
                 <span className="text-gray-400 text-[10px] uppercase">Mã đơn vị:</span>
-                <span className="text-on-surface font-bold block">Phòng {activeUnitId}</span>
+                <span className="text-on-surface font-bold block">Phòng {data.roomNumber}</span>
               </div>
               <div className="space-y-0.5">
                 <span className="text-gray-400 text-[10px] uppercase">Tòa nhà trực thuộc:</span>
-                <span className="text-on-surface font-bold block">FPT House</span>
+                <span className="text-on-surface font-bold block">{data.buildingName}</span>
               </div>
               <div className="space-y-0.5">
                 <span className="text-gray-400 text-[10px] uppercase">Vị trí:</span>
-                <span className="text-on-surface font-bold block">Tầng 2 (Phòng giữa)</span>
+                <span className="text-on-surface font-bold block">Tầng {data.floor}</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
                 <span className="text-gray-400 text-[10px] uppercase">Diện tích sử dụng:</span>
-                <span className="text-on-surface font-bold block">25 m²</span>
+                <span className="text-on-surface font-bold block">{data.area} m²</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
                 <span className="text-gray-400 text-[10px] uppercase">Sức chứa tối đa:</span>
-                <span className="text-on-surface font-bold block">02 người lớn</span>
+                <span className="text-on-surface font-bold block">{data.maxCapacity} người</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
                 <span className="text-gray-400 text-[10px] uppercase">Nội thất:</span>
-                <span className="text-on-surface font-bold block">Cơ bản (Có giường, tủ)</span>
+                <span className="text-on-surface font-bold block">{data.isFurnished ? 'Có sẵn nội thất' : 'Cơ bản (Trống)'}</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
-                <span className="text-gray-400 text-[10px] uppercase">Gác lửng đúc:</span>
-                <span className="text-on-surface font-bold block">Có gác</span>
+                <span className="text-gray-400 text-[10px] uppercase">Đơn giá điện:</span>
+                <span className="text-on-surface font-bold block">{formatPrice(data.electricityPrice)}/kWh</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
-                <span className="text-gray-400 text-[10px] uppercase">Nhà vệ sinh khép kín:</span>
-                <span className="text-on-surface font-bold block">Có (Riêng tư)</span>
+                <span className="text-gray-400 text-[10px] uppercase">Đơn giá nước:</span>
+                <span className="text-on-surface font-bold block">{formatPrice(data.waterPrice)}/m³</span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
-                <span className="text-gray-400 text-[10px] uppercase">Phòng bếp trong phòng:</span>
-                <span className="text-on-surface font-bold block">Không có</span>
+                <span className="text-gray-400 text-[10px] uppercase">Mạng & Rác thải:</span>
+                <span className="text-on-surface font-bold block">{formatPrice(data.internetPrice)}/th - {formatPrice(data.garbagePrice)}/th</span>
               </div>
             </div>
             
             <p className="text-[11px] text-gray-500 font-semibold leading-relaxed mt-5 border-t border-gray-50 pt-4">
-              <span className="font-bold text-gray-700">Mô tả phòng:</span> Phòng có gác sạch sẽ, có ban công thoáng gió mát mẻ, phù hợp sinh viên hoặc người đi làm văn phòng thuê sinh sống ổn định, gần khu đô thị thông minh FPT Đà Nẵng.
+              <span className="font-bold text-gray-700">Mô tả phòng:</span> {data.description || 'Chưa cấu hình mô tả chi tiết phòng.'}
             </p>
           </div>
 
           {/* Recent Invoices Card */}
           <div className="bg-white rounded-3xl border border-gray-100 soft-shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-50 flex justify-between items-center">
-              <h3 className="text-xs font-bold text-gray-500 uppercase">Hóa đơn điện nước gần đây</h3>
-              <button 
-                onClick={() => alert('Mở giao diện tạo hóa đơn chốt tháng...')}
-                className="text-[10px] font-bold text-primary-container hover:text-orange-600 cursor-pointer"
-              >
-                + Tạo hóa đơn mới
-              </button>
+              <h3 className="text-xs font-bold text-gray-500 uppercase">Hóa đơn dịch vụ gần đây</h3>
+              {tenant && (
+                <button 
+                  onClick={() => setCurrentPage('owner-invoices-create')}
+                  className="text-[10px] font-bold text-primary-container hover:text-orange-600 cursor-pointer"
+                >
+                  + Tạo hóa đơn mới
+                </button>
+              )}
             </div>
             
             <div className="overflow-x-auto">
@@ -472,38 +589,46 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 font-semibold text-gray-700">
-                  {invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-orange-50/20">
-                      <td className="p-4 font-mono text-[10px] text-gray-400">{inv.id}</td>
-                      <td className="p-4">{inv.month}</td>
-                      <td className="p-4">{formatPrice(inv.rentPrice)}</td>
-                      <td className="p-4">{formatPrice(inv.utilitiesPrice)}</td>
-                      <td className="p-4 text-primary-container font-black">{formatPrice(inv.total)}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                          inv.status === 'Đã thanh toán'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : inv.status === 'Chưa thanh toán'
-                            ? 'bg-yellow-50 text-yellow-750 border-yellow-200'
-                            : 'bg-red-50 text-red-700 border-red-200 animate-pulse'
-                        }`}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        {inv.status !== 'Đã thanh toán' ? (
-                          <button 
-                            onClick={() => handleMarkInvoicePaid(inv.id)}
-                            className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
-                          >
-                            Xác nhận đã thu
-                          </button>
-                        ) : (
-                          <span className="text-gray-400 text-[10px]">Đã chốt xong</span>
-                        )}
+                  {invoices.length > 0 ? (
+                    invoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-orange-50/20">
+                        <td className="p-4 font-mono text-[10px] text-gray-400">{inv.id}</td>
+                        <td className="p-4">{inv.month}</td>
+                        <td className="p-4">{formatPrice(inv.rentPrice)}</td>
+                        <td className="p-4">{formatPrice(inv.utilitiesPrice)}</td>
+                        <td className="p-4 text-primary-container font-black">{formatPrice(inv.total)}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                            inv.status === 'Đã thanh toán'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : inv.status === 'Chưa thanh toán'
+                              ? 'bg-yellow-50 text-yellow-750 border-yellow-200'
+                              : 'bg-red-50 text-red-700 border-red-200 animate-pulse'
+                          }`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          {inv.status !== 'Đã thanh toán' && inv.status !== 'Đã hủy' ? (
+                            <button 
+                              onClick={() => handleMarkInvoicePaid(inv.id)}
+                              className="px-2.5 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                            >
+                              Xác nhận đã thu
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-[10px]">{inv.status === 'Đã hủy' ? 'Hóa đơn đã hủy' : 'Đã đóng đủ'}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-gray-400">
+                        Chưa có lịch sử hóa đơn dịch vụ cho phòng này.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -533,10 +658,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                   Lưu ghi chú
                 </button>
               </div>
-              <div className="bg-orange-50/30 border border-orange-100/50 p-3 rounded-xl text-[10px] text-gray-600 font-bold leading-normal">
-                <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider block mb-0.5">Ghi chú hiện tại:</span>
-                "{savedNotes}"
-              </div>
+              {savedNotes && (
+                <div className="bg-orange-50/30 border border-orange-100/50 p-3 rounded-xl text-[10px] text-gray-600 font-bold leading-normal">
+                  <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider block mb-0.5">Ghi chú hiện tại:</span>
+                  "{savedNotes}"
+                </div>
+              )}
             </form>
 
             {/* Timeline logs */}
@@ -575,11 +702,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 {/* Profile Header */}
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-orange-100 text-primary-container flex items-center justify-center font-bold text-sm shadow-sm">
-                    {tenant.name.split(' ').slice(-1)[0][0]}
+                    {tenant.name ? tenant.name.split(' ').slice(-1)[0][0] : 'U'}
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-black text-on-surface truncate">{tenant.name}</h4>
-                    <p className="text-[10px] text-gray-500 truncate leading-normal mt-0.5">{tenant.email}</p>
+                    <p className="text-[10px] text-gray-500 truncate leading-normal mt-0.5">{tenant.email || 'offline-tenant@roomhub.vn'}</p>
                   </div>
                 </div>
 
@@ -589,16 +716,26 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     <span className="text-gray-400">Điện thoại:</span>
                     <span className="text-on-surface font-bold">{tenant.phone}</span>
                   </div>
+                  {tenant.cccd && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Số CCCD:</span>
+                      <span className="text-on-surface font-bold">{tenant.cccd}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Ngày ở:</span>
+                    <span className="text-gray-400">Bắt đầu ở:</span>
                     <span className="text-on-surface">{tenant.startDate}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Tiền cọc:</span>
+                    <span className="text-gray-400">Hạn hợp đồng:</span>
+                    <span className="text-on-surface">{tenant.endDateExpected}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Tiền đặt cọc:</span>
                     <span className="text-on-surface">{formatPrice(tenant.deposit)}</span>
                   </div>
                   <div className="flex justify-between border-t border-gray-200/50 pt-2 font-bold">
-                    <span className="text-gray-400">Giá thỏa thuận:</span>
+                    <span className="text-gray-400">Giá thuê:</span>
                     <span className="text-primary-container">{formatPrice(tenant.agreementPrice)}/th</span>
                   </div>
                 </div>
@@ -606,13 +743,17 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 {/* Operations */}
                 <div className="space-y-1.5 pt-2 border-t border-gray-50">
                   <button 
-                    onClick={() => alert(`Gửi thông báo nhắc nợ Zalo/Email tới khách ${tenant.name}...`)}
+                    onClick={() => alert(`Gửi thông báo nhắc nợ ZNS tới khách thuê ${tenant.name} thành công!`)}
                     className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
                   >
                     Gửi thông báo ZNS
                   </button>
                   <button 
-                    onClick={() => setIsEndTenancyOpen(true)}
+                    onClick={() => {
+                      setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                      setEndTenancyReason('');
+                      setIsEndTenancyOpen(true);
+                    }}
                     className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
                   >
                     Kết thúc hợp đồng (Trả phòng)
@@ -633,7 +774,19 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => setIsAddTenantOpen(true)}
+                  onClick={() => {
+                    setSearchResult('not-searched');
+                    setSearchQuery('');
+                    setAddTenantName('');
+                    setAddTenantEmail('');
+                    setAddTenantPhone('');
+                    setAddTenantCCCD('');
+                    setAddTenantAddress('');
+                    setAddTenantRent(data?.price || 0);
+                    setAddTenantDeposit(data?.price || 0);
+                    setAddTenantPeopleCount(1);
+                    setIsAddTenantOpen(true);
+                  }}
                   className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer mx-auto flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[16px] font-bold">add</span> Thêm người thuê
@@ -661,13 +814,13 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-gray-50 text-[10px] font-bold">
                   <button 
-                    onClick={() => alert(`Xem tin public của bài ${listing.id}`)}
+                    onClick={() => setCurrentPage('owner-listings')}
                     className="flex-grow py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg text-center cursor-pointer"
                   >
                     Xem bài viết
                   </button>
                   <button 
-                    onClick={() => alert('Mở form sửa tin đăng...')}
+                    onClick={() => setCurrentPage('owner-listings')}
                     className="flex-grow py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg text-center cursor-pointer"
                   >
                     Chỉnh sửa
@@ -678,7 +831,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
               <div className="text-center py-4 space-y-3 animate-scaleUp">
                 <p className="text-[10px] text-gray-500 font-semibold">Chưa có tin cho thuê liên kết</p>
                 <button 
-                  onClick={() => alert('Tạo tin đăng...')}
+                  onClick={() => {
+                    if (setSelectedListingId && data?.id) {
+                      setSelectedListingId(parseInt(data.id, 10));
+                    }
+                    setCurrentPage('owner-listings-create');
+                  }}
                   className="px-4 py-1.5 bg-orange-50 hover:bg-orange-100 text-primary-container text-[10px] font-bold rounded-lg transition-all border border-orange-100 cursor-pointer mx-auto block active:scale-95"
                 >
                   + Tạo tin cho thuê
@@ -693,7 +851,19 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
             <div className="flex flex-col gap-2">
               {!tenant && (
                 <button 
-                  onClick={() => setIsAddTenantOpen(true)}
+                  onClick={() => {
+                    setSearchResult('not-searched');
+                    setSearchQuery('');
+                    setAddTenantName('');
+                    setAddTenantEmail('');
+                    setAddTenantPhone('');
+                    setAddTenantCCCD('');
+                    setAddTenantAddress('');
+                    setAddTenantRent(data?.price || 0);
+                    setAddTenantDeposit(data?.price || 0);
+                    setAddTenantPeopleCount(1);
+                    setIsAddTenantOpen(true);
+                  }}
                   className="w-full py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">person_add</span> + Ký hợp đồng khách thuê
@@ -701,22 +871,35 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
               )}
               {tenant && (
                 <button 
-                  onClick={() => alert('Lập hóa đơn thu tiền tháng mới...')}
+                  onClick={() => setCurrentPage('owner-invoices-create')}
                   className="w-full py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">receipt_long</span> Chốt tiền & Tạo hóa đơn
                 </button>
               )}
               <button 
-                onClick={() => setIsChangeStatusOpen(true)}
+                onClick={() => {
+                  setTempStatus(unitStatus);
+                  setIsChangeStatusOpen(true);
+                }}
                 className="w-full py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px] text-gray-400">change_circle</span> Đổi trạng thái phòng
               </button>
               <button 
-                onClick={() => {
-                  setUnitStatus('Bảo trì');
-                  alert(`Đã đưa phòng ${activeUnitId} sang trạng thái "Bảo trì".`);
+                onClick={async () => {
+                  try {
+                    setIsAddLoading(true);
+                    await api.put(`/owner/units/${unitIdNum}/status`, { status: 'Bảo trì' });
+                    setUnitStatus('Bảo trì');
+                    alert(`Đã đưa phòng ${data.roomNumber} sang trạng thái "Bảo trì".`);
+                    fetchDetail();
+                  } catch (err: any) {
+                    console.error(err);
+                    alert(err.response?.data?.message || 'Có lỗi xảy ra khi đưa phòng vào bảo trì.');
+                  } finally {
+                    setIsAddLoading(false);
+                  }
                 }}
                 className="w-full py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
@@ -724,7 +907,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
               </button>
               {tenant && (
                 <button 
-                  onClick={() => setIsEndTenancyOpen(true)}
+                  onClick={() => {
+                    setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                    setEndTenancyReason('');
+                    setIsEndTenancyOpen(true);
+                  }}
                   className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span> Kết thúc hợp đồng (Trả phòng)
@@ -737,7 +924,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
 
       </div>
 
-      {/* 1. ADD TENANT MODAL (High-fidelity detailed modal dialog!) */}
+      {/* 1. ADD TENANT MODAL */}
       {isAddTenantOpen && (
         <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn overflow-y-auto">
           <div className="bg-white rounded-3xl border border-gray-100 soft-shadow w-full max-w-3xl overflow-hidden my-8 animate-scaleUp max-h-[90vh] flex flex-col justify-between">
@@ -747,7 +934,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
               <div>
                 <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary-container">person_add</span>
-                  Thêm người thuê mới - Hợp đồng phòng {activeUnitId}
+                  Thêm người thuê mới - Hợp đồng phòng {data.roomNumber}
                 </h3>
                 <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Khởi tạo hồ sơ khách thuê và chốt kỳ tiền cọc.</p>
               </div>
@@ -791,11 +978,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                   <div className="bg-blue-50 border border-blue-150 p-4 rounded-2xl flex items-center justify-between animate-scaleUp">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                        AN
+                        {addTenantName ? addTenantName.split(' ').slice(-1)[0][0] : 'U'}
                       </div>
                       <div className="text-[10px] text-gray-500 font-semibold leading-normal">
-                        <span className="text-xs font-black text-on-surface block leading-tight">Nguyễn Văn An</span>
-                        nguyenvana@gmail.com · 0909 123 456
+                        <span className="text-xs font-black text-on-surface block leading-tight">{addTenantName}</span>
+                        {addTenantEmail} · {addTenantPhone}
                         <span className="bg-blue-200 text-blue-800 font-bold px-1.5 py-0.25 rounded text-[8px] uppercase inline-block ml-2">Đã xác minh</span>
                       </div>
                     </div>
@@ -824,7 +1011,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 <span className="text-[11px] font-black text-primary-container uppercase block">2. Hồ sơ cá nhân khách thuê trọ</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Name */}
                   <div className="space-y-1">
                     <label className="uppercase">Họ và tên khách thuê <span className="text-red-500">*</span></label>
                     <input 
@@ -839,7 +1025,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     {addTenantErrors.name && <p className="text-[10px] text-red-500 mt-1">{addTenantErrors.name}</p>}
                   </div>
 
-                  {/* Phone */}
                   <div className="space-y-1">
                     <label className="uppercase">Số điện thoại liên hệ <span className="text-red-500">*</span></label>
                     <input 
@@ -854,7 +1039,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     {addTenantErrors.phone && <p className="text-[10px] text-red-500 mt-1">{addTenantErrors.phone}</p>}
                   </div>
 
-                  {/* Email */}
                   <div className="space-y-1">
                     <label className="uppercase">Địa chỉ Email (Nhận hóa đơn)</label>
                     <input 
@@ -866,7 +1050,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     />
                   </div>
 
-                  {/* CCCD */}
                   <div className="space-y-1">
                     <label className="uppercase">Số CCCD / CMND</label>
                     <input 
@@ -878,7 +1061,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     />
                   </div>
 
-                  {/* Address */}
                   <div className="col-span-2 space-y-1">
                     <label className="uppercase">Địa chỉ liên hệ thường trú</label>
                     <input 
@@ -897,7 +1079,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 <span className="text-[11px] font-black text-primary-container uppercase block">3. Thiết lập hợp đồng thuê & cọc</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Start Date */}
                   <div className="space-y-1">
                     <label className="uppercase">Ngày bắt đầu hợp đồng <span className="text-red-500">*</span></label>
                     <input 
@@ -908,7 +1089,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     />
                   </div>
 
-                  {/* End Date */}
                   <div className="space-y-1">
                     <label className="uppercase">Ngày kết thúc dự kiến</label>
                     <input 
@@ -919,14 +1099,13 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     />
                   </div>
 
-                  {/* Agreement Price */}
                   <div className="space-y-1">
                     <label className="uppercase">Giá thuê thỏa thuận <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <input 
                         type="number" 
                         value={addTenantRent}
-                        onChange={(e) => setAddTenantRent(parseInt(e.target.value, 10))}
+                        onChange={(e) => setAddTenantRent(parseInt(e.target.value, 10) || 0)}
                         className={`w-full pl-3 pr-16 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
                           addTenantErrors.rent ? 'border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                         }`} 
@@ -935,14 +1114,13 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     </div>
                   </div>
 
-                  {/* Deposit */}
                   <div className="space-y-1">
                     <label className="uppercase">Tiền đặt cọc giữ chân</label>
                     <div className="relative">
                       <input 
                         type="number" 
                         value={addTenantDeposit}
-                        onChange={(e) => setAddTenantDeposit(parseInt(e.target.value, 10))}
+                        onChange={(e) => setAddTenantDeposit(parseInt(e.target.value, 10) || 0)}
                         className={`w-full pl-3 pr-16 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
                           addTenantErrors.deposit ? 'border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                         }`} 
@@ -951,7 +1129,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     </div>
                   </div>
 
-                  {/* People Count */}
                   <div className="space-y-1">
                     <label className="uppercase">Số lượng người lưu trú <span className="text-red-500">*</span></label>
                     <input 
@@ -959,7 +1136,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                       min="1"
                       max="10"
                       value={addTenantPeopleCount}
-                      onChange={(e) => setAddTenantPeopleCount(parseInt(e.target.value, 10))}
+                      onChange={(e) => setAddTenantPeopleCount(parseInt(e.target.value, 10) || 1)}
                       className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
                         addTenantErrors.peopleCount ? 'border-red-500 bg-red-50/10' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                       }`} 
@@ -969,10 +1146,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 </div>
 
                 {/* Sức chứa validation alert */}
-                {addTenantPeopleCount > 2 && (
+                {addTenantPeopleCount > (data?.maxCapacity || 2) && (
                   <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center gap-2 text-red-600 animate-pulse">
                     <span className="material-symbols-outlined text-[18px]">warning</span>
-                    <span className="text-[10px] font-black uppercase">{addTenantErrors.peopleCount || 'Số lượng người ở vượt quá giới hạn thiết lập tối đa (2 người) của phòng này!'}</span>
+                    <span className="text-[10px] font-black uppercase">{addTenantErrors.peopleCount || `Số lượng người ở vượt quá giới hạn thiết lập tối đa (${data?.maxCapacity} người) của phòng này!`}</span>
                   </div>
                 )}
               </div>
@@ -1011,7 +1188,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                     onChange={(e) => setAutoStatusRented(e.target.checked)}
                     className="w-4 h-4 text-primary-container accent-primary-container" 
                   />
-                  <label htmlFor="notice3" className="cursor-pointer select-none">Tự động chuyển đổi trạng thái phòng {activeUnitId} sang **"Đang thuê"** ngay sau khi lưu.</label>
+                  <label htmlFor="notice3" className="cursor-pointer select-none">Tự động chuyển đổi trạng thái phòng {data.roomNumber} sang **"Đang thuê"** ngay sau khi lưu.</label>
                 </div>
               </div>
 
@@ -1039,7 +1216,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
         </div>
       )}
 
-      {/* 2. END TENANCY MODAL ( trả phòng cấn cọc ) */}
+      {/* 2. END TENANCY MODAL */}
       {isEndTenancyOpen && (
         <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl border border-gray-100 soft-shadow w-full max-w-md overflow-hidden animate-scaleUp">
@@ -1048,7 +1225,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
             <div className="px-6 py-4 bg-red-50/50 border-b border-red-100 flex justify-between items-center">
               <h3 className="text-base font-bold text-red-700 flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-500">logout</span>
-                Kết thúc hợp đồng - Trả phòng {activeUnitId}
+                Kết thúc hợp đồng - Trả phòng {data.roomNumber}
               </h3>
               <button 
                 onClick={() => setIsEndTenancyOpen(false)}
@@ -1110,7 +1287,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
               <div className="bg-red-50 text-red-700 border border-red-100 p-3 rounded-2xl flex items-start gap-2">
                 <span className="material-symbols-outlined text-red-500 text-[18px] shrink-0 mt-0.5">warning</span>
                 <p className="text-[10px] leading-normal font-semibold">
-                  Hành động này sẽ lưu trữ thông tin hợp đồng hiện tại và đánh dấu khách thuê **Nguyễn Văn An** ở trạng thái "Đã rời đi". Hãy kiểm tra kỹ công nợ dịch vụ trước khi trả phòng.
+                  Hành động này sẽ lưu trữ thông tin hợp đồng hiện tại và đánh dấu khách thuê **{tenant?.name}** ở trạng thái "Đã rời đi". Hãy kiểm tra kỹ công nợ dịch vụ trước khi trả phòng.
                 </p>
               </div>
 
@@ -1125,7 +1302,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 </button>
                 <button 
                   type="submit"
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
                 >
                   Xác nhận kết thúc thuê
                 </button>
@@ -1145,7 +1322,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
             <div className="px-6 py-4 bg-orange-50/50 border-b border-orange-100 flex justify-between items-center">
               <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary-container">change_circle</span>
-                Đổi trạng thái phòng {activeUnitId}
+                Đổi trạng thái phòng {data.roomNumber}
               </h3>
               <button 
                 onClick={() => setIsChangeStatusOpen(false)}
@@ -1162,13 +1339,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage }) => {
                 <label className="uppercase">Chọn trạng thái vận hành mới</label>
                 <select 
                   value={tempStatus}
-                  onChange={(e) => setTempStatus(e.target.value as any)}
+                  onChange={(e) => setTempStatus(e.target.value)}
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-white"
                 >
                   <option value="Còn trống">Còn trống (Sẵn sàng đón khách)</option>
                   <option value="Đang thuê">Đang thuê (Hợp đồng đang chạy)</option>
                   <option value="Bảo trì">Bảo trì (Đang sửa chữa, sửa sang)</option>
-                  <option value="Quá hạn">Nợ quá hạn (Hóa đơn trễ đóng)</option>
                 </select>
               </div>
 

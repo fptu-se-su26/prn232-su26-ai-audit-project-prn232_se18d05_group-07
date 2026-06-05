@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface InvoiceCreateProps {
   setCurrentPage: (page: PageType) => void;
@@ -27,163 +28,37 @@ interface UnitBilling {
   errorMessage?: string;
   hasInvoiceThisMonth: boolean;
   notes?: string;
+  electricityPrice: number;
+  waterPrice: number;
 }
-
-// Initial Mock Data
-const INITIAL_UNITS: UnitBilling[] = [
-  {
-    id: 'unit-1',
-    propertyName: 'FPT House',
-    unitName: 'Phòng 201',
-    unitType: 'Phòng trọ',
-    tenantName: 'Nguyễn Văn A',
-    tenantPhone: '0905123456',
-    tenantEmail: 'vana@gmail.com',
-    isLinked: true,
-    rentPrice: 2500000,
-    oldElectric: 120,
-    newElectric: 240,
-    oldWater: 30,
-    newWater: 34,
-    fixedFees: 180000,
-    fixedFeesBreakdown: [
-      { label: 'Internet', amount: 100000 },
-      { label: 'Rác', amount: 30000 },
-      { label: 'Giữ xe', amount: 50000 }
-    ],
-    surcharge: 150000,
-    discount: 0,
-    status: 'Hợp lệ',
-    hasInvoiceThisMonth: false,
-    notes: 'Sửa vòi nước bồn rửa mặt'
-  },
-  {
-    id: 'unit-2',
-    propertyName: 'Hòa Hải Studio',
-    unitName: 'Studio 302',
-    unitType: 'Studio',
-    tenantName: 'Trần Thị B',
-    tenantPhone: '0914987654',
-    tenantEmail: 'thib@gmail.com',
-    isLinked: true,
-    rentPrice: 4500000,
-    oldElectric: 210,
-    newElectric: 310,
-    oldWater: 50,
-    newWater: 56,
-    fixedFees: 210000,
-    fixedFeesBreakdown: [
-      { label: 'Internet', amount: 120000 },
-      { label: 'Rác', amount: 40000 },
-      { label: 'Giữ xe', amount: 50000 }
-    ],
-    surcharge: 0,
-    discount: 0,
-    status: 'Hợp lệ',
-    hasInvoiceThisMonth: false
-  },
-  {
-    id: 'unit-3',
-    propertyName: 'Sơn Trà Mini Apartment',
-    unitName: 'Căn hộ mini 105',
-    unitType: 'Căn hộ mini',
-    tenantName: 'Lê Văn C',
-    tenantPhone: '0988654321',
-    tenantEmail: 'vanc@gmail.com',
-    isLinked: false,
-    rentPrice: 6000000,
-    oldElectric: 400,
-    newElectric: '',
-    oldWater: 80,
-    newWater: '',
-    fixedFees: 200000,
-    fixedFeesBreakdown: [
-      { label: 'Internet', amount: 100000 },
-      { label: 'Rác', amount: 30000 },
-      { label: 'Phí dịch vụ', amount: 70000 }
-    ],
-    surcharge: 0,
-    discount: 0,
-    status: 'Thiếu chỉ số',
-    hasInvoiceThisMonth: false
-  },
-  {
-    id: 'unit-4',
-    propertyName: 'FPT House',
-    unitName: 'Phòng 305',
-    unitType: 'Phòng trọ',
-    tenantName: 'Phạm Thị D',
-    tenantPhone: '0977112233',
-    tenantEmail: 'thid@gmail.com',
-    isLinked: true,
-    rentPrice: 2700000,
-    oldElectric: 250,
-    newElectric: 230, // Error: new < old
-    oldWater: 40,
-    newWater: 45,
-    fixedFees: 150000,
-    fixedFeesBreakdown: [
-      { label: 'Internet', amount: 100000 },
-      { label: 'Rác', amount: 50000 }
-    ],
-    surcharge: 0,
-    discount: 0,
-    status: 'Lỗi chỉ số',
-    errorMessage: 'Điện mới nhỏ hơn điện cũ',
-    hasInvoiceThisMonth: false
-  },
-  {
-    id: 'unit-5',
-    propertyName: 'Ngũ Hành Sơn Rooms',
-    unitName: 'Phòng 103',
-    unitType: 'Phòng trọ',
-    tenantName: 'Hoàng Văn E',
-    tenantPhone: '0935445566',
-    tenantEmail: 'vane@gmail.com',
-    isLinked: false,
-    rentPrice: 3000000,
-    oldElectric: 100,
-    newElectric: 110,
-    oldWater: 20,
-    newWater: 23,
-    fixedFees: 100000,
-    fixedFeesBreakdown: [
-      { label: 'Internet', amount: 70000 },
-      { label: 'Rác', amount: 30000 }
-    ],
-    surcharge: 0,
-    discount: 0,
-    status: 'Đã có hóa đơn',
-    hasInvoiceThisMonth: true
-  }
-];
-
-const PROPERTIES = [
-  { id: 'all', name: 'Tất cả tài sản' },
-  { id: 'fpt-house', name: 'FPT House' },
-  { id: 'hoahai-studio', name: 'Hòa Hải Studio' },
-  { id: 'sontra-mini', name: 'Sơn Trà Mini Apartment' },
-  { id: 'nguhanhson-rooms', name: 'Ngũ Hành Sơn Rooms' },
-  { id: 'haichau-apartment', name: 'Hải Châu Apartment' } // Empty property for empty state test
-];
-
-const ELECTRIC_PRICE = 3500;
-const WATER_PRICE = 15000;
 
 export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) => {
   // Stepper state
   const [currentStep, setCurrentStep] = useState<number>(2); // Default to Step 2 (Nhập chỉ số)
   
+  // Data loading state
+  const [properties, setProperties] = useState<{ id: string, name: string }[]>([{ id: 'all', name: 'Tất cả tài sản' }]);
+  const [units, setUnits] = useState<UnitBilling[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddLoading, setIsAddLoading] = useState(false);
+
   // Form fields
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
-  const [billingMonth, setBillingMonth] = useState<string>('2026-05');
+  const [billingMonth, setBillingMonth] = useState<string>(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [billingScope, setBillingScope] = useState<'all' | 'specific'>('all');
-  const [dueDate, setDueDate] = useState<string>('2026-06-05');
+  const [dueDate, setDueDate] = useState<string>(() => {
+    const today = new Date();
+    // Default due date is 10 days from now
+    today.setDate(today.getDate() + 10);
+    return today.toISOString().split('T')[0];
+  });
   const [initialStatus, setInitialStatus] = useState<'draft' | 'unpaid'>('unpaid');
 
   // Interactive Units Data
-  const [units, setUnits] = useState<UnitBilling[]>(INITIAL_UNITS);
-  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(['unit-1', 'unit-2']);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   
   // Modals & Drawer States
   const [detailDrawerUnit, setDetailDrawerUnit] = useState<UnitBilling | null>(null);
@@ -199,6 +74,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
   // Toast System
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
+  
   const triggerToast = (text: string, type: 'success' | 'warning' | 'error' = 'success') => {
     setToastMessage({ text, type });
   };
@@ -210,22 +86,93 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
     }
   }, [toastMessage]);
 
-  // Sync Select All Checkbox when property filter changes
-  const filteredUnits = units.filter(u => {
-    if (selectedProperty === 'all') return true;
-    const prop = PROPERTIES.find(p => p.id === selectedProperty);
-    return prop ? u.propertyName.toLowerCase() === prop.name.toLowerCase() : true;
-  });
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Fetch properties
+      const propsRes = await api.get('/owner/properties');
+      const propsData = propsRes.data;
+      
+      const mappedProps = [
+        { id: 'all', name: 'Tất cả tài sản' },
+        ...propsData.map((p: any) => ({ id: p.id.toString(), name: p.name }))
+      ];
+      setProperties(mappedProps);
+      
+      // 2. Fetch rooms
+      let allUnits: UnitBilling[] = [];
+      const targetProps = selectedProperty === 'all' 
+        ? propsData 
+        : propsData.filter((p: any) => p.id.toString() === selectedProperty);
+        
+      for (const prop of targetProps) {
+        const detailRes = await api.get(`/owner/properties/${prop.id}`);
+        const detailData = detailRes.data; 
+        
+        // Map RoomUnitDto to UnitBilling
+        // We only bill rooms that are occupied
+        const mappedRooms = detailData.rooms
+          .filter((room: any) => room.status === 'Đang thuê' || room.status === 'Quá hạn')
+          .map((room: any) => {
+            const fixedFeesBreakdown = [
+              { label: 'Internet', amount: room.internetPrice },
+              { label: 'Rác', amount: room.garbagePrice }
+            ];
+            const fixedFeesSum = room.internetPrice + room.garbagePrice;
+            
+            return {
+              id: room.id.toString(),
+              propertyName: prop.name,
+              unitName: `Phòng ${room.roomNumber}`,
+              unitType: room.type,
+              tenantName: room.tenantName || 'Khách trọ',
+              tenantPhone: room.tenantPhone || 'N/A',
+              tenantEmail: room.tenantPhone ? `${room.tenantPhone}@roomhub.vn` : 'N/A',
+              isLinked: room.tenantPhone ? true : false,
+              rentPrice: room.price,
+              oldElectric: room.oldElectricity,
+              newElectric: '', 
+              oldWater: room.oldWater,
+              newWater: '', 
+              fixedFees: fixedFeesSum,
+              fixedFeesBreakdown: fixedFeesBreakdown,
+              surcharge: '',
+              discount: '',
+              status: 'Thiếu chỉ số' as const,
+              hasInvoiceThisMonth: false, 
+              notes: '',
+              electricityPrice: room.electricityPrice,
+              waterPrice: room.waterPrice
+            };
+          });
+        
+        allUnits = [...allUnits, ...mappedRooms];
+      }
+      
+      setUnits(allUnits);
+    } catch (err: any) {
+      console.error('Không thể tải sơ đồ phòng và chỉ số từ hệ thống.', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // If scope is 'all', auto select all eligible filtered units (exclude disabled/already has invoice ones)
+    loadData();
+  }, [selectedProperty]);
+
+  // Sync Select All Checkbox when property filter changes
+  const filteredUnits = units;
+
+  useEffect(() => {
     if (billingScope === 'all') {
       const eligibleIds = filteredUnits
         .filter(u => !u.hasInvoiceThisMonth)
         .map(u => u.id);
       setSelectedUnitIds(eligibleIds);
     }
-  }, [selectedProperty, billingScope]);
+  }, [units, billingScope]);
 
   // Recalculate billing status for a unit based on new values
   const validateUnit = (unit: UnitBilling, newElec: string | number, newWat: string | number, rent: number, sur: number, disc: number): { status: UnitBilling['status']; errorMessage?: string } => {
@@ -262,7 +209,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
       const updated = { ...unit, [field]: value };
       
-      // Values parsing
       const rent = field === 'rentPrice' ? (Number(value) || 0) : unit.rentPrice;
       const sur = field === 'surcharge' ? (Number(value) || 0) : Number(unit.surcharge) || 0;
       const disc = field === 'discount' ? (Number(value) || 0) : Number(unit.discount) || 0;
@@ -281,13 +227,13 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   const calculateElectricCost = (unit: UnitBilling) => {
     if (unit.newElectric === '') return 0;
     const diff = Number(unit.newElectric) - unit.oldElectric;
-    return diff > 0 ? diff * ELECTRIC_PRICE : 0;
+    return diff > 0 ? diff * unit.electricityPrice : 0;
   };
 
   const calculateWaterCost = (unit: UnitBilling) => {
     if (unit.newWater === '') return 0;
     const diff = Number(unit.newWater) - unit.oldWater;
-    return diff > 0 ? diff * WATER_PRICE : 0;
+    return diff > 0 ? diff * unit.waterPrice : 0;
   };
 
   const calculateTotal = (unit: UnitBilling) => {
@@ -326,7 +272,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   const copyLastMonthData = () => {
     setUnits(prev => prev.map(unit => {
       if (unit.hasInvoiceThisMonth) return unit;
-      // Simulate copy by adding reasonable delta to old readings
       const simulatedNewElec = unit.oldElectric + 100;
       const simulatedNewWat = unit.oldWater + 5;
       
@@ -393,19 +338,81 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   const countValid = summarySelectedUnits.filter(u => u.status === 'Hợp lệ').length;
   const countMissing = summarySelectedUnits.filter(u => u.status === 'Thiếu chỉ số').length;
   const countError = summarySelectedUnits.filter(u => u.status === 'Lỗi chỉ số').length;
-  const countExist = filteredUnits.filter(u => u.hasInvoiceThisMonth).length;
 
   const hasSeriousError = countError > 0;
 
   // Confirm Invoices Creation Flow
-  const handleConfirmCreate = () => {
-    setIsConfirmModalOpen(false);
-    setCurrentStep(4); // Move to Step 4 (Xác nhận tạo)
-    triggerToast(`Tạo thành công ${validSelectedUnits.length} hóa đơn tháng ${billingMonth.split('-')[1]}/${billingMonth.split('-')[0]}!`);
+  const handleConfirmCreate = async () => {
+    try {
+      setIsAddLoading(true);
+      
+      const [yearStr, monthStr] = billingMonth.split('-');
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr);
+      
+      const propNameToId: { [name: string]: number } = {};
+      properties.forEach(p => {
+        if (p.id !== 'all') {
+          propNameToId[p.name] = parseInt(p.id);
+        }
+      });
+      
+      const groupedReadings: { [buildingId: number]: any[] } = {};
+      
+      validSelectedUnits.forEach(u => {
+        const bId = propNameToId[u.propertyName];
+        if (!bId) return;
+        
+        if (!groupedReadings[bId]) {
+          groupedReadings[bId] = [];
+        }
+        
+        groupedReadings[bId].push({
+          roomId: parseInt(u.id),
+          oldElectricity: u.oldElectric,
+          newElectricity: Number(u.newElectric),
+          oldWater: u.oldWater,
+          newWater: Number(u.newWater),
+          additionalPrice: Number(u.surcharge) || 0,
+          reductionPrice: Number(u.discount) || 0,
+          note: u.notes || ''
+        });
+      });
+      
+      for (const bId of Object.keys(groupedReadings).map(Number)) {
+        const payload = {
+          buildingId: bId,
+          month: month,
+          year: year,
+          dueDate: new Date(dueDate).toISOString(),
+          roomReadings: groupedReadings[bId]
+        };
+        
+        await api.post('/owner/invoices/batch', payload);
+      }
+      
+      setIsConfirmModalOpen(false);
+      setCurrentStep(4); 
+      triggerToast(`Tạo thành công ${validSelectedUnits.length} hóa đơn tháng ${month}/${year}!`);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi chốt hóa đơn hàng loạt.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+        <p className="text-xs font-bold text-gray-500">Đang tải sơ đồ phòng và chỉ số...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 pb-20 relative">
+    <div className="space-y-6 pb-20 relative animate-fadeIn">
       {/* Toast Alert */}
       {toastMessage && (
         <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border animate-slideIn ${
@@ -505,13 +512,10 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                   value={selectedProperty}
                   onChange={(e) => {
                     setSelectedProperty(e.target.value);
-                    if (e.target.value === 'haichau-apartment') {
-                      triggerToast('Tài sản này chưa có phòng cho thuê!', 'warning');
-                    }
                   }}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-primary-container transition-all"
                 >
-                  {PROPERTIES.map(p => (
+                  {properties.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
@@ -610,69 +614,28 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
             </div>
           </div>
 
-          {/* PART D: Utility Cost Settings Preview */}
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-primary-container text-[18px]">calculate</span>
-                2. Cài đặt chi phí dịch vụ áp dụng mặc định
-              </h4>
-              <p className="text-[10px] text-gray-500">Các chi phí này được tự động lấy từ cấu hình của từng tài sản khi tính tiền.</p>
-            </div>
-            
-            {/* Quick Price Badges */}
-            <div className="flex flex-wrap gap-2 text-[10px] font-bold text-gray-700">
-              <span className="px-2.5 py-1.5 rounded-lg bg-orange-50 border border-orange-100 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px] text-orange-500">bolt</span> Điện: 3.500đ/kWh
-              </span>
-              <span className="px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-100 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px] text-blue-500">water_drop</span> Nước: 15.000đ/m³
-              </span>
-              <span className="px-2.5 py-1.5 rounded-lg bg-green-50 border border-green-100 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px] text-green-500">wifi</span> Wifi: 100.000đ/tháng
-              </span>
-              <span className="px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px] text-gray-500">delete_outline</span> Rác: 30.000đ/tháng
-              </span>
-            </div>
-
-            <button
-              onClick={() => alert('Mở cài đặt chi phí tài sản...')}
-              className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-orange-50 text-[10px] font-bold text-primary-container rounded-lg transition-colors cursor-pointer"
-            >
-              Chỉnh cấu hình
-            </button>
-          </div>
-
-          {/* Empty state & Table block */}
-          {selectedProperty === 'haichau-apartment' ? (
-            /* PART Q: Empty State - Tài sản chưa có người thuê */
+          {/* Table block */}
+          {units.length === 0 ? (
+            /* Empty State */
             <div className="bg-white p-12 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-[64px] text-orange-300 mb-4 animate-bounce">corporate_fare</span>
+              <span className="material-symbols-outlined text-[64px] text-orange-300 mb-4">corporate_fare</span>
               <h3 className="text-base font-bold text-on-surface mb-1">Tài sản chưa có phòng cho thuê</h3>
-              <p className="text-xs text-gray-500 max-w-sm mb-6">Tòa nhà Hải Châu Apartment hiện chưa có phòng/căn nào đang được liên kết thuê trong hợp đồng.</p>
+              <p className="text-xs text-gray-500 max-w-sm mb-6">Tài sản này hiện chưa có phòng/căn nào đang được liên kết thuê trong hợp đồng hiệu lực.</p>
               <button
                 onClick={() => setCurrentPage('owner-properties')}
                 className="px-5 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
               >
-                Đến quản lý tài sản & phòng
+                Đến sơ đồ tài sản & phòng
               </button>
             </div>
-          ) : filteredUnits.length === 0 ? (
-            /* PART Q: Empty State - Chưa chọn hoặc trống */
-            <div className="bg-white p-12 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-[64px] text-orange-200 mb-4">search_off</span>
-              <h3 className="text-base font-bold text-on-surface mb-1">Không tìm thấy phòng phù hợp</h3>
-              <p className="text-xs text-gray-500 max-w-sm">Vui lòng điều chỉnh lại bộ lọc tài sản hoặc tháng tạo hóa đơn.</p>
-            </div>
           ) : (
-            /* PART E & F: Tenant Units Billing Table */
+            /* Billing Table */
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden space-y-4">
               
               {/* Table Toolbar */}
               <div className="p-5 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-50">
                 <div>
-                  <h3 className="text-sm font-bold text-on-surface">3. Danh sách phòng & Nhập chỉ số</h3>
+                  <h3 className="text-sm font-bold text-on-surface">Danh sách phòng & Nhập chỉ số</h3>
                   <p className="text-[10px] text-gray-500">Nhập chỉ số điện nước mới. RoomHub tự động quy đổi thành hóa đơn tương ứng.</p>
                 </div>
                 
@@ -683,21 +646,14 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
                   >
                     <span className="material-symbols-outlined text-[14px] font-bold">content_copy</span>
-                    Tải số liệu tháng trước
+                    Mô phỏng chỉ số mới
                   </button>
                   <button
                     onClick={applyDefaultFees}
                     className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-orange-50 text-gray-700 text-[10px] font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[14px]">sync_alt</span>
-                    Áp dụng phí mặc định
-                  </button>
-                  <button
-                    onClick={() => triggerToast('Đã tải thành công file mẫu Excel!', 'success')}
-                    className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-orange-50 text-gray-700 text-[10px] font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">download</span>
-                    Xuất Excel mẫu
+                    Phí mặc định
                   </button>
                 </div>
               </div>
@@ -958,154 +914,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                   </tbody>
                 </table>
               </div>
-
-              {/* PART S: Responsive Mobile Cards version */}
-              <div className="md:hidden p-4 space-y-4">
-                <div className="text-xs font-bold text-gray-500 border-b border-gray-100 pb-2">Danh sách phòng / căn trên di động</div>
-                {filteredUnits.map((unit) => {
-                  const isSelected = selectedUnitIds.includes(unit.id);
-                  const isDisabled = unit.hasInvoiceThisMonth;
-                  const elecCost = calculateElectricCost(unit);
-                  const watCost = calculateWaterCost(unit);
-                  const totalCost = calculateTotal(unit);
-
-                  return (
-                    <div
-                      key={unit.id}
-                      className={`p-4 rounded-2xl border transition-all ${
-                        isDisabled ? 'bg-gray-50/80 border-gray-200/50 opacity-85' :
-                        isSelected ? 'border-primary-container bg-orange-50/10 shadow-sm' :
-                        'border-gray-200 bg-white'
-                      }`}
-                    >
-                      {/* Mobile Card Header */}
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            disabled={isDisabled}
-                            checked={isSelected}
-                            onChange={() => handleSelectUnit(unit.id)}
-                            className="rounded border-gray-300 text-primary-container focus:ring-primary-container disabled:opacity-50 cursor-pointer"
-                          />
-                          <div>
-                            <h4 className="font-extrabold text-on-surface text-sm">{unit.unitName}</h4>
-                            <p className="text-[10px] text-gray-400">{unit.propertyName} · {unit.unitType}</p>
-                          </div>
-                        </div>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-extrabold border ${
-                          unit.status === 'Hợp lệ' ? 'bg-green-50 border-green-100 text-green-700' :
-                          unit.status === 'Thiếu chỉ số' ? 'bg-orange-50 border-orange-100 text-orange-700' :
-                          unit.status === 'Lỗi chỉ số' ? 'bg-red-50 border-red-100 text-red-700' :
-                          'bg-blue-50 border-blue-100 text-blue-700'
-                        }`}>
-                          {unit.status}
-                        </span>
-                      </div>
-
-                      {/* Mobile Card details - collapsible details */}
-                      <div className="grid grid-cols-2 gap-3.5 text-[11px] font-bold text-gray-600 bg-gray-50 p-3 rounded-xl">
-                        
-                        {/* Tenant */}
-                        <div className="col-span-2 flex justify-between border-b border-gray-200/50 pb-2">
-                          <span className="text-gray-400">Người thuê:</span>
-                          <span className="text-on-surface">{unit.tenantName} {unit.isLinked ? '(Linked)' : '(Offline)'}</span>
-                        </div>
-
-                        {/* Rent price */}
-                        <div className="flex flex-col gap-1">
-                          <span className="text-gray-400">Tiền thuê phòng:</span>
-                          <input
-                            type="number"
-                            disabled={isDisabled}
-                            value={unit.rentPrice}
-                            onChange={(e) => handleInputChange(unit.id, 'rentPrice', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-                          />
-                        </div>
-
-                        {/* Fixed fees */}
-                        <div className="flex flex-col gap-1">
-                          <span className="text-gray-400">Phí cố định:</span>
-                          <span className="text-on-surface pt-1">{unit.fixedFees.toLocaleString()}đ</span>
-                        </div>
-
-                        {/* Electric old/new */}
-                        <div className="flex flex-col gap-1 border-t border-gray-200/50 pt-2">
-                          <span className="text-gray-400">Số Điện (Cũ: {unit.oldElectric}):</span>
-                          <input
-                            type="number"
-                            disabled={isDisabled}
-                            placeholder="Chỉ số mới"
-                            value={unit.newElectric}
-                            onChange={(e) => handleInputChange(unit.id, 'newElectric', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-                          />
-                          {unit.newElectric !== '' && <span className="text-[9px] text-gray-500 font-mono mt-0.5">Tiền: {elecCost.toLocaleString()}đ</span>}
-                        </div>
-
-                        {/* Water old/new */}
-                        <div className="flex flex-col gap-1 border-t border-gray-200/50 pt-2">
-                          <span className="text-gray-400">Số Nước (Cũ: {unit.oldWater}):</span>
-                          <input
-                            type="number"
-                            disabled={isDisabled}
-                            placeholder="Chỉ số mới"
-                            value={unit.newWater}
-                            onChange={(e) => handleInputChange(unit.id, 'newWater', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-                          />
-                          {unit.newWater !== '' && <span className="text-[9px] text-gray-500 font-mono mt-0.5">Tiền: {watCost.toLocaleString()}đ</span>}
-                        </div>
-
-                        {/* Surcharge */}
-                        <div className="flex flex-col gap-1 border-t border-gray-200/50 pt-2">
-                          <span className="text-gray-400">Phụ thu (+):</span>
-                          <input
-                            type="number"
-                            disabled={isDisabled}
-                            placeholder="Phát sinh"
-                            value={unit.surcharge}
-                            onChange={(e) => handleInputChange(unit.id, 'surcharge', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-                          />
-                        </div>
-
-                        {/* Discount */}
-                        <div className="flex flex-col gap-1 border-t border-gray-200/50 pt-2">
-                          <span className="text-gray-400">Giảm trừ (-):</span>
-                          <input
-                            type="number"
-                            disabled={isDisabled}
-                            placeholder="Giảm giá"
-                            value={unit.discount}
-                            onChange={(e) => handleInputChange(unit.id, 'discount', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Mobile Card footer */}
-                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => setDetailDrawerUnit(unit)}
-                          className="text-[10px] font-bold text-primary-container hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">info</span> Xem breakdown chi tiết
-                        </button>
-                        <div>
-                          <span className="text-[10px] text-gray-400 mr-1.5">Tổng dự kiến:</span>
-                          {unit.status === 'Lỗi chỉ số' || unit.status === 'Thiếu chỉ số' ? (
-                            <span className="text-red-500 text-xs font-extrabold">Chưa thể tính</span>
-                          ) : (
-                            <span className="text-primary-container text-sm font-black font-mono">{totalCost.toLocaleString()}đ</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
 
@@ -1156,7 +964,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
         </div>
 
         {/* Right Side: Sticky Summary Panel */}
-        {/* PART H: Billing Summary Sticky Panel */}
         <div className="lg:col-span-1">
           <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-5 sticky top-[96px]">
             <div className="border-b border-gray-100 pb-3">
@@ -1168,7 +975,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
             <div className="space-y-2.5 text-xs text-gray-600 font-bold border-b border-gray-100 pb-4">
               <div className="flex justify-between">
                 <span>Tài sản chọn:</span>
-                <span className="text-on-surface">{PROPERTIES.find(p => p.id === selectedProperty)?.name}</span>
+                <span className="text-on-surface">{properties.find(p => p.id === selectedProperty)?.name}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tổng phòng đang chọn:</span>
@@ -1182,12 +989,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                   {countError > 0 && <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[8px] font-extrabold">Lỗi: {countError}</span>}
                 </div>
               </div>
-              {countExist > 0 && (
-                <div className="flex justify-between text-gray-400">
-                  <span>Đã có hóa đơn rồi:</span>
-                  <span className="font-mono text-[10px]">{countExist} phòng</span>
-                </div>
-              )}
             </div>
 
             {/* Financial breakdown */}
@@ -1253,7 +1054,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                   }
                   setIsConfirmModalOpen(true);
                 }}
-                disabled={hasSeriousError || validSelectedUnits.length === 0}
+                disabled={hasSeriousError || validSelectedUnits.length === 0 || isAddLoading}
                 className="w-full py-3 bg-primary-container disabled:bg-gray-200 disabled:text-gray-400 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-[18px] font-bold">check_circle</span>
@@ -1275,7 +1076,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     triggerToast('Không có dữ liệu hợp lệ để xem trước!', 'error');
                     return;
                   }
-                  setCurrentStep(3); // Go to step 3 (Kiểm tra hóa đơn preview)
+                  setCurrentStep(3); 
                   triggerToast('Đã mở chế độ kiểm tra xem trước hóa đơn!');
                 }}
                 disabled={validSelectedUnits.length === 0}
@@ -1344,15 +1145,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 </div>
               </div>
             )}
-            {countExist > 0 && (
-              <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-blue-500">receipt_long</span>
-                <div>
-                  <h4 className="text-xs font-bold text-blue-800">{countExist} phòng đã có hóa đơn</h4>
-                  <p className="text-[9px] text-blue-600 font-medium">Không thể tạo trùng lặp tháng</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Quick list preview grid */}
@@ -1395,7 +1187,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
           <div className="space-y-2">
             <h3 className="text-lg font-black text-on-surface">Chốt hóa đơn hàng loạt thành công!</h3>
             <p className="text-xs text-gray-500 max-w-md mx-auto">
-              Hệ thống RoomHub đã xử lý tạo thành công **{validSelectedUnits.length}** hóa đơn trong tháng {billingMonth.split('-')[1]}/{billingMonth.split('-')[0]} cho tài sản **{PROPERTIES.find(p => p.id === selectedProperty)?.name}**.
+              Hệ thống RoomHub đã xử lý tạo thành công **{validSelectedUnits.length}** hóa đơn trong tháng {billingMonth.split('-')[1]}/{billingMonth.split('-')[0]} cho tài sản **{properties.find(p => p.id === selectedProperty)?.name}**.
             </p>
           </div>
 
@@ -1425,7 +1217,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               className="w-full sm:w-auto px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[18px]">download_for_offline</span>
-              <span>Tải file bill Excel</span>
+              <span>Báo cáo Excel</span>
             </button>
 
             <button
@@ -1433,13 +1225,12 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               className="w-full sm:w-auto px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[18px]">campaign</span>
-              <span>Gửi thông báo</span>
+              <span>Gửi thông báo nhắc</span>
             </button>
 
             <button
               onClick={() => {
-                setUnits(INITIAL_UNITS);
-                setSelectedUnitIds(['unit-1', 'unit-2']);
+                loadData();
                 setCurrentStep(2);
               }}
               className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-200 hover:bg-orange-50 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer text-center"
@@ -1530,7 +1321,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     {detailDrawerUnit.status === 'Hợp lệ' && (
                       <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
                         <p>· Chỉ số điện: Cũ: {detailDrawerUnit.oldElectric} kWh ➔ Mới: {detailDrawerUnit.newElectric} kWh</p>
-                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newElectric) - detailDrawerUnit.oldElectric} kWh × Đơn giá: {ELECTRIC_PRICE.toLocaleString()}đ/kWh</p>
+                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newElectric) - detailDrawerUnit.oldElectric} kWh × Đơn giá: {detailDrawerUnit.electricityPrice.toLocaleString()}đ/kWh</p>
                       </div>
                     )}
                   </div>
@@ -1548,7 +1339,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     {detailDrawerUnit.status === 'Hợp lệ' && (
                       <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
                         <p>· Chỉ số nước: Cũ: {detailDrawerUnit.oldWater} m³ ➔ Mới: {detailDrawerUnit.newWater} m³</p>
-                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newWater) - detailDrawerUnit.oldWater} m³ × Đơn giá: {WATER_PRICE.toLocaleString()}đ/m³</p>
+                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newWater) - detailDrawerUnit.oldWater} m³ × Đơn giá: {detailDrawerUnit.waterPrice.toLocaleString()}đ/m³</p>
                       </div>
                     )}
                   </div>
@@ -1589,7 +1380,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
                   {/* Note fields */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">6. Ghi chú hóa đơn này</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Ghi chú hóa đơn này</label>
                     <textarea
                       rows={2}
                       placeholder="Nhập ghi chú cho hóa đơn này (Ví dụ: Trừ tiền sửa bóng đèn, vệ sinh...)"
@@ -1706,7 +1497,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-gray-700">
                 <div className="flex justify-between">
                   <span>Tài sản áp dụng:</span>
-                  <span className="text-on-surface">{PROPERTIES.find(p => p.id === selectedProperty)?.name}</span>
+                  <span className="text-on-surface">{properties.find(p => p.id === selectedProperty)?.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Số hóa đơn sẽ tạo:</span>
@@ -1723,7 +1514,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               </div>
 
               {/* Confirm workflow checkbox choices */}
-              <div className="space-y-2 pt-1 font-bold text-gray-700 text-[11px]">
+              <div className="space-y-2 pt-1 font-bold text-gray-705 text-[11px]">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-container focus:ring-primary-container" />
                   <span>Tôi đã kiểm tra kỹ và xác nhận dữ liệu chính xác.</span>
@@ -1743,10 +1534,11 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 Hủy bỏ
               </button>
               <button
+                disabled={isAddLoading}
                 onClick={handleConfirmCreate}
                 className="px-5 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm active:scale-95"
               >
-                Xác nhận tạo hóa đơn
+                {isAddLoading ? 'Đang tạo...' : 'Xác nhận tạo hóa đơn'}
               </button>
             </div>
           </div>
@@ -1795,7 +1587,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
             <div className="flex justify-between items-start border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-green-600">download_for_offline</span>
-                <h3 className="text-sm font-extrabold text-on-surface">Xuất hóa đơn bill Excel</h3>
+                <h3 className="text-sm font-extrabold text-on-surface">Xuất hóa đơn Excel</h3>
               </div>
               <button onClick={() => setIsExportModalOpen(false)} className="text-gray-400 hover:text-on-surface">
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1804,32 +1596,13 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
             <div className="space-y-4 text-xs font-bold text-gray-600">
               <p className="leading-relaxed font-semibold text-gray-500 text-[11px]">
-                Chọn các cấu hình chi tiết xuất file báo cáo tổng hợp dịch vụ tháng để lưu trữ hoặc gửi ngoài hệ thống:
+                File Excel tổng hợp báo cáo dịch vụ tháng đã sẵn sàng:
               </p>
               
               <div className="space-y-2 pt-1 font-bold text-gray-700 text-[11px]">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="exportScope" defaultChecked className="rounded-full border-gray-300 text-primary-container focus:ring-primary-container" />
-                  <span>Xuất tất cả hóa đơn vừa tạo ({validSelectedUnits.length} bill)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="exportScope" className="rounded-full border-gray-300 text-primary-container focus:ring-primary-container" />
-                  <span>Xuất gom thành nhiều sheet trong 1 tệp Excel duy nhất</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="exportScope" className="rounded-full border-gray-300 text-primary-container focus:ring-primary-container" />
-                  <span>Chỉ xuất danh sách bảng tổng hợp doanh số dự kiến</span>
-                </label>
-              </div>
-
-              <div className="border-t border-gray-100 pt-3 space-y-2 text-[10px] text-gray-500 font-semibold pl-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-container focus:ring-primary-container" />
-                  <span>Bao gồm chi tiết phép tính chỉ số điện/nước</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded border-gray-300 text-primary-container focus:ring-primary-container" />
-                  <span>Bao gồm số điện thoại và email thông tin khách thuê</span>
+                  <span>Xuất file Excel tổng hợp các phòng vừa tạo ({validSelectedUnits.length} phòng)</span>
                 </label>
               </div>
             </div>
@@ -1839,7 +1612,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 onClick={() => setIsExportModalOpen(false)}
                 className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg cursor-pointer"
               >
-                Hủy bỏ
+                Đóng
               </button>
               <button
                 onClick={() => {
@@ -1848,7 +1621,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 }}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm"
               >
-                Tải file Excel (.xlsx)
+                Tải file Excel
               </button>
             </div>
           </div>
@@ -1881,19 +1654,10 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                   <span className="font-mono text-xs">{validSelectedUnits.filter(u => u.isLinked).length} Linked</span>
                 </div>
                 <div className="p-2 bg-orange-50 text-orange-800 rounded-xl">
-                  <span className="text-orange-600/70 block uppercase">Người thuê offline:</span>
+                  <span className="text-orange-600/70 block uppercase">Offline:</span>
                   <span className="font-mono text-xs">{validSelectedUnits.filter(u => !u.isLinked).length} Offline</span>
                 </div>
               </div>
-
-              {validSelectedUnits.filter(u => !u.isLinked).length > 0 && (
-                <div className="p-3 bg-orange-50 border border-orange-100 rounded-xl flex items-start gap-2 text-[10px] text-orange-800 font-bold leading-normal">
-                  <span className="material-symbols-outlined text-[16px] text-orange-500 font-bold flex-shrink-0">warning</span>
-                  <p>
-                    Có {validSelectedUnits.filter(u => !u.isLinked).length} khách thuê Offline không thể nhận tin trên RoomHub. Bạn vui lòng tải file Excel gửi qua Zalo/SMS cho họ.
-                  </p>
-                </div>
-              )}
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-on-surface">Nội dung tin nhắn thông báo <span className="text-red-500">*</span></label>
@@ -1915,7 +1679,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               <button
                 onClick={() => {
                   setIsNotificationModalOpen(false);
-                  triggerToast(`Đã gửi thông báo nhắc hóa đơn thành công tới ${validSelectedUnits.filter(u => u.isLinked).length} tài khoản liên kết!`, 'success');
+                  triggerToast(`Đã gửi thông báo nhắc hóa đơn thành công!`, 'success');
                 }}
                 className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm"
               >
