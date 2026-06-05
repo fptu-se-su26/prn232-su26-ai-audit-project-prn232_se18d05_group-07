@@ -71,9 +71,17 @@ namespace Application.Services
             {
                 // Link account if email or phone matches a RoomHub account
                 ApplicationUser? linkedTenant = null;
-                if (!string.IsNullOrWhiteSpace(request.TenantEmailOrPhone))
+                string? contactToSearch = request.TenantEmailOrPhone;
+                if (string.IsNullOrWhiteSpace(contactToSearch))
                 {
-                    var result = await SearchTenantAsync(request.TenantEmailOrPhone);
+                    contactToSearch = !string.IsNullOrWhiteSpace(request.TemporaryTenantEmail)
+                        ? request.TemporaryTenantEmail
+                        : request.TemporaryTenantPhone;
+                }
+
+                if (!string.IsNullOrWhiteSpace(contactToSearch))
+                {
+                    var result = await SearchTenantAsync(contactToSearch);
                     if (result != null)
                     {
                         linkedTenant = await _userManager.FindByIdAsync(result.UserId);
@@ -156,6 +164,51 @@ namespace Application.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<TenantRoomDto?> GetActiveRoomForTenantAsync(string tenantId)
+        {
+            var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
+            if (contract == null)
+                return null;
+
+            var room = contract.Room;
+            var building = room.Floor.Building;
+            var owner = contract.Owner;
+
+            return new TenantRoomDto
+            {
+                RoomId = room.Id,
+                RoomNumber = room.RoomNumber,
+                BuildingName = building.Name,
+                BuildingAddress = building.Address,
+                RoomType = room.RoomType switch
+                {
+                    RoomType.Studio => "Studio",
+                    RoomType.MiniApartment => "Căn hộ mini",
+                    RoomType.Apartment => "Căn hộ",
+                    _ => "Phòng trọ"
+                },
+                SurfaceArea = room.SurfaceArea ?? 25,
+                MaxCapacity = room.MaxCapacity,
+                IsFurnished = room.IsFurnished,
+                ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
+                WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                InternetPrice = room.InternetPrice ?? building.InternetPrice,
+                GarbagePrice = room.GarbagePrice ?? building.GarbagePrice,
+                RentAmount = contract.RentAmount,
+                DepositAmount = contract.DepositAmount,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                Status = "Còn hiệu lực",
+                OwnerName = owner.FullName,
+                OwnerPhone = owner.PhoneNumber ?? "",
+                OwnerEmail = owner.Email ?? "",
+                OwnerAvatar = owner.AvatarUrl,
+                RoomImage = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).FirstOrDefault() 
+                            ?? building.ThumbnailUrl 
+                            ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80"
+            };
         }
     }
 }

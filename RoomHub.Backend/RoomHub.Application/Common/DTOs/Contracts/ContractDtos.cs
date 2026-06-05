@@ -33,4 +33,32 @@ namespace Application.Common.DTOs.Contracts
         public string Cccd { get; set; } = "";
         public string Address { get; set; } = "";
     }
+
+    public class TenantRoomDto
+    {
+        public int RoomId { get; set; }
+        public string RoomNumber { get; set; } = null!;
+        public string BuildingName { get; set; } = null!;
+        public string BuildingAddress { get; set; } = null!;
+        public string RoomType { get; set; } = null!;
+        public decimal SurfaceArea { get; set; }
+        public int MaxCapacity { get; set; }
+        public bool IsFurnished { get; set; }
+        public decimal ElectricityPrice { get; set; }
+        public decimal WaterPrice { get; set; }
+        public decimal InternetPrice { get; set; }
+        public decimal GarbagePrice { get; set; }
+
+        public decimal RentAmount { get; set; }
+        public decimal DepositAmount { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string Status { get; set; } = null!;
+
+        public string OwnerName { get; set; } = null!;
+        public string OwnerPhone { get; set; } = null!;
+        public string OwnerEmail { get; set; } = null!;
+        public string? OwnerAvatar { get; set; }
+        public string? RoomImage { get; set; }
+    }
 }

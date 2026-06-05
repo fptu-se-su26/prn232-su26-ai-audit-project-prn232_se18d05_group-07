@@ -57,6 +57,17 @@ namespace Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(u => u.Email == contact || u.PhoneNumber == contact);
         }
 
+        public async Task<Contract?> GetActiveContractByTenantIdAsync(string tenantId)
+        {
+            return await _context.Contracts
+                .Include(c => c.Room)
+                    .ThenInclude(r => r.Floor)
+                        .ThenInclude(f => f.Building)
+                .Include(c => c.Room.RoomPhotos)
+                .Include(c => c.Owner)
+                .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Status == ContractStatus.Active && !c.IsDeleted);
+        }
+
         public async Task AddAsync(Contract contract)
         {
             await _context.Contracts.AddAsync(contract);
