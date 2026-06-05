@@ -31,3 +31,77 @@
 .icon-fill {
   font-variation-settings: 'FILL' 1;
 }
+
+/* ===== Hiệu ứng Reveal-on-scroll (dùng với useReveal/<Reveal>) ===== */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ===== Dropdown / popover xuất hiện mượt (dùng class animate-scaleUp) ===== */
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.16s ease-out;
+}
+
+/* ===== Khối trang trí trôi nổi nhẹ cho hero parallax ===== */
+@keyframes floaty {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes floatySlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-22px);
+  }
+}
+
+.animate-floaty {
+  animation: floaty 6s ease-in-out infinite;
+}
+
+.animate-floaty-slow {
+  animation: floatySlow 9s ease-in-out infinite;
+}
+
+/* ===== Nền lưới chấm mờ tạo chiều sâu cho các section ===== */
+.dot-grid-bg {
+  background-image: radial-gradient(rgba(157, 67, 0, 0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-floaty,
+  .animate-floaty-slow {
+    animation: none;
+  }
+}
