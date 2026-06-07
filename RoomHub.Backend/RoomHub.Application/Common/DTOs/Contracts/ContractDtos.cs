@@ -54,6 +54,7 @@ namespace Application.Common.DTOs.Contracts
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Status { get; set; } = null!;
+        public bool IsPending { get; set; }
 
         public string OwnerName { get; set; } = null!;
         public string OwnerPhone { get; set; } = null!;

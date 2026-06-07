@@ -717,9 +717,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
                 <div className="border-b border-gray-50 pb-3 flex justify-between items-center">
                   <h3 className="text-xs font-black text-gray-500 uppercase">Khách thuê hiện tại</h3>
                   <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
+                    tenant.contractStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
                     tenant.isLinkedAccount ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {tenant.isLinkedAccount ? 'RoomHub Linked' : 'Offline'}
+                    {tenant.contractStatus === 'Pending' ? 'Chờ xác nhận' : tenant.isLinkedAccount ? 'RoomHub Linked' : 'Offline'}
                   </span>
                 </div>
 
@@ -766,22 +767,45 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
                 {/* Operations */}
                 <div className="space-y-1.5 pt-2 border-t border-gray-50">
-                  <button 
-                    onClick={() => triggerToast(`Gửi thông báo nhắc nợ ZNS tới khách thuê ${tenant.name} thành công!`)}
-                    className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
-                  >
-                    Gửi thông báo ZNS
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setEndTenancyDate(new Date().toISOString().split('T')[0]);
-                      setEndTenancyReason('');
-                      setIsEndTenancyOpen(true);
-                    }}
-                    className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
-                  >
-                    Kết thúc hợp đồng (Trả phòng)
-                  </button>
+                  {tenant.contractStatus === 'Pending' ? (
+                    <>
+                      <button 
+                        onClick={() => triggerToast(`Đã gửi lại lời mời nhận phòng tới khách hàng ${tenant.name} thành công!`)}
+                        className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Gửi lại lời mời nhận phòng
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                          setEndTenancyReason('Chủ trọ hủy lời mời nhận phòng.');
+                          setIsEndTenancyOpen(true);
+                        }}
+                        className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Hủy lời mời (Thu hồi)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => triggerToast(`Gửi thông báo nhắc nợ ZNS tới khách thuê ${tenant.name} thành công!`)}
+                        className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Gửi thông báo ZNS
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                          setEndTenancyReason('');
+                          setIsEndTenancyOpen(true);
+                        }}
+                        className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Kết thúc hợp đồng (Trả phòng)
+                      </button>
+                    </>
+                  )}
                 </div>
 
               </div>

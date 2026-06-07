@@ -65,7 +65,9 @@ namespace Infrastructure.Persistence.Repositories
                         .ThenInclude(f => f.Building)
                 .Include(c => c.Room.RoomPhotos)
                 .Include(c => c.Owner)
-                .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Status == ContractStatus.Active && !c.IsDeleted);
+                .FirstOrDefaultAsync(c => c.TenantId == tenantId && 
+                    (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && 
+                    !c.IsDeleted);
         }
 
         public async Task AddAsync(Contract contract)

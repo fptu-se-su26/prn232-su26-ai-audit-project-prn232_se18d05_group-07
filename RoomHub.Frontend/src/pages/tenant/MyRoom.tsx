@@ -25,6 +25,7 @@ interface RoomData {
   startDate: string;
   endDate: string;
   status: string;
+  isPending: boolean;
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
@@ -37,6 +38,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
   const [roomData, setRoomData] = useState<RoomData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
   const triggerToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ text, type });
@@ -70,6 +72,37 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
   useEffect(() => {
     fetchRoom();
   }, []);
+
+  const handleAcceptRoom = async () => {
+    try {
+      setLoading(true);
+      await api.post('/tenant/room/accept');
+      triggerToast('Đã xác nhận nhận phòng thành công!');
+      fetchRoom();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận nhận phòng.', 'error');
+      setLoading(false);
+    }
+  };
+
+  const handleRejectRoomClick = () => {
+    setShowRejectConfirm(true);
+  };
+
+  const handleConfirmReject = async () => {
+    setShowRejectConfirm(false);
+    try {
+      setLoading(true);
+      await api.post('/tenant/room/reject');
+      triggerToast('Đã từ chối lời mời nhận phòng thành công.', 'warning');
+      fetchRoom();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi từ chối lời mời.', 'error');
+      setLoading(false);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return (price || 0).toLocaleString('vi-VN') + 'đ';
@@ -148,12 +181,15 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
         </div>
       )}
 
+      {/* Parallax Hero */}
       <ParallaxHero
         image={roomData.roomImage || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80"}
         heightClass="min-h-[260px]"
       >
         <div className="p-8 h-full flex flex-col justify-end">
-          <span className="text-[11px] font-bold text-white bg-green-500 px-2.5 py-1 rounded-full w-fit mb-3">● Đang ở</span>
+          <span className={`text-[11px] font-bold text-white px-2.5 py-1 rounded-full w-fit mb-3 ${roomData.isPending ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}>
+            ● {roomData.isPending ? 'Chờ xác nhận' : 'Đang ở'}
+          </span>
           <h2 className="text-white text-2xl md:text-3xl font-bold">Phòng {roomData.roomNumber} — {roomData.buildingName}</h2>
           <p className="text-white/85 text-sm flex items-center gap-1 mt-1 font-semibold">
             <span className="material-symbols-outlined text-[16px]">location_on</span> {roomData.buildingAddress}
@@ -161,6 +197,36 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
         </div>
       </ParallaxHero>
 
+      {/* Pending Room Link Confirmation Banner */}
+      {roomData.isPending && (
+        <Reveal>
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-scaleUp">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-[32px] text-primary-container shrink-0">info</span>
+              <div className="text-xs text-gray-700 font-semibold leading-relaxed">
+                <p className="text-sm font-black text-on-surface">Yêu cầu liên kết nhận phòng chờ xác nhận</p>
+                Chủ trọ <span className="font-bold text-gray-900">{roomData.ownerName}</span> đã gửi lời mời nhận phòng này cho bạn. Vui lòng xác nhận thông tin hợp đồng bên dưới trước khi đồng ý nhận phòng.
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto shrink-0">
+              <button 
+                onClick={handleRejectRoomClick}
+                className="flex-grow sm:flex-grow-0 px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition-all cursor-pointer text-center active:scale-95"
+              >
+                Từ chối
+              </button>
+              <button 
+                onClick={handleAcceptRoom}
+                className="flex-grow sm:flex-grow-0 px-5 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer text-center shadow-sm active:scale-95"
+              >
+                Đồng ý nhận phòng
+              </button>
+            </div>
+          </div>
+        </Reveal>
+      )}
+
+      {/* Main Content Layout */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Reveal>
@@ -209,7 +275,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
                 <li className="flex justify-between"><span className="text-gray-500">Tiền cọc</span><span className="font-bold text-on-surface">{formatPrice(roomData.depositAmount)}</span></li>
                 <li className="flex justify-between"><span className="text-gray-500">Bắt đầu</span><span className="font-semibold text-on-surface">{formatDate(roomData.startDate)}</span></li>
                 <li className="flex justify-between"><span className="text-gray-500">Kết thúc</span><span className="font-semibold text-on-surface">{formatDate(roomData.endDate)}</span></li>
-                <li className="flex justify-between items-center"><span className="text-gray-500">Trạng thái</span><span className="text-[10px] font-bold text-green-600 bg-green-50 px-2.5 py-0.5 rounded-full border border-green-200">{roomData.status}</span></li>
+                <li className="flex justify-between items-center"><span className="text-gray-500">Trạng thái</span><span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${roomData.isPending ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-green-600 bg-green-50 border-green-200'}`}>{roomData.status}</span></li>
               </ul>
               <button onClick={() => triggerToast('Tải hợp đồng PDF (demo)...')} className="w-full mt-5 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-orange-100">
                 <span className="material-symbols-outlined text-[18px]">download</span> Tải hợp đồng
@@ -224,7 +290,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
                 {roomData.ownerAvatar ? (
                   <img src={roomData.ownerAvatar} alt={roomData.ownerName} className="w-12 h-12 rounded-full object-cover shadow-sm border border-gray-100" />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-primary-container text-white flex items-center justify-center font-bold shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-primary-container text-white flex items-center justify-center font-bold shadow-sm animate-scaleUp">
                     {roomData.ownerName ? roomData.ownerName.split(' ').slice(-1)[0][0] : 'U'}
                   </div>
                 )}
@@ -240,6 +306,35 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
           </Reveal>
         </div>
       </div>
+
+      {/* Reject invitation confirmation modal */}
+      {showRejectConfirm && (
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-gray-100 soft-shadow w-full max-w-sm overflow-hidden animate-scaleUp p-6 space-y-4">
+            <h3 className="text-base font-bold text-red-600 flex items-center gap-2">
+              <span className="material-symbols-outlined text-red-500">warning</span>
+              Từ chối nhận phòng
+            </h3>
+            <p className="text-xs font-semibold text-gray-500 leading-normal">
+              Bạn có chắc chắn muốn từ chối lời mời nhận phòng {roomData.roomNumber} tại {roomData.buildingName} từ chủ trọ {roomData.ownerName} không? Lời mời này sẽ bị hủy vĩnh viễn.
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button 
+                onClick={() => setShowRejectConfirm(false)}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={handleConfirmReject}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-755 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                Từ chối nhận phòng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
