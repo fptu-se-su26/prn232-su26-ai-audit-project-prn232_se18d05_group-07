@@ -19,6 +19,7 @@ import ListingList from './pages/owner/ListingList';
 import InvoiceList from './pages/owner/InvoiceList';
 import InvoiceCreate from './pages/owner/InvoiceCreate';
 import InvoiceDetail from './pages/owner/InvoiceDetail';
+import Tenants from './pages/owner/Tenants';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyOtp from './pages/VerifyOtp';
@@ -299,6 +300,8 @@ const AppContent: React.FC = () => {
           <InvoiceCreate setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-invoice-detail' ? (
           <InvoiceDetail invoiceId={selectedInvoiceId} setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-tenants' ? (
+          <Tenants setCurrentPage={setCurrentPage} setSelectedUnitId={setSelectedUnitId} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

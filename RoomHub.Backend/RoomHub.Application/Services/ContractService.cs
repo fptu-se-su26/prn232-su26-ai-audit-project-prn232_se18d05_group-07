@@ -71,9 +71,17 @@ namespace Application.Services
             {
                 // Link account if email or phone matches a RoomHub account
                 ApplicationUser? linkedTenant = null;
-                if (!string.IsNullOrWhiteSpace(request.TenantEmailOrPhone))
+                string? contactToSearch = request.TenantEmailOrPhone;
+                if (string.IsNullOrWhiteSpace(contactToSearch))
                 {
-                    var result = await SearchTenantAsync(request.TenantEmailOrPhone);
+                    contactToSearch = !string.IsNullOrWhiteSpace(request.TemporaryTenantEmail)
+                        ? request.TemporaryTenantEmail
+                        : request.TemporaryTenantPhone;
+                }
+
+                if (!string.IsNullOrWhiteSpace(contactToSearch))
+                {
+                    var result = await SearchTenantAsync(contactToSearch);
                     if (result != null)
                     {
                         linkedTenant = await _userManager.FindByIdAsync(result.UserId);
@@ -94,14 +102,14 @@ namespace Application.Services
                     RentAmount = request.RentAmount,
                     DepositAmount = request.DepositAmount,
                     Terms = request.Terms,
-                    Status = ContractStatus.Active,
+                    Status = linkedTenant != null ? ContractStatus.Pending : ContractStatus.Active,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 await _contractRepository.AddAsync(contract);
 
                 // Update Room operational status
-                room.Status = RoomStatus.Occupied;
+                room.Status = linkedTenant != null ? RoomStatus.PendingApproval : RoomStatus.Occupied;
                 await _roomRepository.UpdateAsync(room);
 
                 // No separate Deposit entity creation since Deposit is for reservation booking hold.
@@ -124,7 +132,7 @@ namespace Application.Services
             if (room == null || room.Floor.Building.OwnerId != ownerId)
                 throw new Exception("Không tìm thấy phòng này hoặc bạn không có quyền truy cập.");
 
-            var activeContract = room.Contracts.FirstOrDefault(c => c.Status == ContractStatus.Active && !c.IsDeleted);
+            var activeContract = room.Contracts.FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
             if (activeContract == null)
                 throw new Exception("Phòng trọ này hiện đang trống hoặc không có hợp đồng hoạt động.");
 
@@ -156,6 +164,156 @@ namespace Application.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<TenantRoomDto?> GetActiveRoomForTenantAsync(string tenantId)
+        {
+            var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
+            if (contract == null)
+                return null;
+
+            var room = contract.Room;
+            var building = room.Floor.Building;
+            var owner = contract.Owner;
+
+            return new TenantRoomDto
+            {
+                RoomId = room.Id,
+                RoomNumber = room.RoomNumber,
+                BuildingName = building.Name,
+                BuildingAddress = building.Address,
+                RoomType = room.RoomType switch
+                {
+                    RoomType.Studio => "Studio",
+                    RoomType.MiniApartment => "Căn hộ mini",
+                    RoomType.Apartment => "Căn hộ",
+                    _ => "Phòng trọ"
+                },
+                SurfaceArea = room.SurfaceArea ?? 25,
+                MaxCapacity = room.MaxCapacity,
+                IsFurnished = room.IsFurnished,
+                ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
+                WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                InternetPrice = room.InternetPrice ?? building.InternetPrice,
+                GarbagePrice = room.GarbagePrice ?? building.GarbagePrice,
+                RentAmount = contract.RentAmount,
+                DepositAmount = contract.DepositAmount,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                Status = contract.Status switch
+                {
+                    ContractStatus.Pending => "Chờ xác nhận",
+                    ContractStatus.Active => "Còn hiệu lực",
+                    _ => contract.Status.ToString()
+                },
+                IsPending = contract.Status == ContractStatus.Pending,
+                OwnerName = owner.FullName,
+                OwnerPhone = owner.PhoneNumber ?? "",
+                OwnerEmail = owner.Email ?? "",
+                OwnerAvatar = owner.AvatarUrl,
+                RoomImage = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).FirstOrDefault() 
+                            ?? building.ThumbnailUrl 
+                            ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80"
+            };
+        }
+
+        public async Task<bool> AcceptContractAsync(string tenantId)
+        {
+            var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
+            if (contract == null || contract.Status != ContractStatus.Pending)
+                throw new Exception("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                contract.Status = ContractStatus.Active;
+                contract.UpdatedAt = DateTime.UtcNow;
+                await _contractRepository.UpdateAsync(contract);
+
+                var room = await _roomRepository.GetByIdAsync(contract.RoomId);
+                if (room != null)
+                {
+                    room.Status = RoomStatus.Occupied;
+                    room.UpdatedAt = DateTime.UtcNow;
+                    await _roomRepository.UpdateAsync(room);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<bool> RejectContractAsync(string tenantId)
+        {
+            var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
+            if (contract == null || contract.Status != ContractStatus.Pending)
+                throw new Exception("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                contract.IsDeleted = true;
+                contract.Status = ContractStatus.Terminated;
+                contract.UpdatedAt = DateTime.UtcNow;
+                await _contractRepository.UpdateAsync(contract);
+
+                var room = await _roomRepository.GetByIdAsync(contract.RoomId);
+                if (room != null)
+                {
+                    room.Status = RoomStatus.Available;
+                    room.UpdatedAt = DateTime.UtcNow;
+                    await _roomRepository.UpdateAsync(room);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<System.Collections.Generic.List<OwnerTenantDto>> GetTenantsForOwnerAsync(string ownerId)
+        {
+            var contracts = await _contractRepository.GetContractsByOwnerAsync(ownerId);
+            return contracts
+                .Where(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted)
+                .Select(c => new OwnerTenantDto
+                {
+                    ContractId = c.Id,
+                    RoomId = c.RoomId,
+                    RoomNumber = c.Room.RoomNumber,
+                    BuildingId = c.Room.Floor.Building.Id,
+                    BuildingName = c.Room.Floor.Building.Name,
+                    TenantId = c.TenantId,
+                    TenantName = c.TemporaryTenantName ?? c.Tenant?.FullName ?? "Khách thuê",
+                    TenantPhone = c.TemporaryTenantPhone ?? c.Tenant?.PhoneNumber ?? "",
+                    TenantEmail = c.TemporaryTenantEmail ?? c.Tenant?.Email ?? "",
+                    TenantAvatar = c.Tenant?.AvatarUrl,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
+                    RentAmount = c.RentAmount,
+                    DepositAmount = c.DepositAmount,
+                    ContractStatus = c.Status switch
+                    {
+                        ContractStatus.Pending => "Chờ xác nhận",
+                        ContractStatus.Active => "Đang thuê",
+                        _ => c.Status.ToString()
+                    },
+                    IsOnline = c.TenantId != null
+                })
+                .OrderBy(t => t.BuildingName)
+                .ThenBy(t => t.RoomNumber)
+                .ToList();
         }
     }
 }

@@ -87,7 +87,7 @@ namespace Application.Services
 
             foreach (var room in allRooms)
             {
-                var activeContract = room.Contracts.FirstOrDefault(c => c.Status == ContractStatus.Active && !c.IsDeleted);
+                var activeContract = room.Contracts.FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
 
                 string? tenantName = activeContract?.TemporaryTenantName;
                 string? tenantPhone = activeContract?.TemporaryTenantPhone;
@@ -110,6 +110,7 @@ namespace Application.Services
                     RoomStatus.Occupied => unpaidInvoices.Any(i => i.Status == InvoiceStatus.Overdue) ? "Quá hạn" : "Đang thuê",
                     RoomStatus.Maintenance => "Bảo trì",
                     RoomStatus.UnderMaintenance => "Bảo trì",
+                    RoomStatus.PendingApproval => "Chờ xác nhận",
                     _ => "Còn trống"
                 };
 
@@ -346,7 +347,7 @@ namespace Application.Services
                 return null;
 
             var building = room.Floor.Building;
-            var activeContract = room.Contracts.FirstOrDefault(c => c.Status == ContractStatus.Active && !c.IsDeleted);
+            var activeContract = room.Contracts.FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
 
             var dto = new UnitDetailDto
             {
@@ -367,6 +368,7 @@ namespace Application.Services
                     RoomStatus.Occupied => "Đang thuê",
                     RoomStatus.Maintenance => "Bảo trì",
                     RoomStatus.UnderMaintenance => "Bảo trì",
+                    RoomStatus.PendingApproval => "Chờ xác nhận",
                     _ => "Còn trống"
                 },
                 BuildingName = building.Name,
@@ -398,7 +400,8 @@ namespace Application.Services
                     Deposit = activeContract.DepositAmount,
                     AgreementPrice = activeContract.RentAmount,
                     PeopleCount = 1, // Defaulting as Contract model has no PeopleCount
-                    IsLinkedAccount = tenantUser != null
+                    IsLinkedAccount = tenantUser != null,
+                    ContractStatus = activeContract.Status.ToString()
                 };
 
                  foreach (var invoice in activeContract.Invoices.OrderByDescending(i => i.InvoiceDate))
