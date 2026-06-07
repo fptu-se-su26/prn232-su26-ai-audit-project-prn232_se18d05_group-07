@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import type { PageType } from '../../App';
 
 interface OwnerLayoutProps {
@@ -8,10 +10,13 @@ interface OwnerLayoutProps {
 }
 
 const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, children }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const notificationRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
@@ -86,9 +91,14 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   ];
 
   const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Chủ nhà?')) {
-      setCurrentPage('home');
-    }
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutConfirmOpen(false);
+    logout();
+    setCurrentPage('home');
+    navigate('/login');
   };
 
   const isActive = (item: typeof menuItems[0]) => {
@@ -159,22 +169,6 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         })}
       </nav>
 
-      {/* Quick Guide Card */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="bg-gradient-to-tr from-orange-100/80 to-blue-50/50 p-4 rounded-2xl border border-orange-100/30 relative overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-orange-200/20 rounded-full"></div>
-          <h4 className="text-xs font-bold text-on-surface mb-1 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary-container text-[16px]">school</span> Hướng dẫn nhanh
-          </h4>
-          <p className="text-[10px] text-gray-600 leading-relaxed mb-3">Tạo toà nhà, đăng tin và chốt hoá đơn hàng tháng chỉ trong 3 phút.</p>
-          <button 
-            onClick={() => alert('Đang tải tài liệu hướng dẫn vận hành cho Chủ nhà...')}
-            className="w-full py-2 bg-white hover:bg-orange-50 text-[10px] font-bold text-primary-container rounded-lg border border-orange-100 transition-all cursor-pointer text-center active:scale-95 shadow-sm"
-          >
-            Xem hướng dẫn
-          </button>
-        </div>
-      </div>
 
       {/* Logout Link Footer */}
       <div className="p-3 border-t border-gray-100">
@@ -402,6 +396,33 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
           </div>
         </main>
 
+      {isLogoutConfirmOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 soft-shadow relative animate-scale-up border border-gray-100 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">logout</span>
+            </div>
+            <h3 className="text-lg font-bold text-on-surface mb-2">Đăng xuất khỏi hệ thống?</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Chủ nhà?</p>
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsLogoutConfirmOpen(false)}
+                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl text-sm font-semibold transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-95"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
