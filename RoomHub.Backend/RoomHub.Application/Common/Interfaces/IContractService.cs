@@ -11,5 +11,6 @@ namespace Application.Common.Interfaces
         Task<TenantRoomDto?> GetActiveRoomForTenantAsync(string tenantId);
         Task<bool> AcceptContractAsync(string tenantId);
         Task<bool> RejectContractAsync(string tenantId);
+        Task<System.Collections.Generic.List<OwnerTenantDto>> GetTenantsForOwnerAsync(string ownerId);
     }
 }

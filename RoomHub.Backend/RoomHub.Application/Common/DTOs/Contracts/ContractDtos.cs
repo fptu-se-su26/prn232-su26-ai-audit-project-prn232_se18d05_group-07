@@ -62,4 +62,24 @@ namespace Application.Common.DTOs.Contracts
         public string? OwnerAvatar { get; set; }
         public string? RoomImage { get; set; }
     }
+
+    public class OwnerTenantDto
+    {
+        public int ContractId { get; set; }
+        public int RoomId { get; set; }
+        public string RoomNumber { get; set; } = null!;
+        public int BuildingId { get; set; }
+        public string BuildingName { get; set; } = null!;
+        public string? TenantId { get; set; }
+        public string TenantName { get; set; } = null!;
+        public string TenantPhone { get; set; } = null!;
+        public string? TenantEmail { get; set; }
+        public string? TenantAvatar { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public decimal RentAmount { get; set; }
+        public decimal DepositAmount { get; set; }
+        public string ContractStatus { get; set; } = null!;
+        public bool IsOnline { get; set; }
+    }
 }

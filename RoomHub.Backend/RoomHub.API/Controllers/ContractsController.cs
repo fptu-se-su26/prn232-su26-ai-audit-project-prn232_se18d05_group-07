@@ -90,7 +90,7 @@ namespace RoomHub.API.Controllers
                 var success = await _contractService.TerminateContractAsync(roomId, request, ownerId);
                 if (success)
                 {
-                    return Ok(new { success = true, message = "Thanh lý hợp đồng và bàn giao trả phòng thành công." });
+                     return Ok(new { success = true, message = "Thanh lý hợp đồng và bàn giao trả phòng thành công." });
                 }
                 return BadRequest(new { message = "Không thể thanh lý hợp đồng." });
             }
@@ -98,6 +98,20 @@ namespace RoomHub.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        // ==========================================
+        // 4. GET ALL OWNER TENANTS
+        // ==========================================
+        [HttpGet("~/api/owner/tenants")]
+        public async Task<IActionResult> GetTenants()
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            var result = await _contractService.GetTenantsForOwnerAsync(ownerId);
+            return Ok(result);
         }
     }
 }

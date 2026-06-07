@@ -281,5 +281,39 @@ namespace Application.Services
                 throw;
             }
         }
+
+        public async Task<System.Collections.Generic.List<OwnerTenantDto>> GetTenantsForOwnerAsync(string ownerId)
+        {
+            var contracts = await _contractRepository.GetContractsByOwnerAsync(ownerId);
+            return contracts
+                .Where(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted)
+                .Select(c => new OwnerTenantDto
+                {
+                    ContractId = c.Id,
+                    RoomId = c.RoomId,
+                    RoomNumber = c.Room.RoomNumber,
+                    BuildingId = c.Room.Floor.Building.Id,
+                    BuildingName = c.Room.Floor.Building.Name,
+                    TenantId = c.TenantId,
+                    TenantName = c.TemporaryTenantName ?? c.Tenant?.FullName ?? "Khách thuê",
+                    TenantPhone = c.TemporaryTenantPhone ?? c.Tenant?.PhoneNumber ?? "",
+                    TenantEmail = c.TemporaryTenantEmail ?? c.Tenant?.Email ?? "",
+                    TenantAvatar = c.Tenant?.AvatarUrl,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
+                    RentAmount = c.RentAmount,
+                    DepositAmount = c.DepositAmount,
+                    ContractStatus = c.Status switch
+                    {
+                        ContractStatus.Pending => "Chờ xác nhận",
+                        ContractStatus.Active => "Đang thuê",
+                        _ => c.Status.ToString()
+                    },
+                    IsOnline = c.TenantId != null
+                })
+                .OrderBy(t => t.BuildingName)
+                .ThenBy(t => t.RoomNumber)
+                .ToList();
+        }
     }
 }
