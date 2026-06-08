@@ -67,6 +67,7 @@ namespace Infrastructure
             // Register Custom Services
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IProfileService, ProfileService>();
 
             // Register Repositories
             services.AddScoped<IBuildingRepository, Persistence.Repositories.BuildingRepository>();
