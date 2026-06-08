@@ -1,34 +1,118 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Reveal } from '../../components/parallax/Parallax';
+import api from '../../services/api';
 
-interface Report {
-  id: number;
-  type: 'review' | 'message';
-  author: string;
-  content: string;
-  reason: string;
-  time: string;
+interface FlaggedListing {
+  roomId: number;
+  title: string;
+  description: string;
+  price: number;
+  area: number;
+  ownerName: string;
+  ownerEmail: string;
+  buildingName: string;
+  district: string;
+  imageUrls: string[];
+  moderationStatus: string;
+  moderationRemarks?: string;
+  listingScore: number;
+  isPublished: boolean;
+  moderatedAt?: string;
+  submittedAt: string;
 }
 
-const initial: Report[] = [
-  { id: 1, type: 'review', author: 'binh.nv@gmail.com', content: 'Chủ trọ lừa đảo, đặt cọc xong không cho xem phòng!!!', reason: 'Ngôn từ xúc phạm', time: '1 giờ trước' },
-  { id: 2, type: 'message', author: 'user2841', content: 'Liên hệ Zalo 09xx để được giảm giá ngoài hệ thống...', reason: 'Spam / giao dịch ngoài nền tảng', time: '3 giờ trước' },
-  { id: 3, type: 'review', author: 'hoa.le@gmail.com', content: 'Phòng ẩm mốc, không đúng như hình đăng tải.', reason: 'Báo cáo bởi chủ trọ', time: 'Hôm qua' },
-];
+interface ModerationStats {
+  flaggedCount: number;
+  pendingCount: number;
+  approvedThisMonth: number;
+  rejectedThisMonth: number;
+}
+
+const formatPrice = (price: number) => `${price.toLocaleString('vi-VN')}đ`;
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return iso;
+  }
+};
 
 const AdminModeration: React.FC = () => {
-  const [reports, setReports] = useState(initial);
-  const resolve = (id: number) => setReports((r) => r.filter((x) => x.id !== id));
+  const [listings, setListings] = useState<FlaggedListing[]>([]);
+  const [stats, setStats] = useState<ModerationStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<number | null>(null);
+  const [error, setError] = useState('');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [listingsRes, statsRes] = await Promise.all([
+        api.get('/admin/moderation/listings/flagged'),
+        api.get('/admin/moderation/stats'),
+      ]);
+      setListings(listingsRes.data);
+      setStats(statsRes.data);
+    } catch {
+      setError('Không thể tải danh sách kiểm duyệt. Vui lòng đăng nhập bằng tài khoản Admin.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleApprove = async (id: number, publish: boolean) => {
+    setActionId(id);
+    try {
+      await api.put(`/admin/moderation/listings/${id}/approve`, { publish });
+      await loadData();
+    } catch {
+      alert('Không thể duyệt tin. Vui lòng thử lại.');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    const remarks = window.prompt('Lý do từ chối (tùy chọn):');
+    if (remarks === null) return;
+
+    setActionId(id);
+    try {
+      await api.put(`/admin/moderation/listings/${id}/reject`, { remarks: remarks || undefined });
+      await loadData();
+    } catch {
+      alert('Không thể từ chối tin. Vui lòng thử lại.');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="material-symbols-outlined text-[40px] text-primary-container animate-spin">progress_activity</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-100 text-red-600 rounded-2xl p-4 text-sm font-semibold">{error}</div>
+      )}
+
       <Reveal>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Chờ xử lý', value: reports.length, color: 'text-amber-500' },
-            { label: 'Đánh giá bị báo', value: reports.filter((r) => r.type === 'review').length, color: 'text-red-500' },
-            { label: 'Tin nhắn bị báo', value: reports.filter((r) => r.type === 'message').length, color: 'text-indigo-500' },
-            { label: 'Đã xử lý (tháng)', value: 47, color: 'text-green-600' },
+            { label: 'Chờ Admin duyệt', value: stats?.flaggedCount ?? 0, color: 'text-amber-500' },
+            { label: 'Đang xử lý AI', value: stats?.pendingCount ?? 0, color: 'text-indigo-500' },
+            { label: 'Đã duyệt (tháng)', value: stats?.approvedThisMonth ?? 0, color: 'text-green-600' },
+            { label: 'Đã từ chối (tháng)', value: stats?.rejectedThisMonth ?? 0, color: 'text-red-500' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl border border-gray-100 soft-shadow p-5">
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -39,42 +123,87 @@ const AdminModeration: React.FC = () => {
       </Reveal>
 
       <div className="space-y-4">
-        {reports.length === 0 && (
+        {listings.length === 0 && !error && (
           <div className="bg-white rounded-2xl border border-gray-100 soft-shadow p-12 text-center">
             <span className="material-symbols-outlined text-[56px] text-green-400 mb-2">verified</span>
-            <p className="font-bold text-on-surface">Tuyệt vời! Không còn nội dung nào chờ kiểm duyệt.</p>
+            <p className="font-bold text-on-surface">Không có tin nào chờ Admin duyệt.</p>
+            <p className="text-sm text-gray-500 mt-1">Tin bị AI chuyển sang (Flagged) sẽ hiện tại đây.</p>
           </div>
         )}
-        {reports.map((r, i) => (
-          <Reveal key={r.id} delay={i * 60}>
-            <div className="bg-white rounded-2xl border border-gray-100 soft-shadow p-5">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className={`material-symbols-outlined ${r.type === 'review' ? 'text-amber-500' : 'text-indigo-500'}`}>{r.type === 'review' ? 'rate_review' : 'forum'}</span>
-                  <div>
-                    <p className="text-sm font-bold text-on-surface">{r.type === 'review' ? 'Đánh giá' : 'Tin nhắn'} từ {r.author}</p>
-                    <p className="text-[11px] text-gray-400">{r.time}</p>
+
+        {listings.map((l, i) => {
+          const cover = l.imageUrls[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=400&q=80';
+          const isBusy = actionId === l.roomId;
+
+          return (
+            <Reveal key={l.roomId} delay={i * 60}>
+              <div className="bg-white rounded-2xl border border-gray-100 soft-shadow p-5">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <img src={cover} alt={l.title} className="w-full lg:w-36 h-36 lg:h-28 object-cover rounded-xl shrink-0" />
+
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-on-surface">{l.title}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Chủ: {l.ownerName} ({l.ownerEmail}) · {l.buildingName}, {l.district}
+                        </p>
+                        <p className="text-xs text-primary-container font-bold mt-0.5">
+                          {formatPrice(l.price)}/tháng · {l.area}m² · Điểm AI: {l.listingScore}/100
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full text-amber-700 bg-amber-50 flex items-center gap-1 shrink-0">
+                        <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+                        AI chuyển Admin
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 line-clamp-3">{l.description}</p>
+
+                    {l.moderationRemarks && (
+                      <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                        <p className="text-[10px] font-bold text-amber-700 uppercase mb-1">Báo cáo AI / Hệ thống</p>
+                        <p className="text-xs text-amber-900 whitespace-pre-line">{l.moderationRemarks}</p>
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-400">
+                      Gửi duyệt: {formatDate(l.submittedAt)}
+                      {l.moderatedAt ? ` · AI xử lý: ${formatDate(l.moderatedAt)}` : ''}
+                    </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full text-red-600 bg-red-50 flex items-center gap-1 shrink-0">
-                  <span className="material-symbols-outlined text-[14px]">flag</span> {r.reason}
-                </span>
+
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-50">
+                  <button
+                    disabled={isBusy}
+                    onClick={() => handleApprove(l.roomId, true)}
+                    className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">check</span>
+                    Duyệt & Công bố
+                  </button>
+                  <button
+                    disabled={isBusy}
+                    onClick={() => handleApprove(l.roomId, false)}
+                    className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">draft</span>
+                    Duyệt (giữ nháp)
+                  </button>
+                  <button
+                    disabled={isBusy}
+                    onClick={() => handleReject(l.roomId)}
+                    className="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                    Từ chối
+                  </button>
+                </div>
               </div>
-              <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 mb-4 italic">"{r.content}"</p>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => resolve(r.id)} className="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">delete</span> Gỡ nội dung
-                </button>
-                <button onClick={() => resolve(r.id)} className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">check</span> Hợp lệ, bỏ qua
-                </button>
-                <button onClick={() => alert('Cảnh báo người dùng (demo)')} className="px-3 py-1.5 text-gray-500 hover:bg-gray-50 rounded-lg text-xs font-bold transition-colors flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">warning</span> Cảnh báo
-                </button>
-              </div>
-            </div>
-          </Reveal>
-        ))}
+            </Reveal>
+          );
+        })}
       </div>
     </div>
   );

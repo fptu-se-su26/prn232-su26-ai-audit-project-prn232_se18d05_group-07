@@ -15,6 +15,7 @@ interface ListingItem {
   id: string;
   code: string;
   title: string;
+  description: string;
   type: PropertyType;
   price: number;
   linkedAsset: string;
@@ -27,9 +28,13 @@ interface ListingItem {
   createdDate: string;
   address: string;
   thumbnail: string;
+  imageUrls: string[];
   rejectionReason?: string;
   area: number;
   maxPeople: number;
+  listingScore?: number;
+  aiDescription?: string;
+  moderationStatus?: string;
 }
 const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedListingId }) => {
   const [listings, setListings] = useState<ListingItem[]>([]);
@@ -38,30 +43,65 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
+  const mapListingItem = (item: any): ListingItem => {
+    let derivedStatus: ListingStatus = 'Nháp';
+    const modStatus = (item.moderationStatus || 'Pending').toLowerCase();
+    if (modStatus === 'rejected') {
+      derivedStatus = 'Bị từ chối';
+    } else if (modStatus === 'pending' || modStatus === 'flagged') {
+      derivedStatus = 'Chờ duyệt';
+    } else if (modStatus === 'approved' && item.isPublished) {
+      derivedStatus = 'Đang hiển thị';
+    } else if (modStatus === 'approved' && !item.isPublished) {
+      derivedStatus = item.isHidden ? 'Đã ẩn' : 'Nháp';
+    }
+
+    return {
+      id: item.roomId.toString(),
+      code: `RH-LST-${1000 + item.roomId}`,
+      title: item.title,
+      description: item.description || '',
+      type: item.type as PropertyType,
+      price: item.price,
+      linkedAsset: item.buildingName,
+      linkedUnit: item.roomNumber,
+      source: 'existing' as SourceType,
+      status: derivedStatus,
+      views: item.views || 0,
+      saves: Math.floor((item.views || 0) * (0.08 + (item.roomId % 5) * 0.01)),
+      requests: Math.floor((item.views || 0) * (0.03 + (item.roomId % 3) * 0.01)),
+      createdDate: item.createdDate || new Date().toISOString(),
+      address: item.buildingName + ', Đà Nẵng',
+      thumbnail: (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
+      imageUrls: item.imageUrls || [],
+      rejectionReason: item.moderationRemarks || undefined,
+      area: item.area || 25,
+      maxPeople: item.capacity || 2,
+      listingScore: item.listingScore ?? 100,
+      aiDescription: item.aiFormattedDescription || undefined,
+      moderationStatus: item.moderationStatus,
+    };
+  };
+
+  const handlePublishResponse = (data: any, fallbackSuccess: string) => {
+    const modStatus = (data?.moderationStatus || '').toLowerCase();
+    if (modStatus === 'rejected') {
+      triggerToast(data?.message || 'Tin bị AI từ chối. Vui lòng chỉnh sửa nội dung.');
+      return false;
+    }
+    if (modStatus === 'flagged') {
+      triggerToast(data?.message || 'Tin đã chuyển Admin duyệt thủ công.');
+      return true;
+    }
+    triggerToast(data?.message || fallbackSuccess);
+    return true;
+  };
+
   const fetchListings = async () => {
     try {
       setLoading(true);
       const res = await api.get('/owner/listings');
-      const mappedListings = res.data.map((item: any) => ({
-        id: item.roomId.toString(),
-        code: `RH-LST-${1000 + item.roomId}`,
-        title: item.title,
-        type: item.type as PropertyType,
-        price: item.price,
-        linkedAsset: item.buildingName,
-        linkedUnit: item.roomNumber,
-        source: 'existing' as SourceType,
-        status: item.isPublished ? ('Đang hiển thị' as ListingStatus) : ('Nháp' as ListingStatus),
-        views: item.views || 0,
-        saves: Math.floor((item.views || 0) * (0.08 + (item.roomId % 5) * 0.01)),
-        requests: Math.floor((item.views || 0) * (0.03 + (item.roomId % 3) * 0.01)),
-        createdDate: item.createdDate || new Date().toISOString(),
-        address: item.buildingName + ', Đà Nẵng',
-        thumbnail: (item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
-        area: item.area || 25,
-        maxPeople: item.capacity || 2
-      }));
-      setListings(mappedListings);
+      setListings(res.data.map(mapListingItem));
     } catch (err) {
       console.error('Lỗi khi tải danh sách tin đăng:', err);
       triggerToast('Không thể tải danh sách tin đăng từ server.');
@@ -99,6 +139,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isResubmitModalOpen, setIsResubmitModalOpen] = useState(false);
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isMarkRentedModalOpen, setIsMarkRentedModalOpen] = useState(false);
   const [activeListing, setActiveListing] = useState<ListingItem | null>(null);
   const [hidePublicAfterRent, setHidePublicAfterRent] = useState(true);
@@ -256,11 +297,16 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
   const handleBulkResubmit = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await Promise.all(selectedIds.map(id => api.put(`/owner/listings/${id}/publish`, { isPublished: true })));
-      setListings(prev =>
-        prev.map(l => (selectedIds.includes(l.id) && (l.status === 'Nháp' || l.status === 'Bị từ chối') ? { ...l, status: 'Chờ duyệt' as const } : l))
+      const results = await Promise.allSettled(
+        selectedIds.map(id => api.put(`/owner/listings/${id}/publish`, { isPublished: true }))
       );
-      triggerToast(`Đã gửi duyệt thành công ${selectedIds.length} tin cho thuê`);
+      const rejected = results.filter(r => r.status === 'rejected').length;
+      await fetchListings();
+      if (rejected > 0) {
+        triggerToast(`${rejected}/${selectedIds.length} tin bị từ chối hoặc lỗi khi gửi duyệt.`);
+      } else {
+        triggerToast(`Đã gửi kiểm duyệt AI cho ${selectedIds.length} tin cho thuê`);
+      }
     } catch (err) {
       console.error(err);
       triggerToast('Có lỗi xảy ra khi gửi duyệt hàng loạt.');
@@ -269,14 +315,95 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} tin đã chọn?`)) {
-      setListings(prev => prev.filter(l => !selectedIds.includes(l.id)));
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} tin đã chọn?`)) return;
+    try {
+      await Promise.all(selectedIds.map(id => api.delete(`/owner/listings/${id}`)));
+      await fetchListings();
       triggerToast(`Đã xóa vĩnh viễn ${selectedIds.length} tin cho thuê`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi xóa hàng loạt.');
+    } finally {
       setSelectedIds([]);
     }
   };
+
+  const closeDropdown = () => setActiveDropdownId(null);
+
+  const openDetailModal = (listing: ListingItem) => {
+    setActiveListing(listing);
+    setIsDetailModalOpen(true);
+    closeDropdown();
+  };
+
+  const handleViewPublic = (listing: ListingItem) => {
+    if (listing.status !== 'Đang hiển thị') {
+      triggerToast('Tin chưa được công bố, không thể xem trang public.');
+      return;
+    }
+    window.open(`${window.location.origin}/room/${listing.id}`, '_blank', 'noopener,noreferrer');
+    closeDropdown();
+  };
+
+  const handleDuplicateListing = async (listing: ListingItem) => {
+    closeDropdown();
+    try {
+      const res = await api.post(`/owner/listings/${listing.id}/duplicate`, {});
+      if (res.data.success) {
+        triggerToast(res.data.message || 'Đã nhân bản tin thành công.');
+        await fetchListings();
+      } else {
+        triggerToast(res.data.message || 'Không thể nhân bản tin.');
+      }
+    } catch (err: any) {
+      triggerToast(err.response?.data?.message || 'Không thể nhân bản tin. Kiểm tra còn phòng trống trong tòa nhà.');
+    }
+  };
+
+  const renderActionMenu = (list: ListingItem) => (
+    <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-40 z-[1000] text-left text-[11px] font-bold text-gray-600 animate-fadeIn">
+      <button
+        onClick={() => openDetailModal(list)}
+        className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
+      >
+        <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
+      </button>
+
+      {list.status === 'Đang hiển thị' && (
+        <button
+          onClick={() => { openHideModal(list); closeDropdown(); }}
+          className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[14px]">visibility_off</span> Ẩn tin
+        </button>
+      )}
+
+      {list.status === 'Đang hiển thị' && (
+        <button
+          onClick={() => handleViewPublic(list)}
+          className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
+        >
+          <span className="material-symbols-outlined text-[14px]">open_in_new</span> Xem public
+        </button>
+      )}
+
+      <button
+        onClick={() => handleDuplicateListing(list)}
+        className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
+      >
+        <span className="material-symbols-outlined text-[14px]">content_copy</span> Nhân bản tin
+      </button>
+
+      <button
+        onClick={() => { openDeleteModal(list); closeDropdown(); }}
+        className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
+      >
+        <span className="material-symbols-outlined text-[14px]">delete</span> Xóa vĩnh viễn
+      </button>
+    </div>
+  );
 
   // Single Action Triggers
   const openHideModal = (listing: ListingItem) => {
@@ -288,9 +415,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
     if (!activeListing) return;
     try {
       await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: false });
-      setListings(prev =>
-        prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Đã ẩn' as const } : l))
-      );
+      await fetchListings();
       triggerToast('Tin cho thuê đã được ẩn khỏi sàn public thành công');
     } catch (err) {
       console.error(err);
@@ -306,12 +431,19 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
     setIsDeleteModalOpen(true);
   };
 
-  const confirmDeleteListing = () => {
+  const confirmDeleteListing = async () => {
     if (!activeListing) return;
-    setListings(prev => prev.filter(l => l.id !== activeListing.id));
-    triggerToast('Đã xóa vĩnh viễn tin đăng thành công');
-    setIsDeleteModalOpen(false);
-    setActiveListing(null);
+    try {
+      await api.delete(`/owner/listings/${activeListing.id}`);
+      await fetchListings();
+      triggerToast('Đã xóa vĩnh viễn tin đăng thành công');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi xóa tin.');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setActiveListing(null);
+    }
   };
 
   const openResubmitModal = (listing: ListingItem) => {
@@ -322,14 +454,14 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
   const confirmResubmitListing = async () => {
     if (!activeListing) return;
     try {
-      await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: true });
-      setListings(prev =>
-        prev.map(l => (l.id === activeListing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
-      );
-      triggerToast('Đã gửi yêu cầu phê duyệt lại tin trọ thành công');
-    } catch (err) {
+      const res = await api.put(`/owner/listings/${activeListing.id}/publish`, { isPublished: true });
+      handlePublishResponse(res.data, 'Đã gửi yêu cầu phê duyệt lại tin trọ thành công');
+      await fetchListings();
+    } catch (err: any) {
       console.error(err);
-      triggerToast('Có lỗi xảy ra khi gửi yêu cầu duyệt.');
+      const data = err.response?.data;
+      triggerToast(data?.message || 'Có lỗi xảy ra khi gửi yêu cầu duyệt.');
+      await fetchListings();
     } finally {
       setIsResubmitModalOpen(false);
       setActiveListing(null);
@@ -367,33 +499,50 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
 
   const handleShowAgain = async (listing: ListingItem) => {
     try {
-      await api.put(`/owner/listings/${listing.id}/publish`, { isPublished: true });
-      setListings(prev =>
-        prev.map(l => (l.id === listing.id ? { ...l, status: 'Chờ duyệt' as const } : l))
-      );
-      triggerToast('Đã gửi lại duyệt để khôi phục trạng thái hiển thị');
-    } catch (err) {
+      const res = await api.put(`/owner/listings/${listing.id}/publish`, { isPublished: true });
+      handlePublishResponse(res.data, 'Đã gửi lại duyệt để khôi phục trạng thái hiển thị');
+      await fetchListings();
+    } catch (err: any) {
       console.error(err);
-      triggerToast('Có lỗi xảy ra khi hiển thị lại tin.');
+      const data = err.response?.data;
+      triggerToast(data?.message || 'Có lỗi xảy ra khi hiển thị lại tin.');
+      await fetchListings();
     }
   };
 
   // Dynamic Badges Render Helpers
-  const renderStatusBadge = (status: ListingStatus) => {
+  const renderStatusBadge = (status: ListingStatus, listing?: ListingItem) => {
+    const scoreColor = (listing?.listingScore ?? 100) >= 70 ? 'text-green-600' : (listing?.listingScore ?? 100) >= 40 ? 'text-yellow-600' : 'text-red-600';
+    
     switch (status) {
       case 'Đang hiển thị':
         return (
-          <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-            Đang hiển thị
-          </span>
+          <div className="flex flex-col gap-1">
+            <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+              Đang hiển thị
+            </span>
+            {listing?.listingScore != null && (
+              <span className={`text-[9px] font-bold ${scoreColor} flex items-center gap-0.5`}>
+                <span className="material-symbols-outlined text-[12px]">stars</span>
+                AI Score: {listing.listingScore}/100
+              </span>
+            )}
+          </div>
         );
       case 'Chờ duyệt':
         return (
-          <span className="px-2.5 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-            Chờ duyệt
-          </span>
+          <div className="flex flex-col gap-1">
+            <span className="px-2.5 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max animate-pulse">
+              <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
+              AI đang kiểm duyệt
+            </span>
+            {listing?.rejectionReason && (
+              <span className="text-[9px] text-yellow-600 font-medium max-w-[180px] truncate" title={listing.rejectionReason}>
+                {listing.rejectionReason}
+              </span>
+            )}
+          </div>
         );
       case 'Nháp':
         return (
@@ -404,10 +553,33 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
         );
       case 'Bị từ chối':
         return (
-          <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            Bị từ chối
-          </span>
+          <div className="flex flex-col gap-1 group/reject relative">
+            <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max cursor-help">
+              <span className="material-symbols-outlined text-[12px]">gpp_bad</span>
+              AI từ chối
+            </span>
+            {listing?.rejectionReason && (
+              <>
+                <span className="text-[9px] text-red-500 font-medium max-w-[180px] truncate cursor-help" title={listing.rejectionReason}>
+                  💬 {listing.rejectionReason}
+                </span>
+                {/* Tooltip popup */}
+                <div className="invisible group-hover/reject:visible absolute z-50 bottom-full left-0 mb-2 w-72 p-3 bg-white border border-red-200 rounded-xl shadow-lg text-left transition-all opacity-0 group-hover/reject:opacity-100">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="material-symbols-outlined text-red-500 text-[16px]">smart_toy</span>
+                    <span className="text-[11px] font-black text-red-700 uppercase">Lý do AI từ chối</span>
+                  </div>
+                  <p className="text-[11px] text-gray-700 leading-relaxed font-medium">{listing.rejectionReason}</p>
+                  {listing.listingScore != null && (
+                    <div className="mt-2 pt-2 border-t border-red-100 flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500 font-bold">Điểm chất lượng:</span>
+                      <span className={`text-[10px] font-black ${scoreColor}`}>{listing.listingScore}/100</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         );
       case 'Đã ẩn':
         return (
@@ -900,7 +1072,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
                       {/* Status badge */}
                       <td className="py-4.5 px-4">
                         <div className="space-y-1">
-                          {renderStatusBadge(list.status)}
+                          {renderStatusBadge(list.status, list)}
                           {list.status === 'Bị từ chối' && (
                             <button 
                               onClick={() => openReasonModal(list)}
@@ -1014,54 +1186,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
                             >
                               <span className="material-symbols-outlined text-[16px]">more_vert</span>
                             </button>
-                            {activeDropdownId === list.id && (
-                              <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-36 z-[1000] text-left text-[11px] font-bold text-gray-600 animate-fadeIn">
-                                
-                                <button 
-                                  onClick={() => alert(`Xem chi tiết tin trọ: ${list.title}`)}
-                                  className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
-                                </button>
-                                
-                                {list.status === 'Đang hiển thị' && (
-                                  <button 
-                                    onClick={() => openHideModal(list)}
-                                    className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">visibility_off</span> Ẩn tin
-                                  </button>
-                                )}
-
-                                {list.status === 'Đang hiển thị' && (
-                                  <button 
-                                    onClick={() => alert(`Xem trang public bài đăng ${list.code}`)}
-                                    className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">visibility</span> Xem public
-                                  </button>
-                                )}
-
-                                <button 
-                                  onClick={() => {
-                                    const clone = { ...list, id: Math.random().toString(), code: `RH-LST-${Math.floor(1000 + Math.random() * 9000)}`, title: `${list.title} (Bản sao)`, status: 'Nháp' as const, views: 0, saves: 0, requests: 0, createdDate: new Date().toISOString().split('T')[0] };
-                                    setListings(prev => [clone, ...prev]);
-                                    triggerToast('Đã nhân bản thành công tin trọ mới lưu nháp');
-                                  }}
-                                  className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">content_copy</span> Nhân bản tin
-                                </button>
-
-                                <button 
-                                  onClick={() => openDeleteModal(list)}
-                                  className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">delete</span> Xóa vĩnh viễn
-                                </button>
-
-                              </div>
-                            )}
+                            {activeDropdownId === list.id && renderActionMenu(list)}
                           </div>
 
                         </div>
@@ -1103,7 +1228,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
 
                   {/* Status Overlay Badge */}
                   <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
-                    {renderStatusBadge(list.status)}
+                    {renderStatusBadge(list.status, list)}
                     <span className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-primary-container text-[8.5px] font-black uppercase rounded shadow-sm">
                       {list.type}
                     </span>
@@ -1126,7 +1251,7 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
                       {list.code} · {list.source === 'existing' ? 'Sinh từ phòng' : 'Tin độc lập'}
                     </span>
                     <h4 
-                      onClick={() => alert(`Xem chi tiết tin đăng: ${list.title}`)}
+                      onClick={() => openDetailModal(list)}
                       className="text-xs font-bold text-gray-800 line-clamp-2 min-h-[34px] hover:text-primary-container cursor-pointer leading-relaxed"
                     >
                       {list.title}
@@ -1173,9 +1298,21 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
                       )}
                     </div>
 
-                    <div className="flex gap-1.5">
-                      
-                      {/* Secondary dropdown actions trigger */}
+                    <div className="flex gap-1.5 relative">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdownId(prev => prev === list.id ? null : list.id);
+                          }}
+                          className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:border-orange-200 hover:bg-orange-50/20 text-gray-500 hover:text-primary-container rounded-lg cursor-pointer"
+                          title="Thao tác"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">more_vert</span>
+                        </button>
+                        {activeDropdownId === list.id && renderActionMenu(list)}
+                      </div>
+
                       <button 
                         onClick={() => {
                           setSelectedListingId(parseInt(list.id, 10));
@@ -1298,6 +1435,61 @@ const ListingList: React.FC<ListingListProps> = ({ setCurrentPage, setSelectedLi
             >
               <span className="material-symbols-outlined text-[16px] font-bold">chevron_right</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: LISTING DETAIL */}
+      {isDetailModalOpen && activeListing && (
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center z-[2200] p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl soft-shadow flex flex-col animate-scaleUp max-w-lg w-full border border-gray-100 max-h-[90vh] overflow-hidden">
+            <div className="p-5 border-b border-gray-50 flex items-center justify-between">
+              <h3 className="text-sm font-black text-on-surface uppercase tracking-wide">Chi tiết tin đăng</h3>
+              <button onClick={() => { setIsDetailModalOpen(false); setActiveListing(null); }} className="text-gray-400 hover:text-gray-600">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-4 text-left">
+              {activeListing.imageUrls.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {activeListing.imageUrls.map((url, idx) => (
+                    <img key={idx} src={url} alt="" className="w-24 h-24 rounded-xl object-cover shrink-0" />
+                  ))}
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">{activeListing.code} · {activeListing.status}</p>
+                <h4 className="text-base font-bold text-on-surface mt-1">{activeListing.title}</h4>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">{activeListing.description || 'Chưa có mô tả.'}</p>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-gray-50 rounded-xl p-3"><span className="text-gray-400 block text-[10px]">Giá thuê</span><strong>{activeListing.price.toLocaleString('vi-VN')}đ/tháng</strong></div>
+                <div className="bg-gray-50 rounded-xl p-3"><span className="text-gray-400 block text-[10px]">Diện tích</span><strong>{activeListing.area} m²</strong></div>
+                <div className="bg-gray-50 rounded-xl p-3"><span className="text-gray-400 block text-[10px]">Tài sản</span><strong>{activeListing.linkedAsset}</strong></div>
+                <div className="bg-gray-50 rounded-xl p-3"><span className="text-gray-400 block text-[10px]">Phòng</span><strong>{activeListing.linkedUnit}</strong></div>
+              </div>
+              {activeListing.listingScore != null && (
+                <p className="text-xs text-gray-500">Điểm AI: <strong className={activeListing.listingScore >= 70 ? 'text-green-600' : 'text-amber-600'}>{activeListing.listingScore}/100</strong></p>
+              )}
+              {activeListing.rejectionReason && (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-900 whitespace-pre-line">{activeListing.rejectionReason}</div>
+              )}
+            </div>
+            <div className="p-5 border-t border-gray-50 flex gap-2">
+              {activeListing.status === 'Đang hiển thị' && (
+                <button onClick={() => handleViewPublic(activeListing)} className="flex-1 py-2.5 bg-primary-container text-white rounded-xl text-xs font-bold">Xem public</button>
+              )}
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setSelectedListingId(parseInt(activeListing.id, 10));
+                  setCurrentPage('owner-listings-create');
+                }}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50"
+              >
+                Chỉnh sửa
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -41,4 +41,5 @@ Desktop.ini
 
 # Secrets / Local app settings (keep out of git)
 **/appsettings.Development.json
+**/.vs/
 **/appsettings.*.Local.json

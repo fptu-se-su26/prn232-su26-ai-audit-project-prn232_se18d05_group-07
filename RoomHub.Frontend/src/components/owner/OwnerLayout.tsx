@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import type { PageType } from '../../App';
+import { useAuth } from '../../hooks/useAuth';
 
 interface OwnerLayoutProps {
   currentPage: PageType;

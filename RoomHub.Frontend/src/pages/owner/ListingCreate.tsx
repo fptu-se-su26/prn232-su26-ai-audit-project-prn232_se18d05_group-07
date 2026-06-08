@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
 import api from '../../services/api';
+import { validateListingStep2, getStep2Checklist, LISTING_RULES } from '../../utils/listingValidation';
 
 interface ListingCreateProps {
   setCurrentPage: (page: PageType) => void;
@@ -86,6 +87,16 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+
+  const step2FieldErrors = useMemo(
+    () => validateListingStep2(title, description, rentPrice, independentArea),
+    [title, description, rentPrice, independentArea]
+  );
+
+  const step2Checklist = useMemo(
+    () => getStep2Checklist(title, description, rentPrice, independentArea),
+    [title, description, rentPrice, independentArea]
+  );
 
   // Custom Alert state
   const [alertConfig, setAlertConfig] = useState<{
@@ -310,10 +321,7 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
       if (!selectedPropertyId) errs.property = 'Vui lòng chọn tài sản liên kết.';
       if (!selectedUnitId) errs.unit = 'Vui lòng chọn số phòng cụ thể.';
     } else if (step === 2) {
-      if (!title.trim()) errs.title = 'Tiêu đề tin đăng không được để trống.';
-      if (!description.trim()) errs.description = 'Mô tả chi tiết không được để trống.';
-      if (rentPrice <= 0) errs.rentPrice = 'Đơn giá thuê phải lớn hơn 0.';
-      if (independentArea <= 0) errs.area = 'Diện tích phòng phải lớn hơn 0.';
+      Object.assign(errs, step2FieldErrors);
     } else if (step === 3) {
       if (imgUrls.length === 0) errs.images = 'Cung cấp ít nhất 1 ảnh đại diện.';
     }
@@ -353,7 +361,7 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
         reorderedImages.unshift(coverImg);
       }
 
-      await api.put(`/owner/listings/${selectedUnitId}`, {
+      const res = await api.put(`/owner/listings/${selectedUnitId}`, {
         title,
         description,
         price: rentPrice,
@@ -363,23 +371,55 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
         imageUrls: reorderedImages
       });
 
-      showAlert(
-        status === 'Draft' ? 'Lưu nháp thành công' : 'Đăng tin thành công',
-        status === 'Draft' 
-          ? 'Tin trọ của bạn đã được lưu nháp thành công!' 
-          : 'Tin cho thuê của bạn đã được công bố thành công trên RoomHub!',
-        'success',
-        () => {
-          if (setSelectedRoomId) {
-            setSelectedRoomId(null);
-          }
-          setCurrentPage('owner-listings');
-        }
-      );
+      const data = res.data;
+      const modStatus = (data.moderationStatus || '').toLowerCase();
+      const navigateBack = () => {
+        if (setSelectedRoomId) setSelectedRoomId(null);
+        setCurrentPage('owner-listings');
+      };
+
+      if (modStatus === 'rejected') {
+        showAlert(
+          'Tin bị AI từ chối',
+          data.message || data.moderationRemarks || 'Nội dung vi phạm quy định đăng tin. Vui lòng chỉnh sửa và thử lại.',
+          'error'
+        );
+      } else if (modStatus === 'flagged') {
+        showAlert(
+          'Cần Admin duyệt thủ công',
+          data.message || 'Tin đăng đã được lưu và chuyển cho Admin kiểm duyệt.',
+          'warning',
+          navigateBack
+        );
+      } else if (isPublished && data.isPublished) {
+        showAlert(
+          'Đăng tin thành công',
+          data.message || 'Tin cho thuê đã được AI duyệt và công bố trên RoomHub!',
+          'success',
+          navigateBack
+        );
+      } else {
+        showAlert(
+          status === 'Draft' ? 'Lưu nháp thành công' : 'Lưu tin thành công',
+          data.message || 'Tin trọ của bạn đã được lưu thành công.',
+          'success',
+          navigateBack
+        );
+      }
     } catch (err: any) {
       console.error(err);
-      const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật tin đăng. Vui lòng thử lại.';
-      showAlert('Lỗi thao tác', errMsg, 'error');
+      const data = err.response?.data;
+      const modStatus = (data?.moderationStatus || '').toLowerCase();
+      if (modStatus === 'rejected') {
+        showAlert(
+          'Tin bị AI từ chối',
+          data?.message || data?.moderationRemarks || 'Nội dung vi phạm quy định đăng tin.',
+          'error'
+        );
+      } else {
+        const errMsg = data?.message || 'Có lỗi xảy ra khi cập nhật tin đăng. Vui lòng thử lại.';
+        showAlert('Lỗi thao tác', errMsg, 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -588,7 +628,9 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
                       errors.title ? 'border-red-500 bg-red-55/10' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                     }`}
                   />
-                  {errors.title && <p className="text-[10px] text-red-550 mt-1">{errors.title}</p>}
+                  {(errors.title || (title.trim() && step2FieldErrors.title)) && (
+                    <p className="text-[10px] text-red-550 mt-1">{errors.title || step2FieldErrors.title}</p>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -603,7 +645,9 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
                       errors.description ? 'border-red-500 bg-red-55/10' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                     }`}
                   />
-                  {errors.description && <p className="text-[10px] text-red-550 mt-1">{errors.description}</p>}
+                  {(errors.description || (description.trim() && step2FieldErrors.description)) && (
+                    <p className="text-[10px] text-red-550 mt-1">{errors.description || step2FieldErrors.description}</p>
+                  )}
                 </div>
 
                 {/* Price, Deposit, Area, Capacity */}
@@ -614,13 +658,19 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
                       <input 
                         type="number" 
                         value={rentPrice}
-                        onChange={(e) => setRentPrice(parseInt(e.target.value, 10))}
+                        onChange={(e) => setRentPrice(parseInt(e.target.value, 10) || 0)}
                         className={`w-full pl-3 pr-16 py-2.5 border rounded-xl focus:outline-none focus:bg-white text-xs font-bold text-gray-700 ${
-                          errors.rentPrice ? 'border-red-500' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
+                          errors.rentPrice || step2FieldErrors.rentPrice ? 'border-red-500 bg-red-55/10' : 'border-gray-200 bg-gray-50/50 focus:border-primary-container'
                         }`} 
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">đ/tháng</span>
                     </div>
+                    {(errors.rentPrice || step2FieldErrors.rentPrice) && (
+                      <p className="text-[10px] text-red-550 mt-1">{errors.rentPrice || step2FieldErrors.rentPrice}</p>
+                    )}
+                    <p className="text-[10px] text-gray-400 font-semibold">
+                      Tối thiểu {LISTING_RULES.MIN_PRICE.toLocaleString('vi-VN')}đ/tháng
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -641,9 +691,14 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
                     <input 
                       type="number" 
                       value={independentArea}
-                      onChange={(e) => setIndependentArea(parseInt(e.target.value, 10))}
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-gray-50/50" 
+                      onChange={(e) => setIndependentArea(parseInt(e.target.value, 10) || 0)}
+                      className={`w-full px-3.5 py-2.5 border rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 ${
+                        errors.area || step2FieldErrors.area ? 'border-red-500 bg-red-55/10' : 'border-gray-200 bg-gray-50/50'
+                      }`}
                     />
+                    {(errors.area || step2FieldErrors.area) && (
+                      <p className="text-[10px] text-red-550 mt-1">{errors.area || step2FieldErrors.area}</p>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -685,6 +740,29 @@ const ListingCreate: React.FC<ListingCreateProps> = ({ setCurrentPage, roomId, s
                       <option value="Tối thiểu 1 năm">Tối thiểu 1 năm</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Real-time validation checklist */}
+                <div className="border-t border-gray-50 pt-4 space-y-2">
+                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wide">Kiểm tra nội dung</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {step2Checklist.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold ${
+                          item.passed ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          {item.passed ? 'check_circle' : 'error'}
+                        </span>
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-semibold">
+                    Kiểm tra tức thì khi nhập. AI sẽ quét toàn bộ nội dung và ảnh khi bạn đăng tin.
+                  </p>
                 </div>
               </div>
             </div>

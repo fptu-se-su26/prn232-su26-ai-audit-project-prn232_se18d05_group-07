@@ -41,6 +41,15 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(r => r.WaterPrice).HasColumnType("decimal(18, 2)");
             builder.Property(r => r.InternetPrice).HasColumnType("decimal(18, 2)");
             builder.Property(r => r.GarbagePrice).HasColumnType("decimal(18, 2)");
+            
+            builder.Property(r => r.AIFormattedDescription);
+            builder.Property(r => r.ListingScore).HasDefaultValue(100);
+            builder.Property(r => r.ModeratedAt);
+            builder.Property(r => r.ModerationRemarks).HasMaxLength(2048);
+            builder.Property(r => r.ModerationStatus)
+                .HasConversion<string>()
+                .HasColumnType("varchar(30)");
+
             builder.HasOne(r => r.Floor)
                 .WithMany(f => f.Rooms)
                 .HasForeignKey(r => r.FloorId)
