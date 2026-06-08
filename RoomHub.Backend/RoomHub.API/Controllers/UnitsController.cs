@@ -2,6 +2,7 @@ using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Application.Common.Interfaces;
+using Application.Common.DTOs.Properties;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -74,6 +75,26 @@ namespace RoomHub.API.Controllers
                 return BadRequest(new { message = "Không thể cập nhật ghi chú phòng. Vui lòng kiểm tra lại." });
 
             return Ok(new { success = true, message = "Cập nhật ghi chú nội bộ thành công." });
+        }
+
+        // ==========================================
+        // 4. UPDATE ROOM DETAILS
+        // ==========================================
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateUnitDetails(int id, [FromBody] UpdateUnitDetailsRequest request)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            if (request == null)
+                return BadRequest(new { message = "Dữ liệu cập nhật không hợp lệ." });
+
+            var success = await _propertyService.UpdateUnitDetailsAsync(id, request, ownerId);
+            if (!success)
+                return BadRequest(new { message = "Không thể cập nhật thông tin phòng. Vui lòng kiểm tra lại." });
+
+            return Ok(new { success = true, message = "Cập nhật thông tin phòng thành công." });
         }
     }
 

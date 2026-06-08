@@ -54,6 +54,7 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
   // Default Utility cost states
   const [elecPrice, setElecPrice] = useState<number>(3500);
   const [waterPrice, setWaterPrice] = useState<number>(15000);
+  const [waterBillingType, setWaterBillingType] = useState<'PerCubicMeter' | 'PerPerson'>('PerCubicMeter');
   const [netPrice, setNetPrice] = useState<number>(100000);
   const [garbagePrice, setGarbagePrice] = useState<number>(30000);
   const [parkingPrice, setParkingPrice] = useState<number>(50000);
@@ -299,6 +300,7 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
       startNum: startNum,
       electricityPrice: elecPrice,
       waterPrice: waterPrice,
+      waterBillingType: waterBillingType,
       internetPrice: netPrice,
       garbagePrice: garbagePrice,
       customRooms: Object.entries(customRooms).map(([roomId, data]) => ({
@@ -306,7 +308,8 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
         floorNumber: generatedPreviewRooms.find(r => r.id === roomId)?.floor || 1,
         basePrice: data.price,
         surfaceArea: data.area,
-        maxCapacity: data.maxPeople
+        maxCapacity: data.maxPeople,
+        waterBillingType: waterBillingType
       }))
     })
     .then(() => {
@@ -994,6 +997,19 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                     </div>
                   </div>
 
+                  {/* Water Billing Type */}
+                  <div className="space-y-1">
+                    <label className="uppercase">Hình thức tính nước</label>
+                    <select 
+                      value={waterBillingType}
+                      onChange={(e) => setWaterBillingType(e.target.value as any)}
+                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-white"
+                    >
+                      <option value="PerCubicMeter">Theo mét khối (đ/m³)</option>
+                      <option value="PerPerson">Theo đầu người (đ/người)</option>
+                    </select>
+                  </div>
+
                   {/* Water */}
                   <div className="space-y-1">
                     <label className="uppercase">Giá nước mặc định</label>
@@ -1004,7 +1020,9 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                         onChange={(e) => setWaterPrice(parseInt(e.target.value, 10))}
                         className="w-full pl-3 pr-16 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-gray-50/50" 
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">đ/m³</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">
+                        {waterBillingType === 'PerCubicMeter' ? 'đ/m³' : 'đ/người'}
+                      </span>
                     </div>
                   </div>
 

@@ -44,7 +44,21 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Invoices
                 .Include(i => i.Contract)
                     .ThenInclude(c => c.Room)
+                        .ThenInclude(r => r.Floor)
+                            .ThenInclude(f => f.Building)
                 .Where(i => i.Contract.OwnerId == ownerId)
+                .OrderByDescending(i => i.InvoiceDate)
+                .ToListAsync();
+        }
+
+        public async Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId)
+        {
+            return await _context.Invoices
+                .Include(i => i.Contract)
+                    .ThenInclude(c => c.Room)
+                        .ThenInclude(r => r.Floor)
+                            .ThenInclude(f => f.Building)
+                .Where(i => i.Contract.TenantId == tenantId && !i.Contract.IsDeleted)
                 .OrderByDescending(i => i.InvoiceDate)
                 .ToListAsync();
         }

@@ -33,6 +33,7 @@ namespace Domain.Entities
         public bool HiddenByOwner { get; set; } = false;
         public decimal? ElectricityPrice { get; set; }
         public decimal? WaterPrice { get; set; }
+        public string? WaterBillingType { get; set; }
         public decimal? InternetPrice { get; set; }
         public decimal? GarbagePrice { get; set; }
         

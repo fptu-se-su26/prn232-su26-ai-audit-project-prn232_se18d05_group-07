@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -29,6 +29,7 @@ namespace Infrastructure.Persistence.Configurations
             // Bổ sung các cấu hình Decimal này vào bên trong hàm Configure(EntityTypeBuilder<Building> builder)
             builder.Property(b => b.ElectricityPrice).HasColumnType("decimal(18, 2)");
             builder.Property(b => b.WaterPrice).HasColumnType("decimal(18, 2)");
+            builder.Property(b => b.WaterBillingType).HasMaxLength(50).HasDefaultValue("PerCubicMeter");
             builder.Property(b => b.InternetPrice).HasColumnType("decimal(18, 2)");
             builder.Property(b => b.GarbagePrice).HasColumnType("decimal(18, 2)");
             builder.HasOne(b => b.Owner)

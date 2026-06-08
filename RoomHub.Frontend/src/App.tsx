@@ -109,11 +109,18 @@ const AppContent: React.FC = () => {
       // Tenant routes
       if (hash.startsWith('#/tenant/')) {
         const sub = hash.replace('#/tenant/', '');
+        if (sub.startsWith('invoices/')) {
+          const id = sub.replace('invoices/', '');
+          if (id && id !== 'detail') {
+            setSelectedInvoiceId(id);
+            setCurrentPage('tenant-invoice-detail');
+            return;
+          }
+        }
         const tenantMap: Record<string, PageType> = {
           'dashboard': 'tenant-dashboard',
           'room': 'tenant-room',
           'invoices': 'tenant-invoices',
-          'invoices/detail': 'tenant-invoice-detail',
           'favorites': 'tenant-favorites',
           'maintenance': 'tenant-maintenance',
           'messages': 'tenant-messages',
@@ -226,7 +233,9 @@ const AppContent: React.FC = () => {
     }
 
     if (currentPage.startsWith('tenant-')) {
-      const sub = currentPage === 'tenant-invoice-detail' ? 'invoices/detail' : currentPage.replace('tenant-', '');
+      const sub = currentPage === 'tenant-invoice-detail' && selectedInvoiceId
+        ? `invoices/${selectedInvoiceId}`
+        : currentPage.replace('tenant-', '');
       const targetHash = '#/tenant/' + sub;
       if (window.location.hash !== targetHash) window.location.hash = targetHash;
     }
@@ -266,9 +275,9 @@ const AppContent: React.FC = () => {
         {currentPage === 'tenant-room' ? (
           <TenantMyRoom setCurrentPage={setCurrentPage} />
         ) : currentPage === 'tenant-invoices' ? (
-          <TenantMyInvoices setCurrentPage={setCurrentPage} />
+          <TenantMyInvoices setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         ) : currentPage === 'tenant-invoice-detail' ? (
-          <TenantInvoiceDetail setCurrentPage={setCurrentPage} />
+          <TenantInvoiceDetail invoiceId={selectedInvoiceId} setCurrentPage={setCurrentPage} />
         ) : currentPage === 'tenant-favorites' ? (
           <TenantFavorites setCurrentPage={setCurrentPage} />
         ) : currentPage === 'tenant-maintenance' ? (
@@ -278,7 +287,7 @@ const AppContent: React.FC = () => {
         ) : currentPage === 'tenant-profile' ? (
           <TenantProfile />
         ) : (
-          <TenantDashboard setCurrentPage={setCurrentPage} />
+          <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}
       </TenantLayout>
     );

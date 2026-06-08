@@ -16,9 +16,9 @@ interface UnitBilling {
   tenantEmail: string;
   isLinked: boolean;
   rentPrice: number;
-  oldElectric: number;
+  oldElectric: string | number;
   newElectric: string | number;
-  oldWater: number;
+  oldWater: string | number;
   newWater: string | number;
   fixedFees: number;
   fixedFeesBreakdown: { label: string; amount: number }[];
@@ -30,11 +30,15 @@ interface UnitBilling {
   notes?: string;
   electricityPrice: number;
   waterPrice: number;
+  isWaterFixed: boolean;
+  waterFixedAmount: string | number;
+  waterBillingType: string;
+  maxCapacity: number;
 }
 
 export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) => {
   // Stepper state
-  const [currentStep, setCurrentStep] = useState<number>(2); // Default to Step 2 (Nhập chỉ số)
+  const [currentStep, setCurrentStep] = useState<number>(1); // Default to Step 1 (Nhập số liệu)
   
   // Data loading state
   const [properties, setProperties] = useState<{ id: string, name: string }[]>([{ id: 'all', name: 'Tất cả tài sản' }]);
@@ -143,7 +147,11 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               hasInvoiceThisMonth: false, 
               notes: '',
               electricityPrice: room.electricityPrice,
-              waterPrice: room.waterPrice
+              waterPrice: room.waterPrice,
+              isWaterFixed: room.waterBillingType === 'PerPerson',
+              waterFixedAmount: room.waterBillingType === 'PerPerson' ? (room.waterPrice * room.maxCapacity) : '',
+              waterBillingType: room.waterBillingType || 'PerCubicMeter',
+              maxCapacity: room.maxCapacity || 2
             };
           });
         
@@ -175,35 +183,66 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   }, [units, billingScope]);
 
   // Recalculate billing status for a unit based on new values
-  const validateUnit = (unit: UnitBilling, newElec: string | number, newWat: string | number, rent: number, sur: number, disc: number): { status: UnitBilling['status']; errorMessage?: string } => {
+  const validateUnit = (
+    unit: UnitBilling,
+    oElec: string | number,
+    nElec: string | number,
+    oWat: string | number,
+    nWat: string | number,
+    rent: number,
+    sur: number,
+    disc: number
+  ): { status: UnitBilling['status']; errorMessage?: string } => {
     if (unit.hasInvoiceThisMonth) {
       return { status: 'Đã có hóa đơn' };
     }
 
-    if (newElec === '' || newWat === '') {
+    if (nElec === '' || oElec === '') {
       return { status: 'Thiếu chỉ số' };
     }
 
-    const elecNum = Number(newElec);
-    const watNum = Number(newWat);
+    const elecNum = Number(nElec);
+    const oldElecNum = Number(oElec);
 
-    if (isNaN(elecNum) || isNaN(watNum) || rent < 0 || sur < 0 || disc < 0) {
+    if (isNaN(elecNum) || isNaN(oldElecNum) || rent < 0 || sur < 0 || disc < 0) {
       return { status: 'Lỗi chỉ số', errorMessage: 'Dữ liệu nhập vào không hợp lệ' };
     }
 
-    if (elecNum < unit.oldElectric) {
+    if (elecNum < oldElecNum) {
       return { status: 'Lỗi chỉ số', errorMessage: 'Điện mới nhỏ hơn điện cũ' };
     }
 
-    if (watNum < unit.oldWater) {
-      return { status: 'Lỗi chỉ số', errorMessage: 'Nước mới nhỏ hơn nước cũ' };
+    if (unit.isWaterFixed) {
+      const fixedWatAmt = Number(unit.waterFixedAmount);
+      if (unit.waterFixedAmount === '') {
+        return { status: 'Thiếu chỉ số' };
+      }
+      if (isNaN(fixedWatAmt) || fixedWatAmt < 0) {
+        return { status: 'Lỗi chỉ số', errorMessage: 'Tiền nước cố định không hợp lệ' };
+      }
+    } else {
+      if (nWat === '' || oWat === '') {
+        return { status: 'Thiếu chỉ số' };
+      }
+      const watNum = Number(nWat);
+      const oldWatNum = Number(oWat);
+      if (isNaN(watNum) || isNaN(oldWatNum)) {
+        return { status: 'Lỗi chỉ số', errorMessage: 'Dữ liệu nhập vào không hợp lệ' };
+      }
+      if (watNum < oldWatNum) {
+        return { status: 'Lỗi chỉ số', errorMessage: 'Nước mới nhỏ hơn nước cũ' };
+      }
     }
 
     return { status: 'Hợp lệ' };
   };
 
   // Handle inputs changes
-  const handleInputChange = (id: string, field: 'newElectric' | 'newWater' | 'rentPrice' | 'surcharge' | 'discount' | 'notes', value: string) => {
+  const handleInputChange = (
+    id: string,
+    field: 'oldElectric' | 'oldWater' | 'newElectric' | 'newWater' | 'rentPrice' | 'surcharge' | 'discount' | 'notes' | 'isWaterFixed' | 'waterFixedAmount',
+    value: any
+  ) => {
     setUnits(prev => prev.map(unit => {
       if (unit.id !== id) return unit;
 
@@ -212,10 +251,13 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
       const rent = field === 'rentPrice' ? (Number(value) || 0) : unit.rentPrice;
       const sur = field === 'surcharge' ? (Number(value) || 0) : Number(unit.surcharge) || 0;
       const disc = field === 'discount' ? (Number(value) || 0) : Number(unit.discount) || 0;
+      
+      const oElec = field === 'oldElectric' ? value : unit.oldElectric;
       const nElec = field === 'newElectric' ? value : unit.newElectric;
+      const oWat = field === 'oldWater' ? value : unit.oldWater;
       const nWat = field === 'newWater' ? value : unit.newWater;
 
-      const validation = validateUnit(unit, nElec, nWat, rent, sur, disc);
+      const validation = validateUnit(updated, oElec, nElec, oWat, nWat, rent, sur, disc);
       updated.status = validation.status;
       updated.errorMessage = validation.errorMessage;
 
@@ -225,14 +267,17 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
   // Helper calculating cost
   const calculateElectricCost = (unit: UnitBilling) => {
-    if (unit.newElectric === '') return 0;
-    const diff = Number(unit.newElectric) - unit.oldElectric;
+    if (unit.newElectric === '' || unit.oldElectric === '') return 0;
+    const diff = Number(unit.newElectric) - Number(unit.oldElectric);
     return diff > 0 ? diff * unit.electricityPrice : 0;
   };
 
   const calculateWaterCost = (unit: UnitBilling) => {
-    if (unit.newWater === '') return 0;
-    const diff = Number(unit.newWater) - unit.oldWater;
+    if (unit.isWaterFixed) {
+      return Number(unit.waterFixedAmount) || 0;
+    }
+    if (unit.newWater === '' || unit.oldWater === '') return 0;
+    const diff = Number(unit.newWater) - Number(unit.oldWater);
     return diff > 0 ? diff * unit.waterPrice : 0;
   };
 
@@ -270,21 +315,38 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
   // Action Copy last month values
   const copyLastMonthData = () => {
-    setUnits(prev => prev.map(unit => {
-      if (unit.hasInvoiceThisMonth) return unit;
-      const simulatedNewElec = unit.oldElectric + 100;
-      const simulatedNewWat = unit.oldWater + 5;
-      
-      const validation = validateUnit(unit, simulatedNewElec, simulatedNewWat, unit.rentPrice, Number(unit.surcharge) || 0, Number(unit.discount) || 0);
-      
-      return {
-        ...unit,
-        newElectric: simulatedNewElec,
-        newWater: simulatedNewWat,
-        status: validation.status,
-        errorMessage: validation.errorMessage
-      };
-    }));
+    setUnits(prev => {
+      return prev.map(unit => {
+        if (unit.hasInvoiceThisMonth) return unit;
+        const oElec = Number(unit.oldElectric) || 0;
+        const oWat = Number(unit.oldWater) || 0;
+        const simulatedNewElec = oElec + 100;
+        const simulatedNewWat = oWat + 5;
+        const simulatedFixedWat = unit.isWaterFixed ? 50000 : '';
+
+        const updated = {
+          ...unit,
+          newElectric: simulatedNewElec,
+          newWater: unit.isWaterFixed ? '' : simulatedNewWat,
+          waterFixedAmount: unit.isWaterFixed ? simulatedFixedWat : '',
+        };
+
+        const validation = validateUnit(
+          updated,
+          oElec,
+          simulatedNewElec,
+          unit.isWaterFixed ? '' : oWat,
+          unit.isWaterFixed ? '' : simulatedNewWat,
+          unit.rentPrice,
+          Number(unit.surcharge) || 0,
+          Number(unit.discount) || 0
+        );
+
+        updated.status = validation.status;
+        updated.errorMessage = validation.errorMessage;
+        return updated;
+      });
+    });
     triggerToast('Đã sao chép và cập nhật chỉ số điện nước từ tháng trước!');
   };
 
@@ -306,7 +368,9 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
       const validation = validateUnit(
         updated, 
+        updated.oldElectric,
         updated.newElectric, 
+        updated.oldWater,
         updated.newWater, 
         updated.rentPrice, 
         amt, 
@@ -369,13 +433,15 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
         
         groupedReadings[bId].push({
           roomId: parseInt(u.id),
-          oldElectricity: u.oldElectric,
+          oldElectricity: Number(u.oldElectric),
           newElectricity: Number(u.newElectric),
-          oldWater: u.oldWater,
-          newWater: Number(u.newWater),
+          oldWater: u.isWaterFixed ? 0 : Number(u.oldWater),
+          newWater: u.isWaterFixed ? 0 : Number(u.newWater),
           additionalPrice: Number(u.surcharge) || 0,
           reductionPrice: Number(u.discount) || 0,
-          note: u.notes || ''
+          note: u.notes || '',
+          isWaterFixed: u.isWaterFixed,
+          waterFixedAmount: u.isWaterFixed ? (Number(u.waterFixedAmount) || 0) : 0
         });
       });
       
@@ -392,7 +458,8 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
       }
       
       setIsConfirmModalOpen(false);
-      setCurrentStep(4); 
+      setCurrentStep(3); 
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       triggerToast(`Tạo thành công ${validSelectedUnits.length} hóa đơn tháng ${month}/${year}!`);
     } catch (err: any) {
       console.error(err);
@@ -454,13 +521,11 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
       {/* PART B: Stepper / Progress Indicator */}
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-x-auto">
-        <div className="flex items-center justify-between min-w-[650px] px-4">
+        <div className="flex items-center justify-between min-w-[600px] px-4">
           {[
-            { step: 1, label: 'Chọn phạm vi' },
-            { step: 2, label: 'Nhập chỉ số' },
-            { step: 3, label: 'Kiểm tra hóa đơn' },
-            { step: 4, label: 'Xác nhận tạo' },
-            { step: 5, label: 'Xuất / Gửi thông báo' }
+            { step: 1, label: 'Nhập số liệu' },
+            { step: 2, label: 'Rà soát' },
+            { step: 3, label: 'Thành công' }
           ].map((s) => {
             const isActive = currentStep === s.step;
             const isCompleted = currentStep > s.step;
@@ -480,7 +545,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     {s.label}
                   </span>
                 </div>
-                {s.step < 5 && (
+                {s.step < 3 && (
                   <div className={`flex-1 h-[2px] mx-4 transition-all duration-300 ${
                     isCompleted ? 'bg-green-300' : 'bg-gray-100'
                   }`} />
@@ -678,7 +743,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                       <th className="py-3 px-3 w-24">Điện mới</th>
                       <th className="py-3 px-3">Tiền điện</th>
                       <th className="py-3 px-3 w-20">Nước cũ</th>
-                      <th className="py-3 px-3 w-24">Nước mới</th>
+                      <th className="py-3 px-3 w-24">Nước mới / Cố định</th>
                       <th className="py-3 px-3">Tiền nước</th>
                       <th className="py-3 px-3">Phí cố định</th>
                       <th className="py-3 px-3 w-24">Phụ thu (+)</th>
@@ -753,8 +818,15 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                           </td>
 
                           {/* 5. Electric Old */}
-                          <td className="py-4 px-3 text-center text-gray-500 font-mono">
-                            {unit.oldElectric}
+                          <td className="py-4 px-3">
+                            <input
+                              type="number"
+                              disabled={isDisabled}
+                              placeholder="Cũ"
+                              value={unit.oldElectric}
+                              onChange={(e) => handleInputChange(unit.id, 'oldElectric', e.target.value)}
+                              className="w-16 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-primary-container text-right disabled:bg-gray-100"
+                            />
                           </td>
 
                           {/* 6. Electric New */}
@@ -775,42 +847,74 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
                           {/* 7. Electric Cost */}
                           <td className="py-4 px-3 font-mono text-right text-gray-700">
-                            {unit.newElectric === '' ? (
+                            {unit.newElectric === '' || unit.oldElectric === '' ? (
                               <span className="text-[10px] text-orange-500">Chưa nhập</span>
                             ) : (
                               <div>
                                 <p className="font-bold">{elecCost.toLocaleString()}đ</p>
-                                <p className="text-[8px] text-gray-400 font-medium">({(Number(unit.newElectric) - unit.oldElectric)} kWh)</p>
+                                <p className="text-[8px] text-gray-400 font-medium">({(Number(unit.newElectric) - Number(unit.oldElectric))} kWh)</p>
                               </div>
                             )}
                           </td>
 
                           {/* 8. Water Old */}
-                          <td className="py-4 px-3 text-center text-gray-500 font-mono">
-                            {unit.oldWater}
+                          <td className="py-4 px-3 text-center">
+                            {!unit.isWaterFixed ? (
+                               <input
+                                 type="number"
+                                 disabled={isDisabled}
+                                 placeholder="Cũ"
+                                 value={unit.oldWater}
+                                 onChange={(e) => handleInputChange(unit.id, 'oldWater', e.target.value)}
+                                 className="w-16 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-primary-container text-right disabled:bg-gray-100"
+                               />
+                            ) : (
+                               <span className="text-gray-400">-</span>
+                            )}
                           </td>
 
-                          {/* 9. Water New */}
+                          {/* 9. Water New / Fixed Amount */}
                           <td className="py-4 px-3">
-                            <input
-                              type="number"
-                              disabled={isDisabled}
-                              placeholder="Mới"
-                              value={unit.newWater}
-                              onChange={(e) => handleInputChange(unit.id, 'newWater', e.target.value)}
-                              className="w-16 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-primary-container text-right disabled:bg-gray-100"
-                            />
+                            {!unit.isWaterFixed ? (
+                              <input
+                                type="number"
+                                disabled={isDisabled}
+                                placeholder="Mới"
+                                value={unit.newWater}
+                                onChange={(e) => handleInputChange(unit.id, 'newWater', e.target.value)}
+                                className="w-16 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-primary-container text-right disabled:bg-gray-100"
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                disabled={true}
+                                value={`${(Number(unit.waterFixedAmount) || 0).toLocaleString()}đ`}
+                                className="w-20 px-2 py-1 bg-gray-100 border border-gray-200 rounded-lg text-xs font-bold text-right text-gray-500 cursor-not-allowed select-none"
+                                title={`Tiền nước cố định: ${unit.maxCapacity} người x ${unit.waterPrice.toLocaleString()}đ`}
+                              />
+                            )}
                           </td>
 
                           {/* 10. Water Cost */}
                           <td className="py-4 px-3 font-mono text-right text-gray-700">
-                            {unit.newWater === '' ? (
-                              <span className="text-[10px] text-orange-500">Chưa nhập</span>
+                            {unit.isWaterFixed ? (
+                              unit.waterFixedAmount === '' ? (
+                                <span className="text-[10px] text-orange-500">Chưa nhập</span>
+                              ) : (
+                                <div>
+                                  <p className="font-bold">{(Number(unit.waterFixedAmount) || 0).toLocaleString()}đ</p>
+                                  <p className="text-[8px] text-gray-400 font-medium">({unit.maxCapacity} người x {unit.waterPrice.toLocaleString()}đ)</p>
+                                </div>
+                              )
                             ) : (
-                              <div>
-                                <p className="font-bold">{watCost.toLocaleString()}đ</p>
-                                <p className="text-[8px] text-gray-400 font-medium">({(Number(unit.newWater) - unit.oldWater)} m³)</p>
-                              </div>
+                              unit.newWater === '' || unit.oldWater === '' ? (
+                                <span className="text-[10px] text-orange-500">Chưa nhập</span>
+                              ) : (
+                                <div>
+                                  <p className="font-bold">{watCost.toLocaleString()}đ</p>
+                                  <p className="text-[8px] text-gray-400 font-medium">({(Number(unit.newWater) - Number(unit.oldWater))} m³)</p>
+                                </div>
+                              )
                             )}
                           </td>
 
@@ -939,7 +1043,16 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                       if (!selectedUnitIds.includes(unit.id) || unit.hasInvoiceThisMonth) return unit;
                       
                       const updated = { ...unit, discount: 50000 };
-                      const validation = validateUnit(updated, updated.newElectric, updated.newWater, updated.rentPrice, Number(updated.surcharge) || 0, 50000);
+                      const validation = validateUnit(
+                        updated,
+                        updated.oldElectric,
+                        updated.newElectric,
+                        updated.oldWater,
+                        updated.newWater,
+                        updated.rentPrice,
+                        Number(updated.surcharge) || 0,
+                        50000
+                      );
                       updated.status = validation.status;
                       updated.errorMessage = validation.errorMessage;
 
@@ -1104,7 +1217,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
             
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentStep(2)}
+                onClick={() => setCurrentStep(1)}
                 className="px-3.5 py-2 bg-white border border-gray-200 hover:bg-orange-50 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 Quay lại sửa chỉ số
@@ -1178,7 +1291,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
       )}
 
       {/* PART K, M, N: Success State & Action step after Invoice creation */}
-      {currentStep >= 4 && (
+      {currentStep === 3 && (
         <div className="bg-white p-8 rounded-2xl border border-green-200 bg-gradient-to-tr from-green-50/30 to-white shadow-lg space-y-6 text-center animate-scaleUp max-w-2xl mx-auto">
           <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto ring-8 ring-green-50">
             <span className="material-symbols-outlined text-[36px] font-bold">check_circle</span>
@@ -1231,7 +1344,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
             <button
               onClick={() => {
                 loadData();
-                setCurrentStep(2);
+                setCurrentStep(1);
               }}
               className="w-full sm:w-auto px-5 py-2.5 bg-white border border-gray-200 hover:bg-orange-50 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer text-center"
             >
@@ -1321,7 +1434,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     {detailDrawerUnit.status === 'Hợp lệ' && (
                       <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
                         <p>· Chỉ số điện: Cũ: {detailDrawerUnit.oldElectric} kWh ➔ Mới: {detailDrawerUnit.newElectric} kWh</p>
-                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newElectric) - detailDrawerUnit.oldElectric} kWh × Đơn giá: {detailDrawerUnit.electricityPrice.toLocaleString()}đ/kWh</p>
+                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newElectric) - Number(detailDrawerUnit.oldElectric)} kWh × Đơn giá: {detailDrawerUnit.electricityPrice.toLocaleString()}đ/kWh</p>
                       </div>
                     )}
                   </div>
@@ -1337,10 +1450,17 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                       </span>
                     </div>
                     {detailDrawerUnit.status === 'Hợp lệ' && (
-                      <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
-                        <p>· Chỉ số nước: Cũ: {detailDrawerUnit.oldWater} m³ ➔ Mới: {detailDrawerUnit.newWater} m³</p>
-                        <p>· Tiêu dùng: {Number(detailDrawerUnit.newWater) - detailDrawerUnit.oldWater} m³ × Đơn giá: {detailDrawerUnit.waterPrice.toLocaleString()}đ/m³</p>
-                      </div>
+                      detailDrawerUnit.isWaterFixed ? (
+                        <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
+                          <p>· Hình thức: Nước cố định hàng tháng</p>
+                          <p>· Số tiền: {Number(detailDrawerUnit.waterFixedAmount).toLocaleString()}đ</p>
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-gray-400 font-medium pl-3 space-y-0.5">
+                          <p>· Chỉ số nước: Cũ: {detailDrawerUnit.oldWater} m³ ➔ Mới: {detailDrawerUnit.newWater} m³</p>
+                          <p>· Tiêu dùng: {Number(detailDrawerUnit.newWater) - Number(detailDrawerUnit.oldWater)} m³ × Đơn giá: {detailDrawerUnit.waterPrice.toLocaleString()}đ/m³</p>
+                        </div>
+                      )
                     )}
                   </div>
 

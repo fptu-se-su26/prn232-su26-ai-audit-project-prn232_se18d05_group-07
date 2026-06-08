@@ -32,6 +32,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddLoading, setIsAddLoading] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -117,6 +118,19 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
 
   useEffect(() => {
     fetchInvoices();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.invoice-actions-menu')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
   }, []);
 
   // Financial Stats
@@ -1061,49 +1075,65 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
                             </button>
                           )}
 
-                          <div className="relative group/actions">
+                          <div className="relative invoice-actions-menu">
                             <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(prev => prev === list.id ? null : list.id);
+                              }}
                               className="w-7 h-7 flex items-center justify-center border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[16px]">more_vert</span>
                             </button>
-                            <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-40 z-[1000] hidden group-hover/actions:block text-left text-[11px] font-bold text-gray-600">
-                              
-                              <button 
-                                onClick={() => {
-                                  window.location.hash = `#/owner/invoices/${list.id}`;
-                                }}
-                                className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
-                              </button>
-
-                              {(list.status === 'Chưa thanh toán' || list.status === 'Quá hạn' || list.status === 'Thanh toán một phần') && (
+                            {activeMenuId === list.id && (
+                              <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-150 rounded-xl shadow-lg py-1.5 w-40 z-[1000] text-left text-[11px] font-bold text-gray-600">
+                                
                                 <button 
-                                  onClick={() => openMarkPaidModal(list)}
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    window.location.hash = `#/owner/invoices/${list.id}`;
+                                  }}
+                                  className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">info</span> Xem chi tiết
+                                </button>
+
+                                {(list.status === 'Chưa thanh toán' || list.status === 'Quá hạn' || list.status === 'Thanh toán một phần') && (
+                                  <button 
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      openMarkPaidModal(list);
+                                    }}
+                                    className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">credit_score</span> Đóng đủ (Paid)
+                                  </button>
+                                )}
+
+                                <button 
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleExportSingleExcel(list.id, list.code);
+                                  }}
                                   className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
                                 >
-                                  <span className="material-symbols-outlined text-[14px]">credit_score</span> Đóng đủ (Paid)
+                                  <span className="material-symbols-outlined text-[14px]">table</span> Xuất Excel bill
                                 </button>
-                              )}
 
-                              <button 
-                                onClick={() => handleExportSingleExcel(list.id, list.code)}
-                                className="w-full px-3 py-1.5 hover:bg-orange-50/40 hover:text-primary-container flex items-center gap-1.5 cursor-pointer border-t border-gray-50"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">table</span> Xuất Excel bill
-                              </button>
+                                {list.status !== 'Đã hủy' && (
+                                  <button 
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      openCancelModal(list);
+                                    }}
+                                    className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">cancel</span> Hủy hóa đơn
+                                  </button>
+                                )}
 
-                              {list.status !== 'Đã hủy' && (
-                                <button 
-                                  onClick={() => openCancelModal(list)}
-                                  className="w-full px-3 py-1.5 hover:bg-red-50 hover:text-red-655 flex items-center gap-1.5 cursor-pointer border-t border-gray-50 text-red-500"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">cancel</span> Hủy hóa đơn
-                                </button>
-                              )}
-
-                            </div>
+                              </div>
+                            )}
                           </div>
 
                         </div>

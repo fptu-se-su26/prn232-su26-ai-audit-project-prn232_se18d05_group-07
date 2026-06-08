@@ -67,6 +67,15 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
   const [isAddTenantOpen, setIsAddTenantOpen] = useState(false);
   const [isEndTenancyOpen, setIsEndTenancyOpen] = useState(false);
   const [isChangeStatusOpen, setIsChangeStatusOpen] = useState(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+  const [editMaxCapacity, setEditMaxCapacity] = useState<number>(2);
+  const [editWaterBillingType, setEditWaterBillingType] = useState<'PerCubicMeter' | 'PerPerson'>('PerCubicMeter');
+  const [editWaterPrice, setEditWaterPrice] = useState<number>(0);
+  const [editElectricityPrice, setEditElectricityPrice] = useState<number>(0);
+  const [editInternetPrice, setEditInternetPrice] = useState<number>(0);
+  const [editGarbagePrice, setEditGarbagePrice] = useState<number>(0);
+  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editArea, setEditArea] = useState<number>(0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<'not-searched' | 'found' | 'not-found'>('not-searched');
@@ -165,6 +174,31 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
       setError(err.response?.data?.message || 'Không thể tải thông tin chi tiết phòng.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsAddLoading(true);
+      await api.put(`/owner/units/${unitIdNum}`, {
+        maxCapacity: editMaxCapacity,
+        waterBillingType: editWaterBillingType,
+        waterPrice: editWaterPrice,
+        electricityPrice: editElectricityPrice,
+        internetPrice: editInternetPrice,
+        garbagePrice: editGarbagePrice,
+        price: editPrice,
+        area: editArea
+      });
+      setIsEditDetailsOpen(false);
+      triggerToast('Đã cập nhật thông tin phòng thành công!');
+      fetchDetail();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin phòng.', 'error');
+    } finally {
+      setIsAddLoading(false);
     }
   };
 
@@ -495,6 +529,22 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
           >
             <span className="material-symbols-outlined text-[16px]">change_circle</span> Đổi trạng thái
           </button>
+          <button 
+            onClick={() => {
+              setEditMaxCapacity(data?.maxCapacity || 2);
+              setEditWaterBillingType(data?.waterBillingType || 'PerCubicMeter');
+              setEditWaterPrice(data?.waterPrice || 0);
+              setEditElectricityPrice(data?.electricityPrice || 0);
+              setEditInternetPrice(data?.internetPrice || 0);
+              setEditGarbagePrice(data?.garbagePrice || 0);
+              setEditPrice(data?.price || 0);
+              setEditArea(data?.area || 0);
+              setIsEditDetailsOpen(true);
+            }}
+            className="px-4 py-2.5 bg-white border border-gray-200 hover:bg-orange-50 hover:text-primary-container text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">edit</span> Sửa thông tin
+          </button>
         </div>
       </div>
 
@@ -574,7 +624,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
                 <span className="text-gray-400 text-[10px] uppercase">Đơn giá nước:</span>
-                <span className="text-on-surface font-bold block">{formatPrice(data.waterPrice)}/m³</span>
+                <span className="text-on-surface font-bold block">
+                  {formatPrice(data.waterPrice)}/{data.waterBillingType === 'PerPerson' ? 'người' : 'm³'} ({data.waterBillingType === 'PerPerson' ? 'Cố định' : 'Theo khối'})
+                </span>
               </div>
               <div className="space-y-0.5 border-t border-gray-50 pt-2.5">
                 <span className="text-gray-400 text-[10px] uppercase">Mạng & Rác thải:</span>
@@ -1419,6 +1471,156 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
                   className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
                 >
                   Lưu thay đổi
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. EDIT ROOM DETAILS MODAL */}
+      {isEditDetailsOpen && (
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-gray-100 soft-shadow w-full max-w-lg overflow-hidden animate-scaleUp">
+            
+            {/* Header */}
+            <div className="px-6 py-4 bg-orange-50/50 border-b border-orange-100 flex justify-between items-center">
+              <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary-container">edit</span>
+                Sửa thông tin chi tiết phòng {data?.roomNumber}
+              </h3>
+              <button 
+                onClick={() => setIsEditDetailsOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-orange-100/30 flex items-center justify-center text-gray-400 hover:text-gray-700 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleUpdateDetails} className="p-6 space-y-4 text-xs font-bold text-gray-500">
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* MaxCapacity */}
+                <div className="space-y-1">
+                  <label className="uppercase">Sức chứa tối đa (người) *</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editMaxCapacity}
+                    onChange={(e) => setEditMaxCapacity(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+
+                {/* Area */}
+                <div className="space-y-1">
+                  <label className="uppercase">Diện tích sử dụng (m²)</label>
+                  <input 
+                    type="number"
+                    value={editArea}
+                    onChange={(e) => setEditArea(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+
+                {/* Base Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">Giá thuê phòng mặc định (đ/tháng) *</label>
+                  <input 
+                    type="number"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+
+                {/* Electricity Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">Đơn giá điện (đ/kWh) *</label>
+                  <input 
+                    type="number"
+                    value={editElectricityPrice}
+                    onChange={(e) => setEditElectricityPrice(parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+
+                {/* Water Billing Type */}
+                <div className="space-y-1">
+                  <label className="uppercase">Hình thức tính tiền nước</label>
+                  <select 
+                    value={editWaterBillingType}
+                    onChange={(e) => setEditWaterBillingType(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-bold text-gray-700 bg-white"
+                  >
+                    <option value="PerCubicMeter">Tính theo mét khối (đ/m³)</option>
+                    <option value="PerPerson">Tính cố định theo đầu người (đ/người)</option>
+                  </select>
+                </div>
+
+                {/* Water Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">Đơn giá nước *</label>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      value={editWaterPrice}
+                      onChange={(e) => setEditWaterPrice(parseInt(e.target.value, 10) || 0)}
+                      className="w-full pl-3 pr-16 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      {editWaterBillingType === 'PerCubicMeter' ? 'đ/m³' : 'đ/người'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Internet Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">Phí mạng Internet (đ/tháng)</label>
+                  <input 
+                    type="number"
+                    value={editInternetPrice}
+                    onChange={(e) => setEditInternetPrice(parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+
+                {/* Garbage Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">Phí rác & dịch vụ (đ/tháng)</label>
+                  <input 
+                    type="number"
+                    value={editGarbagePrice}
+                    onChange={(e) => setEditGarbagePrice(parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container text-xs font-semibold text-gray-700 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-orange-50/30 border border-orange-100/50 p-3 rounded-2xl flex items-start gap-2 mt-2">
+                <span className="material-symbols-outlined text-primary-container text-[18px] shrink-0 mt-0.5">info</span>
+                <p className="text-[10px] text-gray-600 leading-normal font-medium">
+                  Thay đổi các cấu hình đơn giá hoặc sức chứa của phòng sẽ được áp dụng ngay cho kỳ chốt hóa đơn tiếp theo mà không làm thay đổi các kỳ trước đó.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-2 border-t border-gray-50">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditDetailsOpen(false)}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                >
+                  Lưu thông tin phòng
                 </button>
               </div>
 

@@ -17,6 +17,7 @@ namespace Application.Common.DTOs.Properties
         public decimal BasePrice { get; set; }
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
         public decimal InternetPrice { get; set; }
         public decimal GarbagePrice { get; set; }
         public decimal ParkingPrice { get; set; }
@@ -44,6 +45,8 @@ namespace Application.Common.DTOs.Properties
         public decimal OldWater { get; set; }
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
+        public int MaxCapacity { get; set; }
         public decimal InternetPrice { get; set; }
         public decimal GarbagePrice { get; set; }
     }
@@ -61,6 +64,7 @@ namespace Application.Common.DTOs.Properties
         public decimal? BasePrice { get; set; }
         public decimal? SurfaceArea { get; set; }
         public int? MaxCapacity { get; set; }
+        public string? WaterBillingType { get; set; }
     }
 
     public class CreatePropertyRequestDto
@@ -83,6 +87,7 @@ namespace Application.Common.DTOs.Properties
         public int StartNum { get; set; } = 1;
         public decimal ElectricityPrice { get; set; } = 3500;
         public decimal WaterPrice { get; set; } = 15000;
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
         public decimal InternetPrice { get; set; } = 100000;
         public decimal GarbagePrice { get; set; } = 30000;
         public List<CustomRoomDto>? CustomRooms { get; set; }

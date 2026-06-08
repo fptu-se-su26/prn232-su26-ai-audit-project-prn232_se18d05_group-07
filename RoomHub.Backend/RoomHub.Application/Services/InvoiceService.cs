@@ -150,8 +150,13 @@ namespace Application.Services
                     var internetPrice = room.InternetPrice ?? building.InternetPrice;
                     var garbagePrice = room.GarbagePrice ?? building.GarbagePrice;
 
+                    var waterBillingType = room.WaterBillingType ?? building.WaterBillingType;
+                    bool isWaterFixed = (waterBillingType == "PerPerson");
+
                     var elecCost = elecUsage > 0 ? elecUsage * elecPrice : 0;
-                    var waterCost = waterUsage > 0 ? waterUsage * waterPrice : 0;
+                    var waterCost = isWaterFixed 
+                        ? (waterPrice * room.MaxCapacity) 
+                        : (waterUsage > 0 ? waterUsage * waterPrice : 0);
 
                     var total = activeContract.RentAmount + elecCost + waterCost + internetPrice + garbagePrice
                                 + readingInput.AdditionalPrice - readingInput.ReductionPrice;
@@ -175,7 +180,7 @@ namespace Application.Services
                     {
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Rent", Amount = activeContract.RentAmount, Description = $"Tiền thuê phòng tháng {request.Month:D2}/{request.Year}" },
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Electricity", Amount = elecCost, Description = $"Tiền điện (Chỉ số: {readingInput.OldElectricity} -> {readingInput.NewElectricity}, Sử dụng: {elecUsage} kWh)" },
-                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Water", Amount = waterCost, Description = $"Tiền nước (Chỉ số: {readingInput.OldWater} -> {readingInput.NewWater}, Sử dụng: {waterUsage} m³)" },
+                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Water", Amount = waterCost, Description = isWaterFixed ? $"Tiền nước (Cố định theo đầu người: {room.MaxCapacity} người x {waterPrice:N0}đ)" : $"Tiền nước (Chỉ số: {readingInput.OldWater} -> {readingInput.NewWater}, Sử dụng: {waterUsage} m³)" },
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Internet", Amount = internetPrice, Description = "Tiền mạng Internet" },
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Garbage", Amount = garbagePrice, Description = "Phí vệ sinh & dịch vụ trọ" }
                     };
@@ -192,8 +197,7 @@ namespace Application.Services
 
                     foreach (var item in items)
                     {
-                        // Add directly to DbContext via room / building
-                        activeContract.Invoices.Last().InvoiceItems.Add(item);
+                        invoice.InvoiceItems.Add(item);
                     }
 
                     // 3. Save Utility readings
@@ -294,12 +298,8 @@ namespace Application.Services
             return true;
         }
 
-        public async Task<byte[]> ExportInvoiceToExcelAsync(int invoiceId, string ownerId)
+        private async Task<byte[]> GenerateExcelBytesAsync(Invoice invoice)
         {
-            var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
-            if (invoice == null || invoice.Contract.OwnerId != ownerId)
-                throw new Exception("Không tìm thấy hóa đơn này hoặc bạn không có quyền truy cập.");
-
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             using (var package = new ExcelPackage())
             {
@@ -337,7 +337,8 @@ namespace Application.Services
                 worksheet.Cells["C7"].Value = "Số tiền";
                 
                 worksheet.Cells["A7:C7"].Style.Font.Bold = true;
-                worksheet.Cells["A7:C7"].Style.Fill.SetBackground(System.Drawing.Color.LightSkyBlue);
+                worksheet.Cells["A7:C7"].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                worksheet.Cells["A7:C7"].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightSkyBlue);
 
                 int row = 8;
                 foreach (var item in invoice.InvoiceItems)
@@ -381,6 +382,156 @@ namespace Application.Services
 
                 return await Task.FromResult(package.GetAsByteArray());
             }
+        }
+
+        public async Task<byte[]> ExportInvoiceToExcelAsync(int invoiceId, string ownerId)
+        {
+            var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
+            if (invoice == null || invoice.Contract.OwnerId != ownerId)
+                throw new Exception("Không tìm thấy hóa đơn này hoặc bạn không có quyền truy cập.");
+
+            return await GenerateExcelBytesAsync(invoice);
+        }
+
+        public async Task<List<InvoiceHeaderDto>> GetTenantInvoicesAsync(string tenantId)
+        {
+            var invoices = await _invoiceRepository.GetInvoicesByTenantAsync(tenantId);
+
+            return invoices.Select(i => new InvoiceHeaderDto
+            {
+                Id = i.Id,
+                RoomNumber = i.Contract.Room.RoomNumber,
+                BuildingName = i.Contract.Room.Floor.Building.Name,
+                Month = i.InvoiceDate.ToString("MM/yyyy"),
+                TotalAmount = i.TotalAmount,
+                Status = i.Status switch
+                {
+                    InvoiceStatus.Paid => "Đã thanh toán",
+                    InvoiceStatus.Unpaid => "Chưa thanh toán",
+                    InvoiceStatus.Overdue => "Quá hạn",
+                    InvoiceStatus.Pending => "Chờ xử lý",
+                    InvoiceStatus.Cancelled => "Đã hủy",
+                    _ => "Chưa thanh toán"
+                },
+                DueDate = i.DueDate.ToString("dd/MM/yyyy"),
+                TenantName = i.Contract.TemporaryTenantName ?? i.Contract.Tenant?.FullName ?? "Chưa rõ",
+                TenantPhone = i.Contract.TemporaryTenantPhone ?? i.Contract.Tenant?.PhoneNumber ?? "",
+                IsLinkedAccount = i.Contract.TenantId != null
+            }).ToList();
+        }
+
+        public async Task<InvoiceDetailDto?> GetTenantInvoiceDetailAsync(int invoiceId, string tenantId)
+        {
+            var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
+            if (invoice == null || (invoice.Contract.TenantId != tenantId && invoice.Contract.TemporaryTenantEmail != tenantId))
+                return null;
+
+            var building = invoice.Contract.Room.Floor.Building;
+            var tenantUser = invoice.Contract.Tenant;
+
+            var dto = new InvoiceDetailDto
+            {
+                Id = invoice.Id,
+                RoomNumber = invoice.Contract.Room.RoomNumber,
+                BuildingName = building.Name,
+                BuildingAddress = building.Address,
+                TenantName = invoice.Contract.TemporaryTenantName ?? tenantUser?.FullName ?? "Chưa rõ",
+                TenantPhone = invoice.Contract.TemporaryTenantPhone ?? tenantUser?.PhoneNumber ?? "",
+                Month = invoice.InvoiceDate.ToString("MM/yyyy"),
+                InvoiceDate = invoice.InvoiceDate.ToString("dd/MM/yyyy"),
+                DueDate = invoice.DueDate.ToString("dd/MM/yyyy"),
+                TotalAmount = invoice.TotalAmount,
+                Status = invoice.Status switch
+                {
+                    InvoiceStatus.Paid => "Đã thanh toán",
+                    InvoiceStatus.Unpaid => "Chưa thanh toán",
+                    InvoiceStatus.Overdue => "Quá hạn",
+                    InvoiceStatus.Pending => "Chờ xử lý",
+                    InvoiceStatus.Cancelled => "Đã hủy",
+                    _ => "Chưa thanh toán"
+                },
+                IsLinkedAccount = invoice.Contract.TenantId != null
+            };
+
+            foreach (var item in invoice.InvoiceItems)
+            {
+                dto.Items.Add(new InvoiceItemDto
+                {
+                    Description = item.Description ?? "",
+                    Amount = item.Amount,
+                    ItemType = item.ItemType
+                });
+            }
+
+            foreach (var payment in invoice.Payments.Where(p => p.Status == "Completed"))
+            {
+                dto.Payments.Add(new InvoicePaymentDto
+                {
+                    Amount = payment.Amount,
+                    PaymentMethod = payment.PaymentMethod switch
+                    {
+                        "BankTransfer" => "Chuyển khoản",
+                        "Cash" => "Tiền mặt",
+                        _ => "Ví điện tử"
+                    },
+                    PaidAt = payment.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "",
+                    TransactionId = payment.TransactionId ?? ""
+                });
+            }
+
+            return dto;
+        }
+
+        public async Task<bool> TenantPayInvoiceAsync(int invoiceId, RecordPaymentRequest request, string tenantId)
+        {
+            var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
+            if (invoice == null || (invoice.Contract.TenantId != tenantId && invoice.Contract.TemporaryTenantEmail != tenantId))
+                return false;
+
+            if (invoice.Status == InvoiceStatus.Paid)
+                return true;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var payment = new Payment
+                {
+                    InvoiceId = invoice.Id,
+                    Amount = request.Amount,
+                    PaymentMethod = request.PaymentMethod,
+                    TransactionId = request.TransactionId ?? ("MOCK-TXN-" + DateTime.UtcNow.Ticks),
+                    Status = "Completed",
+                    PaidAt = DateTime.UtcNow
+                };
+
+                invoice.Payments.Add(payment);
+
+                // Update invoice status based on total paid amount
+                var totalPaid = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount) + request.Amount;
+                if (totalPaid >= invoice.TotalAmount)
+                {
+                    invoice.Status = InvoiceStatus.Paid;
+                }
+
+                await _invoiceRepository.UpdateAsync(invoice);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<byte[]> ExportTenantInvoiceToExcelAsync(int invoiceId, string tenantId)
+        {
+            var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
+            if (invoice == null || (invoice.Contract.TenantId != tenantId && invoice.Contract.TemporaryTenantEmail != tenantId))
+                throw new Exception("Không tìm thấy hóa đơn này hoặc bạn không có quyền truy cập.");
+
+            return await GenerateExcelBytesAsync(invoice);
         }
     }
 }

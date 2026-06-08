@@ -63,6 +63,7 @@ namespace Application.Services
                     BasePrice = basePrice,
                     ElectricityPrice = b.ElectricityPrice,
                     WaterPrice = b.WaterPrice,
+                    WaterBillingType = b.WaterBillingType,
                     InternetPrice = b.InternetPrice,
                     GarbagePrice = b.GarbagePrice,
                     ParkingPrice = 50000,
@@ -162,6 +163,8 @@ namespace Application.Services
                     OldWater = oldWater,
                     ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
                     WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                    WaterBillingType = room.WaterBillingType ?? building.WaterBillingType,
+                    MaxCapacity = room.MaxCapacity,
                     InternetPrice = room.InternetPrice ?? building.InternetPrice,
                     GarbagePrice = room.GarbagePrice ?? building.GarbagePrice
                 });
@@ -189,6 +192,7 @@ namespace Application.Services
                 BasePrice = allRooms.FirstOrDefault()?.BasePrice ?? 2500000,
                 ElectricityPrice = building.ElectricityPrice,
                 WaterPrice = building.WaterPrice,
+                WaterBillingType = building.WaterBillingType,
                 InternetPrice = building.InternetPrice,
                 GarbagePrice = building.GarbagePrice,
                 ParkingPrice = 50000,
@@ -221,6 +225,7 @@ namespace Application.Services
                     Address = request.Address,
                     ElectricityPrice = request.ElectricityPrice,
                     WaterPrice = request.WaterPrice,
+                    WaterBillingType = request.WaterBillingType,
                     InternetPrice = request.InternetPrice,
                     GarbagePrice = request.GarbagePrice,
                     ThumbnailUrl = string.IsNullOrWhiteSpace(request.ImageUrl)
@@ -257,6 +262,7 @@ namespace Application.Services
                         RoomNumber = request.Name,
                         RoomType = roomType,
                         MaxCapacity = request.MaxPeople,
+                        WaterBillingType = request.WaterBillingType,
                         SurfaceArea = request.DefaultArea,
                         BasePrice = request.BasePrice,
                         Description = request.Description ?? $"Căn hộ lẻ {request.Name}",
@@ -313,6 +319,7 @@ namespace Application.Services
                                 RoomNumber = roomNumber,
                                 RoomType = roomType,
                                 MaxCapacity = customRoom?.MaxCapacity ?? request.MaxPeople,
+                                WaterBillingType = customRoom?.WaterBillingType ?? request.WaterBillingType,
                                 SurfaceArea = customRoom?.SurfaceArea ?? request.DefaultArea,
                                 BasePrice = customRoom?.BasePrice ?? request.BasePrice,
                                 Description = request.Description ?? $"Phòng tiện nghi {roomNumber}",
@@ -379,6 +386,7 @@ namespace Application.Services
                 MaxCapacity = room.MaxCapacity,
                 ElectricityPrice = room.ElectricityPrice ?? building.ElectricityPrice,
                 WaterPrice = room.WaterPrice ?? building.WaterPrice,
+                WaterBillingType = room.WaterBillingType ?? building.WaterBillingType,
                 InternetPrice = room.InternetPrice ?? building.InternetPrice,
                 GarbagePrice = room.GarbagePrice ?? building.GarbagePrice,
                 InternalNotes = room.Description ?? "",
@@ -491,6 +499,27 @@ namespace Application.Services
 
             room.Description = notes;
             room.UpdatedAt = DateTime.UtcNow;
+            await _roomRepository.UpdateAsync(room);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateUnitDetailsAsync(int roomId, UpdateUnitDetailsRequest request, string ownerId)
+        {
+            var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
+            if (room == null || room.Floor.Building.OwnerId != ownerId)
+                return false;
+
+            room.MaxCapacity = request.MaxCapacity;
+            room.WaterBillingType = request.WaterBillingType;
+            room.WaterPrice = request.WaterPrice;
+            room.ElectricityPrice = request.ElectricityPrice;
+            room.InternetPrice = request.InternetPrice;
+            room.GarbagePrice = request.GarbagePrice;
+            room.BasePrice = request.Price;
+            room.SurfaceArea = request.Area;
+            room.UpdatedAt = DateTime.UtcNow;
+
             await _roomRepository.UpdateAsync(room);
             await _unitOfWork.SaveChangesAsync();
             return true;

@@ -146,7 +146,8 @@ namespace RoomHub.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"Export Excel Error for Owner: {ex}");
+                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
             }
         }
     }
