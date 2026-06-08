@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
@@ -19,6 +19,7 @@ import ListingList from './pages/owner/ListingList';
 import InvoiceList from './pages/owner/InvoiceList';
 import InvoiceCreate from './pages/owner/InvoiceCreate';
 import InvoiceDetail from './pages/owner/InvoiceDetail';
+import Tenants from './pages/owner/Tenants';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyOtp from './pages/VerifyOtp';
@@ -81,11 +82,20 @@ export type PageType =
   | 'admin-subscriptions';
 
 const AppContent: React.FC = () => {
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+
+  const isAuthPage = 
+    location.pathname === '/login' || 
+    location.pathname === '/register' ||
+    location.pathname === '/verify-otp' ||
+    location.pathname === '/forgot-password' ||
+    location.pathname === '/verify-reset-otp' ||
+    location.pathname === '/reset-password';
 
   // 1. Listen for hash changes to support direct URL typing for owner routes
   useEffect(() => {
@@ -299,6 +309,8 @@ const AppContent: React.FC = () => {
           <InvoiceCreate setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-invoice-detail' ? (
           <InvoiceDetail invoiceId={selectedInvoiceId} setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-tenants' ? (
+          <Tenants setCurrentPage={setCurrentPage} setSelectedUnitId={setSelectedUnitId} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>
@@ -318,7 +330,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="bg-background text-on-surface antialiased overflow-x-hidden min-h-screen flex flex-col">
-      <Navbar />
+      {!isAuthPage && <Navbar />}
       <div className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -337,7 +349,7 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 };
