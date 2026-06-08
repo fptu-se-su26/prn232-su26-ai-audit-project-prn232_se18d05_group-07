@@ -68,6 +68,13 @@ Nguyên tắc ghi changelog:
 - [x] **Loại bỏ các Banner và Card thừa**:
   - Xóa card **"Hướng dẫn nhanh"** khỏi Sidebar của Chủ nhà (`OwnerLayout.tsx`).
   - Xóa card **"Mẹo nhỏ"** khỏi Sidebar của Khách thuê (`TenantLayout.tsx`).
+  - Xóa card tài khoản người dùng hiển thị tên/email cứng (`hoai an / phanhoaian1611@gmail.com`) khỏi Sidebar của Khách thuê (`TenantLayout.tsx`).
+- [x] **Động hóa trang Tổng quan của Khách thuê (`Dashboard.tsx`)**:
+  - Loại bỏ hoàn toàn dữ liệu stats và hóa đơn seed cứng.
+  - Gọi API `GET /api/tenant/room` để nạp dữ liệu động từ backend, hiển thị chính xác số phòng đang thuê, giá thuê, diện tích, thời hạn hợp đồng và trạng thái lời mời của khách thuê đang đăng nhập.
+- [x] **Khắc phục giao diện các trang Đăng nhập / Đăng ký**:
+  - Ẩn hoàn toàn khối header (`Navbar`) và footer (`Footer`) trên các trang Auth (`/login`, `/register`, `/verify-otp`, `/forgot-password`, `/verify-reset-otp`, `/reset-password`).
+  - Thêm nút **"Quay lại trang chủ"** ngay bên cạnh Logo RoomHub trên trang Đăng nhập và Đăng ký để hỗ trợ điều hướng nhanh về Landing Page.
 - [x] **Khắc phục hộp thoại logout native**:
   - Xây dựng **Modal xác nhận đăng xuất Custom (React state)** cho cả giao diện chủ nhà và khách thuê để loại bỏ thông báo native trình duyệt chứa dòng chữ `"localhost:5173 says"`.
   - Sửa đổi hàm logout điều hướng chính xác về đường dẫn đăng nhập `/login` thay vì quay về trang chủ.
@@ -86,6 +93,9 @@ Nguyên tắc ghi changelog:
 | 8 | Xóa các card Quick Guide và Tips ở Sidebar | Phan Hoài An | `OwnerLayout.tsx`, `TenantLayout.tsx` | Layout sạch sẽ |
 | 9 | Thay window.confirm logout bằng Custom Modal | Phan Hoài An | `OwnerLayout.tsx`, `TenantLayout.tsx` | Không hiện localhost says |
 | 10| Điều hướng đăng xuất về trang đăng nhập | Phan Hoài An | `OwnerLayout.tsx`, `TenantLayout.tsx` | Out thẳng về trang login |
+| 11| Xóa card user cứng khỏi Sidebar tenant | Phan Hoài An | `TenantLayout.tsx` | Tránh lộ tên email cũ |
+| 12| Kết nối API động cho trang Tổng quan tenant | Phan Hoài An | `src/pages/tenant/Dashboard.tsx` | Hiển thị đúng phòng thật |
+| 13| Ẩn Navbar & Footer, thêm nút Back trên Auth pages | Phan Hoài An | `App.tsx`, `Login.tsx`, `Register.tsx` | Giao diện Auth sạch đẹp |
 
 ## Bug Report chi tiết
 
@@ -95,6 +105,9 @@ Nguyên tắc ghi changelog:
 | B-02 | Nhấn đăng xuất quay về trang chủ | `setCurrentPage('home')` nhưng không gọi `navigate('/login')` | Gọi hàm `logout()`, set `currentPage` về `'home'` và dùng React Router `navigate('/login')` |
 | B-03 | Sidebar có card hướng dẫn và mẹo thừa | Dữ liệu mock/quảng cáo cứng gây rối màn hình | Xóa các khối HTML quick guide và tips |
 | B-04 | Sơ đồ hợp đồng thiếu thông tin tòa nhà | Repository không nạp liên kết Floor và Building | Thêm `.ThenInclude(r => r.Floor).ThenInclude(f => f.Building)` vào `GetContractsByOwnerAsync` |
+| B-05 | Sidebar tenant hiển thị email hoai an cứng | Component render user card cứng | Xóa bỏ block user card trong TenantLayout sidebar |
+| B-06 | Dashboard tenant hiển thị thông tin phòng seed | Mảng dữ liệu mock cứng P.201 Hải Châu | Gọi API `/tenant/room` nạp thông tin động và xử lý empty state |
+| B-07 | Trang Login/Register hiển thị thừa Navbar/Footer | Layout bọc ngoài hiển thị vô điều kiện | Sử dụng `useLocation` kiểm tra auth path và ẩn có điều kiện |
 
 ## AI có hỗ trợ không?
 
@@ -104,7 +117,7 @@ Nguyên tắc ghi changelog:
 Nếu có, mô tả AI đã hỗ trợ phần nào:
 
 ```text
-AI trợ lý Antigravity đã hỗ trợ tích cực trong việc: (1) Phân tích cơ sở dữ liệu và xây dựng luồng nghiệp vụ duyệt/từ chối hợp đồng trọ; (2) Thiết kế API endpoint và viết các hàm mapping DTO phía Backend; (3) Viết toàn bộ trang Tenants.tsx ở frontend tích hợp lọc động, tìm kiếm, xem chi tiết và form thanh lý hợp đồng; (4) Tối ưu hóa layout sidebar, loại bỏ mã nguồn thừa, chuyển đổi từ window.confirm sang React Modal xác nhận đăng xuất tùy chỉnh.
+AI trợ lý Antigravity đã hỗ trợ tích cực trong việc: (1) Phân tích cơ sở dữ liệu và xây dựng luồng nghiệp vụ duyệt/từ chối hợp đồng trọ; (2) Thiết kế API endpoint và viết các hàm mapping DTO phía Backend; (3) Viết toàn bộ trang Tenants.tsx ở frontend tích hợp lọc động, tìm kiếm, xem chi tiết và form thanh lý hợp đồng; (4) Động hóa trang Tổng quan của tenant (Dashboard.tsx) kết nối API thực; (5) Tối ưu hóa layout sidebar, ẩn Navbar/Footer trên auth pages và tích hợp modal đăng xuất custom.
 ```
 
 ## Cam kết cập nhật Changelog

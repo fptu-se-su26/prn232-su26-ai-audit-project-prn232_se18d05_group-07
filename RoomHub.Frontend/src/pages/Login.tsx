@@ -58,11 +58,21 @@ const Login: React.FC = () => {
       {/* LEFT SIDE FORM */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 lg:px-24 bg-white py-12">
         {/* LOGO */}
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-            <span className="material-symbols-outlined text-orange-600">apartment</span>
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+              <span className="material-symbols-outlined text-orange-600">apartment</span>
+            </div>
+            <span className="text-xl font-bold">RoomHub</span>
           </div>
-          <span className="text-xl font-bold">RoomHub</span>
+          <button 
+            type="button" 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-all cursor-pointer active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Quay lại trang chủ
+          </button>
         </div>
 
         {/* LOGIN FORM */}
