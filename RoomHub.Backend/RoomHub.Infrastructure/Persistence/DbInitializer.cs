@@ -23,13 +23,40 @@ namespace Infrastructure.Persistence
             }
 
             // 1. Seed Roles
-            var roles = new[] { "PropertyOwner", "Tenant" };
+            var roles = new[] { "Administrator", "PropertyOwner", "Tenant" };
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
                     await roleManager.CreateAsync(new IdentityRole(role));
                 }
+            }
+
+            // 1b. Seed Admin account
+            var adminEmail = "admin@roomhub.vn";
+            var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+            if (existingAdmin == null)
+            {
+                var admin = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FullName = "Admin RoomHub",
+                    EmailConfirmed = true,
+                    PhoneNumber = "0900000000",
+                    IsVerified = true,
+                    VerificationDate = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+                var adminResult = await userManager.CreateAsync(admin, "Admin@123");
+                if (adminResult.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(admin, "Administrator");
+                }
+            }
+            else if (!await userManager.IsInRoleAsync(existingAdmin, "Administrator"))
+            {
+                await userManager.AddToRoleAsync(existingAdmin, "Administrator");
             }
 
             // 2. Seed Users

@@ -30,10 +30,18 @@ namespace Domain.Entities
 
         public bool IsPublished { get; set; } = false;
         public bool HasListing { get; set; } = false;
+        public bool HiddenByOwner { get; set; } = false;
         public decimal? ElectricityPrice { get; set; }
         public decimal? WaterPrice { get; set; }
         public decimal? InternetPrice { get; set; }
         public decimal? GarbagePrice { get; set; }
+        
+        // AI Moderation fields
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
+        public string? ModerationRemarks { get; set; }
+        public DateTime? ModeratedAt { get; set; }
+        public int ListingScore { get; set; } = 100;
+        public string? AIFormattedDescription { get; set; }
         // Navigation
         public virtual ApplicationUser Landlord { get; set; } = null!;
         public virtual Floor Floor { get; set; } = null!;

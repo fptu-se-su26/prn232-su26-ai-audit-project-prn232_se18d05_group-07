@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace RoomHub.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605034712_AddListingModeration")]
+    partial class AddListingModeration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -964,9 +967,6 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Property<bool>("HasListing")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("HiddenByOwner")
-                        .HasColumnType("bit");
-
                     b.Property<decimal?>("InternetPrice")
                         .HasColumnType("decimal(18, 2)");
 
@@ -1006,7 +1006,9 @@ namespace RoomHub.Infrastructure.Migrations
 
                     b.Property<string>("ModerationStatus")
                         .IsRequired()
-                        .HasColumnType("varchar(30)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("varchar(30)")
+                        .HasDefaultValue("Approved");
 
                     b.Property<string>("RoomNumber")
                         .IsRequired()
@@ -1244,7 +1246,7 @@ namespace RoomHub.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Subscriptions", (string)null);
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("Domain.Entities.SystemSetting", b =>

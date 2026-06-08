@@ -331,7 +331,7 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
                       <span className="material-symbols-outlined text-[16px]">grid_view</span> Quản lý sơ đồ phòng
                     </button>
                     <button 
-                      onClick={() => alert(`Đăng tin cho thuê tài sản "${property.name}"...`)}
+                      onClick={() => setCurrentPage('owner-listings-create')}
                       className="py-2 bg-orange-50 hover:bg-orange-100/80 text-primary-container rounded-xl text-[11px] font-bold text-center transition-all flex items-center justify-center gap-0.5 cursor-pointer active:scale-95"
                     >
                       <span className="material-symbols-outlined text-[16px]">campaign</span> Đăng tin

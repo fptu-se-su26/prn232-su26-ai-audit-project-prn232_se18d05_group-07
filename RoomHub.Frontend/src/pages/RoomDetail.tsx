@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import api from '../services/api';
 import { MOCK_ROOMS } from './Browse';
 
 interface RoomDetailProps {
@@ -16,16 +17,6 @@ const INTERIOR_IMAGES = [
   "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80"
 ];
 
-// Helper to get random host name and avatar based on roomId
-const getHostInfo = (roomId: number) => {
-  const hosts = [
-    { name: "Nguyễn Văn An", phone: "0905 123 ***", role: "Chủ nhà Trọ FPT", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" },
-    { name: "Trần Thị Thu Thảo", phone: "0934 567 ***", role: "Quản lý Căn hộ", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80" },
-    { name: "Lê Quốc Khánh", phone: "0987 654 ***", role: "Chủ nhà Căn hộ Mỹ Khê", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" },
-    { name: "Phan Hoài Nam", phone: "0912 345 ***", role: "Chủ nhà Trọ Bách Khoa", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" }
-  ];
-  return hosts[roomId % hosts.length];
-};
 
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -40,44 +31,156 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     return selectedRoomId ?? null;
   }, [routeId, selectedRoomId]);
 
-  // Scroll to top when component mounts or activeRoomId changes
+  const [roomData, setRoomData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch listing detail from API
+  useEffect(() => {
+    if (!activeRoomId) {
+      setLoading(false);
+      return;
+    }
+
+    if (activeRoomId >= 100000) {
+      const mockId = activeRoomId - 100000;
+      const foundMock = MOCK_ROOMS.find(r => r.id === mockId);
+      if (foundMock) {
+        setRoomData({
+          ...foundMock,
+          id: activeRoomId,
+          imageUrls: [foundMock.image, ...INTERIOR_IMAGES],
+          electricityPrice: 3500,
+          waterPrice: 50000,
+          internetPrice: 0,
+          garbagePrice: 0,
+          landlordName: "Chủ nhà RoomHub",
+          landlordPhone: "0905 123 ***",
+          landlordAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
+    let isMounted = true;
+    const fetchRoom = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/public/listings/${activeRoomId}`);
+        if (isMounted) {
+          setRoomData(res.data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch listing from API:", err);
+        if (isMounted) {
+          setRoomData(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchRoom();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeRoomId]);
+
+  // Scroll to top when activeRoomId changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeRoomId]);
 
-  // Find the selected room or fallback to first room
-  const room = useMemo(() => {
-    const found = MOCK_ROOMS.find(r => r.id === activeRoomId);
-    return found || MOCK_ROOMS[0];
-  }, [activeRoomId]);
+  // Use roomData as the active room
+  const room = roomData;
 
-  // Find similar rooms (exclude current, prefer same type or same district)
-  const similarRooms = useMemo(() => {
-    return MOCK_ROOMS
-      .filter(r => r.id !== room.id)
-      .slice(0, 3);
-  }, [room]);
+  // Fetch similar rooms from API
+  const [similarRooms, setSimilarRooms] = useState<any[]>([]);
+  useEffect(() => {
+    if (!room) return;
+    const fetchSimilar = async () => {
+      try {
+        const res = await api.get(`/public/listings`, {
+          params: { roomType: room.type, pageSize: 4, page: 1 }
+        });
+        const data = res.data;
+        const items = Array.isArray(data) ? data : (data.items ?? []);
+        
+        let combinedSimilar = items.filter((r: any) => r.id !== activeRoomId);
+        if (combinedSimilar.length < 3) {
+          const mockSimilar = MOCK_ROOMS
+            .filter(r => r.type === room.type && (r.id + 100000) !== activeRoomId)
+            .map(r => ({
+              id: r.id + 100000,
+              title: r.title,
+              type: r.type,
+              price: r.price,
+              image: r.image,
+              location: r.location,
+              area: r.area,
+              maxPeople: r.maxPeople
+            }));
+          combinedSimilar = [...combinedSimilar, ...mockSimilar];
+        }
+        
+        setSimilarRooms(combinedSimilar.slice(0, 3));
+      } catch {
+        const mockSimilar = MOCK_ROOMS
+          .filter(r => r.type === room.type && (r.id + 100000) !== activeRoomId)
+          .map(r => ({
+            id: r.id + 100000,
+            title: r.title,
+            type: r.type,
+            price: r.price,
+            image: r.image,
+            location: r.location,
+            area: r.area,
+            maxPeople: r.maxPeople
+          }));
+        setSimilarRooms(mockSimilar.slice(0, 3));
+      }
+    };
+    fetchSimilar();
+  }, [room, activeRoomId]);
 
   const handleAlert = (message: string) => {
     alert(message);
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN');
+  if (loading || !room) {
+    return (
+      <main className="bg-surface text-on-surface py-8 min-h-[50vh] flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
+          <p className="text-sm font-semibold text-gray-500">Đang tải thông tin chi tiết phòng...</p>
+        </div>
+      </main>
+    );
+  }
+
+  const host = {
+    name: room.landlordName || "Chủ nhà RoomHub",
+    phone: room.landlordPhone || "0905 *** ***",
+    role: room.landlordRole || "Chủ nhà",
+    avatar: room.landlordAvatar || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
   };
 
-  const host = getHostInfo(room.id);
+  const formatPrice = (price: number) => {
+    return price ? price.toLocaleString('vi-VN') : '0';
+  };
 
   return (
     <main className="bg-surface text-on-surface py-8">
       <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
-        
+
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex text-label-md font-label-md text-on-surface-variant mb-6">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <a 
-                className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer" 
+              <a
+                className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer"
                 onClick={() => { if (setCurrentPage) { setCurrentPage('home'); } else { navigate('/'); } }}
               >
                 Trang chủ
@@ -86,8 +189,8 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-sm mx-1 text-gray-400">chevron_right</span>
-                <a 
-                  className="hover:text-primary-container transition-colors cursor-pointer" 
+                <a
+                  className="hover:text-primary-container transition-colors cursor-pointer"
                   onClick={() => { if (setCurrentPage) { setCurrentPage('browse'); } else { navigate('/browse'); } }}
                 >
                   Tìm chỗ ở
@@ -107,9 +210,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-3xl overflow-hidden mb-10 shadow-sm border border-gray-100 bg-white p-2">
           {/* Main big view */}
           <div className="relative h-[300px] sm:h-[400px] md:h-[480px] rounded-2xl overflow-hidden">
-            <img 
-              alt={room.title} 
-              className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-700" 
+            <img
+              alt={room.title}
+              className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-700"
               src={room.image}
             />
             <div className="absolute top-4 left-4 flex gap-2">
@@ -121,7 +224,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               </span>
             </div>
           </div>
-          
+
           {/* 4 detail views (Desktop only) */}
           <div className="grid grid-cols-2 gap-3 h-[300px] sm:h-[400px] md:h-[480px] hidden md:grid">
             <div className="rounded-xl overflow-hidden">
@@ -135,7 +238,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
             </div>
             <div className="relative rounded-xl overflow-hidden group">
               <img alt="Nội thất chi tiết 4" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={INTERIOR_IMAGES[3]} />
-              <div 
+              <div
                 onClick={() => handleAlert('Tính năng xem toàn bộ album ảnh thực tế sẽ mở ở giai đoạn tiếp theo!')}
                 className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer hover:bg-black/50 transition-colors text-white"
               >
@@ -148,10 +251,10 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
 
         {/* Details 2-Column Layout */}
         <div className="flex flex-col lg:flex-row gap-8">
-          
+
           {/* Left Main Details Column */}
           <div className="w-full lg:w-2/3 space-y-8 bg-white border border-gray-100 rounded-3xl p-6 md:p-8 soft-shadow">
-            
+
             {/* Title & Price Header */}
             <div className="border-b border-gray-100 pb-6 space-y-4">
               <h1 className="text-2xl md:text-3xl font-extrabold text-on-surface leading-tight">
@@ -166,7 +269,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                   <span>{room.location}</span>
                 </div>
               </div>
-              
+
               {/* Badges specifications */}
               <div className="flex flex-wrap gap-3 pt-2">
                 <div className="flex items-center gap-2 bg-orange-50/50 border border-orange-100/50 px-4 py-2 rounded-full text-gray-700">
@@ -204,7 +307,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 Trang bị tiện ích sẵn có
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {room.amenities.map((amenity) => {
+                {room.amenities.map((amenity: string) => {
                   let icon = "done";
                   if (amenity.includes("Wifi")) icon = "wifi";
                   else if (amenity.includes("Điều hòa") || amenity.includes("lạnh")) icon = "ac_unit";
@@ -243,15 +346,19 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                     </tr>
                     <tr className="hover:bg-gray-50/30 transition-colors">
                       <td className="px-5 py-3.5 font-medium text-gray-600">Chi phí tiền điện</td>
-                      <td className="px-5 py-3.5 text-right text-gray-700 font-bold">3.500đ / kwh (được kiểm soát bằng công tơ riêng)</td>
+                      <td className="px-5 py-3.5 text-right text-gray-700 font-bold">{room.electricityPrice ? `${formatPrice(room.electricityPrice)}đ / kwh` : "3.500đ / kwh"} (được kiểm soát bằng công tơ riêng)</td>
                     </tr>
                     <tr className="hover:bg-gray-50/30 transition-colors">
                       <td className="px-5 py-3.5 font-medium text-gray-600">Chi phí tiền nước sinh hoạt</td>
-                      <td className="px-5 py-3.5 text-right text-gray-700 font-bold">50.000đ / người / tháng</td>
+                      <td className="px-5 py-3.5 text-right text-gray-700 font-bold">{room.waterPrice ? `${formatPrice(room.waterPrice)}đ / người / tháng` : "50.000đ / người / tháng"}</td>
                     </tr>
                     <tr className="hover:bg-gray-50/30 transition-colors">
-                      <td className="px-5 py-3.5 font-medium text-gray-600">Wifi, Phí dọn rác &amp; Xe máy</td>
-                      <td className="px-5 py-3.5 text-right text-green-600 font-black">Miễn phí hoàn toàn</td>
+                      <td className="px-5 py-3.5 font-medium text-gray-600">Phí mạng Internet</td>
+                      <td className="px-5 py-3.5 text-right text-gray-700 font-bold">{room.internetPrice ? `${formatPrice(room.internetPrice)}đ / tháng` : "Miễn phí"}</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-gray-600">Phí dọn rác &amp; Xe máy</td>
+                      <td className="px-5 py-3.5 text-right text-green-600 font-black">{room.garbagePrice ? `${formatPrice(room.garbagePrice)}đ / tháng` : "Miễn phí hoàn toàn"}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -285,9 +392,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 Vị trí địa lý bản đồ
               </h2>
               <div className="w-full h-64 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 overflow-hidden relative soft-shadow">
-                <img 
-                  alt="Bản đồ vị trí" 
-                  className="w-full h-full object-cover opacity-60 filter grayscale-[20%]" 
+                <img
+                  alt="Bản đồ vị trí"
+                  className="w-full h-full object-cover opacity-60 filter grayscale-[20%]"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuADAD3WCdZBDbdcstsUN7au-HkxR1aY-E69qDUTrD01uSDNcHRUEPG4ciiDyFfbcPL2fBaaBJ6x-X58BtvizvwyGEC5SCzf2KLEyhfJNw1yYStBTsH3D_tWbS8u92BUvqbjz7hCb_HHdlHMUEQYH4XyME_wEHcYhFAdKRAj0xFg5M7-DrmpAuWUnpNXLNhR4nMEdSLfUj1rRwRvND3ciSx-9RDbIvtL9yx7H_waVRpFDgqGoo9Euht9sErkUxDJAaLDCvK2bDA5C9E"
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -304,13 +411,13 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
           {/* Right Sticky Contact Sidebar Column */}
           <div className="w-full lg:w-1/3">
             <div className="sticky top-24 bg-white rounded-3xl p-6 soft-shadow border border-gray-100 flex flex-col gap-6">
-              
+
               {/* Host Profile Header */}
               <div className="flex items-center gap-4 border-b border-gray-50 pb-4">
                 <div className="w-14 h-14 rounded-full bg-orange-50 overflow-hidden border-2 border-primary-container shrink-0">
-                  <img 
-                    alt={host.name} 
-                    className="w-full h-full object-cover" 
+                  <img
+                    alt={host.name}
+                    className="w-full h-full object-cover"
                     src={host.avatar}
                   />
                 </div>
@@ -330,7 +437,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               </div>
 
               {/* Contact / Action CTA Button */}
-              <button 
+              <button
                 onClick={() => setIsLoginModalOpen(true)}
                 className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98"
               >
@@ -352,7 +459,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarRooms.map((simRoom) => (
-              <div 
+              <div
                 key={simRoom.id}
                 onClick={() => {
                   if (setSelectedRoomId) {
@@ -365,9 +472,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"
               >
                 <div className="h-44 relative overflow-hidden bg-gray-100">
-                  <img 
+                  <img
                     alt={simRoom.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     src={simRoom.image}
                   />
                   <span className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded text-xs font-bold text-primary-container shadow-sm">
@@ -397,10 +504,10 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md soft-shadow p-6 relative border border-gray-100 animate-scale-up">
-            
+
             {/* Close Button */}
-            <button 
-              aria-label="Đóng modal" 
+            <button
+              aria-label="Đóng modal"
               onClick={() => setIsLoginModalOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
             >
@@ -415,9 +522,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               <p className="text-sm text-gray-500 mb-6 max-w-sm">
                 Vui lòng đăng nhập hoặc đăng ký tài khoản RoomHub để có thể nhìn thấy Số điện thoại chính chủ và bắt đầu gửi tin nhắn thương lượng với chủ trọ!
               </p>
-              
+
               <div className="w-full space-y-3">
-                <button 
+                <button
                   onClick={() => {
                     setIsLoginModalOpen(false);
                     handleAlert('Tính năng Đăng nhập sẽ ra mắt ở giai đoạn tiếp theo!');
@@ -426,7 +533,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 >
                   Đăng nhập ngay
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     setIsLoginModalOpen(false);
                     handleAlert('Tính năng Đăng ký tài khoản sẽ ra mắt ở giai đoạn tiếp theo!');
