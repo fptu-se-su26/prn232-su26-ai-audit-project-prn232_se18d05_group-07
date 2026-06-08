@@ -56,6 +56,8 @@ Sinh viên/nhóm cần ghi lại:
 | 3 | 08/06/2026 | Antigravity | Phát triển tính năng | Cập nhật trang giao diện người thuê của chủ nhà | Trang Tenants.tsx lọc động, xem thông tin và thanh lý hợp đồng | Có | Commit Git |
 | 4 | 08/06/2026 | Antigravity | Tinh chỉnh UI | Xóa card hướng dẫn và mẹo nhỏ ở sidebar hai role | Loại bỏ HTML/CSS thừa ở Sidebar | Có | Commit Git |
 | 5 | 08/06/2026 | Antigravity | Sửa lỗi UX | Sửa nút đăng xuất về login, không dùng confirm native | Thay window.confirm bằng Custom React Modal; dùng useNavigate điều hướng về /login | Có | Commit Git |
+| 6 | 08/06/2026 | Antigravity | Tinh chỉnh UI/UX | Sửa đổi layout Tenant (xóa user card cứng ở sidebar, động hóa dashboard) và ẩn Navbar/Footer trên các trang Auth | Thống nhất dữ liệu dynamic từ API /tenant/room và làm sạch layout Auth | Có | Commit Git |
+| 7 | 08/06/2026 | Antigravity | Đồng bộ CSDL & UI | Xóa user card Owner cứng ở sidebar, động hóa avatar top bar, thêm EF migration | Xóa HTML user card, sử dụng useAuth() động hóa thông tin tài khoản, add-migration & update database | Có | Commit Git |
 
 ---
 
@@ -164,6 +166,73 @@ AI đề xuất: (1) Xóa thẻ HTML của 2 card hướng dẫn trong `OwnerLay
 #### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
 
 Xác minh Modal custom có thể đóng/mở mượt mà, không còn hộp thoại native nào xuất hiện. Điều hướng về `/login` hoạt động trơn tru.
+
+---
+
+### Prompt số 6
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 08/06/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Loại bỏ dữ liệu tĩnh và làm sạch giao diện Tenant, ẩn Navbar/Footer tại các trang Auth |
+| Phần việc liên quan | Frontend / Sidebar & Dashboard & App Layout |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo giúp tôi chỉnh sửa một số vấn đề sau đây đầu tiên hãy thực hiện xóa đi phần hoai an phanhoaian1611@gmail.com ở sidebar phía bên trái trong trang quản lí của role tenant và đồng thời thực hiện chỉnh sửa lại trang Tổng quan http://localhost:5173/browse#/tenant/dashboard của tenant hãy xóa đi dữ liệu seed cứng đảm bảo hiển thị dữ liệu thật thôi mục Phòng đang thuê ở dashboard của tenant phải hiển thị đúng phòng đang ở, tiếp theo là ở trang login regisster hãy thực hiện xóa đi layout header và footer đi thay vào đó bổ sung nút back nếu người dùng muốn quay về trang chủ thôi nhé
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+Người dùng nhận thấy Sidebar của Tenant chứa thẻ thông tin cá nhân cứng và dashboard chứa thông tin phòng studio Lê Lợi mock. Đồng thời giao diện Auth (Login/Register) lại render header Navbar và Footer lớn của trang chủ công khai tạo cảm giác nghiệp vụ lộn xộn.
+
+#### 5.3. Kết quả AI trả về
+
+AI đề xuất:
+1. Xóa khối HTML hiển thị profile card cứng trong `TenantLayout.tsx`.
+2. Thay đổi `Dashboard.tsx` của Tenant để sử dụng `roomData` từ endpoint API `api/tenant/room`, từ đó động hóa stats và chi tiết phòng đang ở.
+3. Trong `App.tsx`, bọc `<Navbar />` và `<Footer />` bằng điều kiện `!isAuthPage` sử dụng hook `useLocation`.
+4. Thêm nút "Quay lại trang chủ" trên giao diện form của `Login.tsx` và `Register.tsx` để người dùng điều hướng nhanh.
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+Xác nhận compile thành công. Kiểm tra giao diện login/register sạch sẽ, Navbar/Footer chỉ hiển thị ở các trang tìm kiếm/giới thiệu công khai.
+
+---
+
+### Prompt số 7
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 08/06/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Dọn dẹp sidebar của chủ nhà, động hóa thông tin tài khoản và cập nhật EF Migrations |
+| Phần việc liên quan | Frontend Owner Sidebar / Backend Migration |
+| Mức độ sử dụng | Hỏi sửa lỗi và tạo lệnh |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo bây giờ ban hãy thực hiện cập nhật chỉnh sauwr giúp tôi những vấn đề sau, đầu tiên hãy thực hiện xáo đi phần AN Phan Hoài An owner@roomhub.vn nằm ở trên thanh sidebar bên phía tay trái và thực hiện cập nhật mail lại cho đúng hơn hiện tại nó đang luôn luôn để mặc định là owner@roomhub.vn, và thực hiện add migration và update database mới giúp tôi
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+Sidebar của chủ nhà cũng có một profile card cứng giống như Tenant ban đầu. Hơn nữa, thông tin người dùng ở góc trên bên phải (avatar dropdown) bị gán tĩnh là `Phan Hoài An` và `owner@roomhub.vn`. Ngoài ra, các cập nhật về trạng thái `Pending` cho hợp đồng cần được đồng bộ xuống database qua EF Core.
+
+#### 5.3. Kết quả AI trả về
+
+AI đề xuất:
+1. Xóa user card cứng trong `OwnerLayout.tsx` ở phần sidebar bên trái.
+2. Tích hợp `useAuth()` vào `OwnerLayout.tsx` để lấy động thông tin đăng nhập (`fullName`, `email`, `initials`) thay vì gán tĩnh.
+3. Chạy các câu lệnh EF migrations: `dotnet ef migrations add AddPendingContractStatus` và `dotnet ef database update` để đồng bộ CSDL SQL Server.
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+Xác minh các câu lệnh database migrations thực thi thành công ("Done"). Chạy frontend thấy Avatar hiển thị động initials của tài khoản đăng nhập thật.
 
 ---
 

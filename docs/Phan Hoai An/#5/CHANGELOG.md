@@ -41,7 +41,7 @@ Nguyên tắc ghi changelog:
 | Phase 03 | 30/05/2026 | Xây dựng Giao diện Vận hành & Quản lý tài sản của Chủ nhà (Owner Dashboard) | Completed |
 | Phase 04 | 04/06/2026 | Sửa lỗi UX/UI, loại bỏ mock data, kết nối API thực tế cho toàn bộ Owner pages | Completed |
 | Phase 06 | 07/06/2026 | Xây dựng luồng Xác nhận nhận phòng/từ chối của Khách thuê (Tenant Room Acceptance/Rejection Flow) | Completed |
-| Phase 07 | 08/06/2026 | Xây dựng trang Quản lý Khách thuê dành cho Chủ nhà (Owner Tenant Management Page) & Sửa giao diện sidebar, modal logout | Completed |
+| Phase 07 | 08/06/2026 | Xây dựng trang Quản lý Khách thuê dành cho Chủ nhà (Owner Tenant Management Page), sửa giao diện sidebar/avatar, tạo EF migration | Completed |
 
 ---
 
@@ -69,6 +69,9 @@ Nguyên tắc ghi changelog:
   - Xóa card **"Hướng dẫn nhanh"** khỏi Sidebar của Chủ nhà (`OwnerLayout.tsx`).
   - Xóa card **"Mẹo nhỏ"** khỏi Sidebar của Khách thuê (`TenantLayout.tsx`).
   - Xóa card tài khoản người dùng hiển thị tên/email cứng (`hoai an / phanhoaian1611@gmail.com`) khỏi Sidebar của Khách thuê (`TenantLayout.tsx`).
+  - Xóa card tài khoản người dùng hiển thị tên/email cứng (`AN / Phan Hoài An / owner@roomhub.vn`) khỏi Sidebar của Chủ nhà (`OwnerLayout.tsx`).
+- [x] **Động hóa avatar và thông tin của Chủ nhà**:
+  - Tích hợp context `useAuth()` vào `OwnerLayout.tsx` để lấy thông tin chủ nhà thực đang đăng nhập, hiển thị động Initials, Họ tên và Email trên Top Bar và Menu Avatar Dropdown thay vì hiển thị tĩnh mặc định là `owner@roomhub.vn` và `Phan Hoài An`.
 - [x] **Động hóa trang Tổng quan của Khách thuê (`Dashboard.tsx`)**:
   - Loại bỏ hoàn toàn dữ liệu stats và hóa đơn seed cứng.
   - Gọi API `GET /api/tenant/room` để nạp dữ liệu động từ backend, hiển thị chính xác số phòng đang thuê, giá thuê, diện tích, thời hạn hợp đồng và trạng thái lời mời của khách thuê đang đăng nhập.
@@ -78,6 +81,8 @@ Nguyên tắc ghi changelog:
 - [x] **Khắc phục hộp thoại logout native**:
   - Xây dựng **Modal xác nhận đăng xuất Custom (React state)** cho cả giao diện chủ nhà và khách thuê để loại bỏ thông báo native trình duyệt chứa dòng chữ `"localhost:5173 says"`.
   - Sửa đổi hàm logout điều hướng chính xác về đường dẫn đăng nhập `/login` thay vì quay về trang chủ.
+- [x] **Tạo EF Core Migration & Cập nhật CSDL**:
+  - Thực hiện thêm Migration `AddPendingContractStatus` ở Backend (`RoomHub.Infrastructure`) và chạy lệnh `database update` để cập nhật các thay đổi nghiệp vụ hợp đồng vào cơ sở dữ liệu SQL Server.
 
 ## Thay đổi chi tiết
 
@@ -96,6 +101,8 @@ Nguyên tắc ghi changelog:
 | 11| Xóa card user cứng khỏi Sidebar tenant | Phan Hoài An | `TenantLayout.tsx` | Tránh lộ tên email cũ |
 | 12| Kết nối API động cho trang Tổng quan tenant | Phan Hoài An | `src/pages/tenant/Dashboard.tsx` | Hiển thị đúng phòng thật |
 | 13| Ẩn Navbar & Footer, thêm nút Back trên Auth pages | Phan Hoài An | `App.tsx`, `Login.tsx`, `Register.tsx` | Giao diện Auth sạch đẹp |
+| 14| Xóa card user cứng và động hóa avatar của Owner | Phan Hoài An | `OwnerLayout.tsx` | Top bar/avatar hiển thị đúng email/name của user đăng nhập |
+| 15| Thêm EF Migration và cập nhật database | Phan Hoài An | `RoomHub.Infrastructure`, `DbInitializer` | SQL Server đồng bộ dữ liệu |
 
 ## Bug Report chi tiết
 
@@ -108,6 +115,8 @@ Nguyên tắc ghi changelog:
 | B-05 | Sidebar tenant hiển thị email hoai an cứng | Component render user card cứng | Xóa bỏ block user card trong TenantLayout sidebar |
 | B-06 | Dashboard tenant hiển thị thông tin phòng seed | Mảng dữ liệu mock cứng P.201 Hải Châu | Gọi API `/tenant/room` nạp thông tin động và xử lý empty state |
 | B-07 | Trang Login/Register hiển thị thừa Navbar/Footer | Layout bọc ngoài hiển thị vô điều kiện | Sử dụng `useLocation` kiểm tra auth path và ẩn có điều kiện |
+| B-08 | Sidebar và Avatar owner hiển thị tên/email cứng | Tên và email bị gán tĩnh là Phan Hoài An và owner@roomhub.vn | Xóa user card ở sidebar và sử dụng context useAuth() động hóa top bar/avatar |
+| B-09 | Thiếu EF migration cho model trạng thái Pending | Chưa tạo migration cho các chỉnh sửa thực thể và enum | Thêm migration AddPendingContractStatus và update database |
 
 ## AI có hỗ trợ không?
 
