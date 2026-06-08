@@ -13,6 +13,7 @@ namespace Domain.Enums
         Renewed,
         Terminated,
         Liquidated,
-        Expired
+        Expired,
+        Pending
     }
 }

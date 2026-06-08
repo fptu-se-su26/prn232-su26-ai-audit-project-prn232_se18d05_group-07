@@ -85,6 +85,17 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
   const [addTenantErrors, setAddTenantErrors] = useState<{ [key: string]: string }>({});
   const [isAddLoading, setIsAddLoading] = useState(false);
 
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const triggerToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ text, type });
+  };
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const [endTenancyDate, setEndTenancyDate] = useState(new Date().toISOString().split('T')[0]);
   const [endTenancyReason, setEndTenancyReason] = useState('');
   const [markAsVacant, setMarkAsVacant] = useState(true);
@@ -186,10 +197,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
       const newLog = { text: `Chủ nhà đã cập nhật ghi chú nội bộ phòng: "${roomNote}"`, time: 'Vừa xong' };
       setLogs(prev => [newLog, ...prev]);
       setRoomNote('');
-      alert('Ghi chú đã được cập nhật thành công!');
+      triggerToast('Ghi chú đã được cập nhật thành công!');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Không thể lưu ghi chú.');
+      triggerToast(err.response?.data?.message || 'Không thể lưu ghi chú.', 'error');
     } finally {
       setIsAddLoading(false);
     }
@@ -205,11 +216,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
         paymentMethod: 'Cash',
         transactionId: `CASH-${Date.now()}`
       });
-      alert(`Đã ghi nhận thanh toán hóa đơn ${id} thành công.`);
+      triggerToast(`Đã ghi nhận thanh toán hóa đơn ${id} thành công.`);
       fetchDetail();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận thanh toán.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận thanh toán.', 'error');
     } finally {
       setIsAddLoading(false);
     }
@@ -217,7 +228,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
   const handleSearchTenant = async () => {
     if (!searchQuery.trim()) {
-      alert('Vui lòng nhập Email hoặc Số điện thoại để tìm kiếm.');
+      triggerToast('Vui lòng nhập Email hoặc Số điện thoại để tìm kiếm.', 'warning');
       return;
     }
     try {
@@ -242,7 +253,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
   };
 
   const handleLinkSearchedUser = () => {
-    alert('Đã kết nối tài khoản RoomHub của khách thuê! Thông tin hợp đồng sẽ được liên kết khi bạn bấm "Ký hợp đồng".');
+    triggerToast('Đã kết nối tài khoản RoomHub của khách thuê! Thông tin hợp đồng sẽ được liên kết khi bạn bấm "Ký hợp đồng".');
   };
 
   const handleAddTenantSubmit = async (e: React.FormEvent) => {
@@ -277,11 +288,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
       await api.post('/owner/contracts', payload);
       setIsAddTenantOpen(false);
-      alert(`Đã ký kết hợp đồng và thêm người thuê "${addTenantName}" vào phòng ${data?.roomNumber} thành công.`);
+      triggerToast(`Đã ký kết hợp đồng và thêm người thuê "${addTenantName}" vào phòng ${data?.roomNumber} thành công.`);
       fetchDetail();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi khởi tạo hợp đồng.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi khởi tạo hợp đồng.', 'error');
     } finally {
       setIsAddLoading(false);
     }
@@ -300,11 +311,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
       await api.post(`/owner/contracts/terminate/${unitIdNum}`, payload);
       setIsEndTenancyOpen(false);
-      alert(`Đã hoàn tất thủ tục bàn giao thanh lý phòng ${data?.roomNumber}.`);
+      triggerToast(`Đã hoàn tất thủ tục bàn giao thanh lý phòng ${data?.roomNumber}.`);
       fetchDetail();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi chấm dứt hợp đồng.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi chấm dứt hợp đồng.', 'error');
     } finally {
       setIsEndLoading(false);
     }
@@ -319,11 +330,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
       const newLog = { text: `Chủ nhà đổi trạng thái phòng sang "${tempStatus}"`, time: 'Vừa xong' };
       setLogs(prev => [newLog, ...prev]);
       setIsChangeStatusOpen(false);
-      alert(`Đã đổi trạng thái phòng ${data?.roomNumber} thành "${tempStatus}".`);
+      triggerToast(`Đã đổi trạng thái phòng ${data?.roomNumber} thành "${tempStatus}".`);
       fetchDetail();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.', 'error');
     } finally {
       setIsAddLoading(false);
     }
@@ -368,6 +379,19 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
   return (
     <div className="space-y-6 pb-12 relative">
+      {/* Toast Alert */}
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border animate-slideIn ${
+          toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+          toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+          'bg-orange-50 border-orange-200 text-orange-800'
+        }`}>
+          <span className="material-symbols-outlined text-[20px]">
+            {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : 'warning'}
+          </span>
+          <span className="text-xs font-bold">{toast.text}</span>
+        </div>
+      )}
       
       {/* Breadcrumb Section */}
       <div className="flex justify-between items-center">
@@ -448,7 +472,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
           <button 
             onClick={() => {
               if (listing) {
-                alert(`Tin cho thuê phòng ${data?.roomNumber} hiện đang hiển thị.`);
+                triggerToast(`Tin cho thuê phòng ${data?.roomNumber} hiện đang hiển thị.`, 'warning');
               } else {
                 if (setSelectedListingId && data?.id) {
                   setSelectedListingId(parseInt(data.id, 10));
@@ -693,9 +717,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
                 <div className="border-b border-gray-50 pb-3 flex justify-between items-center">
                   <h3 className="text-xs font-black text-gray-500 uppercase">Khách thuê hiện tại</h3>
                   <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
+                    tenant.contractStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
                     tenant.isLinkedAccount ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {tenant.isLinkedAccount ? 'RoomHub Linked' : 'Offline'}
+                    {tenant.contractStatus === 'Pending' ? 'Chờ xác nhận' : tenant.isLinkedAccount ? 'RoomHub Linked' : 'Offline'}
                   </span>
                 </div>
 
@@ -742,22 +767,45 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
                 {/* Operations */}
                 <div className="space-y-1.5 pt-2 border-t border-gray-50">
-                  <button 
-                    onClick={() => alert(`Gửi thông báo nhắc nợ ZNS tới khách thuê ${tenant.name} thành công!`)}
-                    className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
-                  >
-                    Gửi thông báo ZNS
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setEndTenancyDate(new Date().toISOString().split('T')[0]);
-                      setEndTenancyReason('');
-                      setIsEndTenancyOpen(true);
-                    }}
-                    className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
-                  >
-                    Kết thúc hợp đồng (Trả phòng)
-                  </button>
+                  {tenant.contractStatus === 'Pending' ? (
+                    <>
+                      <button 
+                        onClick={() => triggerToast(`Đã gửi lại lời mời nhận phòng tới khách hàng ${tenant.name} thành công!`)}
+                        className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Gửi lại lời mời nhận phòng
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                          setEndTenancyReason('Chủ trọ hủy lời mời nhận phòng.');
+                          setIsEndTenancyOpen(true);
+                        }}
+                        className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Hủy lời mời (Thu hồi)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => triggerToast(`Gửi thông báo nhắc nợ ZNS tới khách thuê ${tenant.name} thành công!`)}
+                        className="w-full py-2 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Gửi thông báo ZNS
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setEndTenancyDate(new Date().toISOString().split('T')[0]);
+                          setEndTenancyReason('');
+                          setIsEndTenancyOpen(true);
+                        }}
+                        className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95"
+                      >
+                        Kết thúc hợp đồng (Trả phòng)
+                      </button>
+                    </>
+                  )}
                 </div>
 
               </div>
@@ -892,11 +940,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
                     setIsAddLoading(true);
                     await api.put(`/owner/units/${unitIdNum}/status`, { status: 'Bảo trì' });
                     setUnitStatus('Bảo trì');
-                    alert(`Đã đưa phòng ${data.roomNumber} sang trạng thái "Bảo trì".`);
+                    triggerToast(`Đã đưa phòng ${data.roomNumber} sang trạng thái "Bảo trì".`);
                     fetchDetail();
                   } catch (err: any) {
                     console.error(err);
-                    alert(err.response?.data?.message || 'Có lỗi xảy ra khi đưa phòng vào bảo trì.');
+                    triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi đưa phòng vào bảo trì.', 'error');
                   } finally {
                     setIsAddLoading(false);
                   }

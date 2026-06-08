@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { PageType } from '../../App';
 import { useAuth } from '../../hooks/useAuth';
+import type { PageType } from '../../App';
 
 interface OwnerLayoutProps {
   currentPage: PageType;
@@ -168,6 +168,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
           );
         })}
       </nav>
+
 
       {/* Logout Link Footer */}
       <div className="p-3 border-t border-gray-100">
@@ -395,33 +396,33 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
           </div>
         </main>
 
-        {isLogoutConfirmOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-white rounded-2xl max-w-sm w-full p-6 soft-shadow relative animate-scale-up border border-gray-100 text-center">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="material-symbols-outlined text-[32px]">logout</span>
-              </div>
-              <h3 className="text-lg font-bold text-on-surface mb-2">Đăng xuất khỏi hệ thống?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Chủ nhà?</p>
-              <div className="flex justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsLogoutConfirmOpen(false)}
-                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl text-sm font-semibold transition-all cursor-pointer"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmLogout}
-                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-95"
-                >
-                  Đăng xuất
-                </button>
-              </div>
+      {isLogoutConfirmOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 soft-shadow relative animate-scale-up border border-gray-100 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">logout</span>
+            </div>
+            <h3 className="text-lg font-bold text-on-surface mb-2">Đăng xuất khỏi hệ thống?</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Chủ nhà?</p>
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsLogoutConfirmOpen(false)}
+                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl text-sm font-semibold transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all cursor-pointer active:scale-95"
+              >
+                Đăng xuất
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
     </div>
   );

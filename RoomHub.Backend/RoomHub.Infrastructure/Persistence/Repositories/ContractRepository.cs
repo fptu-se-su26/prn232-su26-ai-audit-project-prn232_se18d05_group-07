@@ -45,6 +45,8 @@ namespace Infrastructure.Persistence.Repositories
         {
             return await _context.Contracts
                 .Include(c => c.Room)
+                    .ThenInclude(r => r.Floor)
+                        .ThenInclude(f => f.Building)
                 .Include(c => c.Tenant)
                 .Where(c => c.OwnerId == ownerId && !c.IsDeleted)
                 .ToListAsync();
@@ -55,6 +57,19 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Users
                 .Include(u => u.TenantProfile)
                 .FirstOrDefaultAsync(u => u.Email == contact || u.PhoneNumber == contact);
+        }
+
+        public async Task<Contract?> GetActiveContractByTenantIdAsync(string tenantId)
+        {
+            return await _context.Contracts
+                .Include(c => c.Room)
+                    .ThenInclude(r => r.Floor)
+                        .ThenInclude(f => f.Building)
+                .Include(c => c.Room.RoomPhotos)
+                .Include(c => c.Owner)
+                .FirstOrDefaultAsync(c => c.TenantId == tenantId && 
+                    (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && 
+                    !c.IsDeleted);
         }
 
         public async Task AddAsync(Contract contract)

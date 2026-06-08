@@ -16,6 +16,7 @@ namespace Application.Common.DTOs.Properties
         public decimal AgreementPrice { get; set; }
         public int PeopleCount { get; set; }
         public bool IsLinkedAccount { get; set; }
+        public string? ContractStatus { get; set; }
     }
 
     public class UnitInvoiceDto
