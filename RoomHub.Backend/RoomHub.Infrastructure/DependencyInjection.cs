@@ -68,6 +68,11 @@ namespace Infrastructure
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IEmailService, EmailService>();
 
+            // Register HttpClient and AI Moderation Services
+            services.AddHttpClient<GroqModerationService>();
+            services.AddHttpClient<GeminiModerationService>();
+            services.AddScoped<IModerationService, ModerationManager>();
+
             // Register Repositories
             services.AddScoped<IBuildingRepository, Persistence.Repositories.BuildingRepository>();
             services.AddScoped<IRoomRepository, Persistence.Repositories.RoomRepository>();
@@ -81,6 +86,7 @@ namespace Infrastructure
             services.AddScoped<IContractService, Application.Services.ContractService>();
             services.AddScoped<IInvoiceService, Application.Services.InvoiceService>();
             services.AddScoped<IListingService, Application.Services.ListingService>();
+            services.AddScoped<IAdminModerationService, Application.Services.AdminModerationService>();
             services.AddScoped<IDashboardService, Application.Services.DashboardService>();
 
             return services;
