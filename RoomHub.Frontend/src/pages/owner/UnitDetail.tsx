@@ -20,6 +20,7 @@ interface TenantData {
   agreementPrice: number;
   peopleCount: number;
   isLinkedAccount: boolean;
+  contractStatus?: string;
 }
 
 interface InvoiceBill {
@@ -129,7 +130,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
         deposit: room.tenant.deposit,
         agreementPrice: room.tenant.agreementPrice,
         peopleCount: room.tenant.peopleCount || 1,
-        isLinkedAccount: room.tenant.isLinkedAccount
+        isLinkedAccount: room.tenant.isLinkedAccount,
+        contractStatus: room.tenant.contractStatus
       } : null);
 
       setInvoices((room.invoices || []).map((inv: any) => ({
