@@ -1,156 +1,160 @@
 # AI Audit Log
 
-## 1. Thông tin chung
+## 1. General Information
 
-| Thông tin | Nội dung |
+| Field | Value |
 |---|---|
-| Môn học | Lập trình C# |
-| Mã môn học | PRN232 |
-| Lớp | SE18D05 |
-| Học kỳ | SU26 |
-| Tên bài tập / Project | RoomHub - Quản lý phòng/nhà trọ |
-| Tên sinh viên / Nhóm | Đỗ Thanh Tín / Nhóm 07 |
-| MSSV / Danh sách MSSV | DE180794 |
-| Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
-| Ngày bắt đầu | 04/06/2026 |
-| Ngày hoàn thành | 06/06/2026 |
+| Course | C# Programming |
+| Course Code | PRN232 |
+| Class | SE18D05 |
+| Semester | SU26 |
+| Assignment / Project | RoomHub - Rental Room Management Platform |
+| Student / Group | Do Thanh Tin / Group 07 |
+| Student ID | DE180794 |
+| Instructor | Mr. Le Thien Nhat Quang |
+| Start Date | 04/06/2026 |
+| Completion Date | 06/06/2026 |
 
 ---
 
-## 2. Công cụ AI đã sử dụng
+## 2. AI Tools Used
 
 - [ ] ChatGPT
-- [x] Gemini (Vision API trong pipeline kiểm duyệt ảnh)
+- [x] Gemini (Vision API in image moderation pipeline)
 - [x] Claude
 - [ ] GitHub Copilot
 - [x] Cursor
 - [ ] Antigravity
 - [ ] Perplexity
 - [ ] Microsoft Copilot
-- [x] Groq (LLM text + Vision fallback trong pipeline kiểm duyệt)
-- [ ] Công cụ khác: ....................................
+- [x] Groq (LLM text + Vision fallback in moderation pipeline)
+- [ ] Other: ....................................
 
 ---
 
-## 3. Mục tiêu sử dụng AI
+## 3. Purpose of AI Usage
 
-- Phân tích codebase RoomHub và thiết kế pipeline kiểm duyệt tin đăng 3 giai đoạn (rules → heuristic → AI).
-- Triển khai backend moderation services (`ModerationManager`, `GroqModerationService`, `GeminiModerationService`).
-- Mở rộng `ListingService` tích hợp moderation khi publish/update listing.
-- Xây dựng API public listings (`PublicListingsController`) và admin moderation (`AdminModerationController`).
-- Validate client-side theo từng bước form đăng tin (`listingValidation.ts`).
-- Cập nhật UI owner (ẩn tin, nhân bản, xóa) và admin (duyệt tin Flagged).
-- Sửa lỗi migration `HiddenByOwner` và lỗi Browse không kết nối API (HTTP 500).
+- Analyze the RoomHub codebase and design a 3-stage listing moderation pipeline (rules → heuristic → AI).
+- Implement backend moderation services (`ModerationManager`, `GroqModerationService`, `GeminiModerationService`).
+- Extend `ListingService` to run moderation on publish/update.
+- Build public listings API (`PublicListingsController`) and admin moderation API (`AdminModerationController`).
+- Add step-by-step client-side form validation (`listingValidation.ts`).
+- Update owner UI (hide, duplicate, delete) and admin UI (review Flagged listings).
+- Fix `HiddenByOwner` migration issue and Browse page API error (HTTP 500).
 
-### Mô tả mục tiêu sử dụng AI
+### Summary of AI Usage Goals
 
 ```text
-Sử dụng Cursor AI để phân tích yêu cầu nghiệp vụ kiểm duyệt tin đăng, thiết kế pipeline AI chuyên nghiệp,
-triển khai backend/frontend, debug lỗi Groq Vision BadRequest, migration thiếu cột HiddenByOwner,
-và chuẩn hóa quy trình commit theo SKILL.md của nhóm. Em tự review, test local, và chỉnh sửa logic
-nghiệp vụ (giá tối thiểu 500k, diện tích 5–500m², trạng thái Flagged chuyển admin).
+I used Cursor AI to analyze listing moderation requirements, design a professional AI pipeline,
+implement backend/frontend features, debug Groq Vision BadRequest errors, fix the missing
+HiddenByOwner migration column, and standardize commits per the team SKILL.md workflow.
+I personally reviewed, tested locally, and adjusted business rules (minimum price 500,000 VND,
+area 5–500 m², Flagged status routed to admin review).
 ```
 
 ---
 
-## 4. Nhật ký sử dụng AI chi tiết
+## 4. Detailed AI Usage Log
 
-### Lần sử dụng AI số 1
+### AI Usage #1
 
-| Nội dung | Thông tin |
+| Field | Value |
 |---|---|
-| Ngày sử dụng | 04/06/2026 |
-| Công cụ AI | Cursor |
-| Mục đích sử dụng | Khảo sát codebase và fix AI moderation không chạy khi đăng bài |
-| Phần việc liên quan | Backend / ListingService / DI |
-| Mức độ sử dụng | Hỗ trợ nhiều |
+| Date | 04/06/2026 |
+| AI Tool | Cursor |
+| Purpose | Explore codebase and fix AI moderation not running on publish |
+| Related Work | Backend / ListingService / DI |
+| Usage Level | Heavy support |
 
-#### Prompt đã sử dụng
+#### Prompt Used
 
 ```text
-Khảo sát codebase RoomHub và fix AI moderation không chạy khi owner đăng tin.
+Explore the RoomHub codebase and fix AI moderation not running when the owner publishes a listing.
 ```
 
-#### Kết quả AI gợi ý
+#### AI Suggestion
 
-AI xác định `IModerationService` chưa được đăng ký DI đúng, `ListingService` không gọi moderation khi publish.
-Đề xuất sửa `DependencyInjection.cs`, `ListingService.cs`, `ListingsController.cs`.
+AI identified that `IModerationService` was not registered correctly in DI and `ListingService`
+did not call moderation on publish. Suggested fixes in `DependencyInjection.cs`,
+`ListingService.cs`, and `ListingsController.cs`.
 
-#### Phần sinh viên đã sử dụng từ AI
+#### What I Applied from AI
 
-Áp dụng đăng ký HttpClient + moderation services, gọi `RunModerationAsync` khi publish/update.
+Registered HttpClient + moderation services and called `RunModerationAsync` on publish/update.
 
-#### Phần sinh viên tự làm
+#### What I Did Myself
 
-Test đăng tin thực tế, xác nhận `ModerationStatus` được lưu vào DB.
+Tested real listing publish flow and confirmed `ModerationStatus` was persisted to the database.
 
 ---
 
-### Lần sử dụng AI số 2
+### AI Usage #2
 
-| Nội dung | Thông tin |
+| Field | Value |
 |---|---|
-| Ngày sử dụng | 05/06/2026 |
-| Công cụ AI | Cursor |
-| Mục đích sử dụng | Siết kiểm duyệt và tối ưu pipeline 3 giai đoạn |
-| Phần việc liên quan | ModerationManager, Groq/Gemini services |
-| Mức độ sử dụng | Sinh chính nội dung, em review và chỉnh |
+| Date | 05/06/2026 |
+| AI Tool | Cursor |
+| Purpose | Tighten moderation rules and optimize the 3-stage pipeline |
+| Related Work | ModerationManager, Groq/Gemini services |
+| Usage Level | AI generated main content; I reviewed and adjusted |
 
-#### Prompt đã sử dụng
+#### Prompt Used
 
 ```text
-Siết kiểm duyệt (giá 1đ, ảnh anime vẫn được duyệt) và tối ưu pipeline kiểm duyệt chuyên nghiệp.
+Tighten moderation (1 VND price and anime images still approved) and optimize a professional moderation pipeline.
 ```
 
-#### Kết quả AI gợi ý
+#### AI Suggestion
 
-Thêm `ListingModerationRules`, `ListingContentHeuristics`, chấm điểm 15/45/40, Gemini Vision primary + Groq fallback.
+Added `ListingModerationRules`, `ListingContentHeuristics`, scoring weights 15/45/40,
+Gemini Vision as primary and Groq as fallback.
 
-#### Phần sinh viên tự làm
+#### What I Did Myself
 
-Điều chỉnh ngưỡng giá 500.000đ, test ảnh anime bị reject, fix Groq Vision model.
+Set minimum price to 500,000 VND, verified anime images are rejected, fixed Groq Vision model.
 
 ---
 
-### Lần sử dụng AI số 3
+### AI Usage #3
 
-| Nội dung | Thông tin |
+| Field | Value |
 |---|---|
-| Ngày sử dụng | 05–06/06/2026 |
-| Công cụ AI | Cursor |
-| Mục đích sử dụng | Validate từng bước form, admin duyệt tin, owner actions |
-| Phần việc liên quan | Frontend + Backend API |
-| Mức độ sử dụng | Hỗ trợ nhiều |
+| Date | 05–06/06/2026 |
+| AI Tool | Cursor |
+| Purpose | Step validation, admin review flow, owner listing actions |
+| Related Work | Frontend + Backend API |
+| Usage Level | Heavy support |
 
-#### Prompt đã sử dụng
+#### Prompt Used
 
 ```text
-Validate theo từng bước form; luồng Admin duyệt tin Flagged; 5 chức năng menu tin đăng owner.
+Validate form step-by-step; implement admin review for Flagged listings; add 5 owner listing menu actions.
 ```
 
-#### Kết quả AI gợi ý
+#### AI Suggestion
 
-`listingValidation.ts`, `AdminModerationService`, menu ListingList (xem/ẩn/nhân bản/xóa), migration `HiddenByOwner`.
-
----
-
-## 5. Nguồn tham khảo
-
-- Tài liệu nhóm: `SKILL.md` (quy trình commit & audit)
-- Template audit: `docs/Phan Hoai An/#4/`
-- API Groq: https://console.groq.com/docs
-- API Gemini: https://ai.google.dev/gemini-api/docs
+`listingValidation.ts`, `AdminModerationService`, ListingList menu (view/hide/duplicate/delete),
+`HiddenByOwner` migration.
 
 ---
 
-## 6. Cam kết
+## 5. References
 
-Tôi xác nhận rằng:
+- Team workflow: `SKILL.md`
+- Audit template: `docs/Phan Hoai An/#4/`
+- Groq API: https://console.groq.com/docs
+- Gemini API: https://ai.google.dev/gemini-api/docs
 
-- [x] Các thông tin trong file này phản ánh đúng quá trình sử dụng AI.
-- [x] Tôi đã tự đọc lại, hiểu và có thể giải thích các phần liên quan.
-- [ ] Tôi chịu trách nhiệm về nội dung bài làm.
+---
 
-**Chữ ký:** [CẦN KÝ — Đỗ Thanh Tín]
+## 6. Commitment
 
-**Ngày ký:** [CẦN ĐIỀN]
+I confirm that:
+
+- [x] The information in this file accurately reflects my AI usage.
+- [x] I have read, understood, and can explain all related parts.
+- [ ] I take full responsibility for the submitted work.
+
+**Signature:** [TO SIGN — Do Thanh Tin]
+
+**Date:** [TO FILL IN]

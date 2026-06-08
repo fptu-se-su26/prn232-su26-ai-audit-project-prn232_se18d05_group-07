@@ -1,91 +1,91 @@
 # Changelog
 
-## 1. Thông tin project
+## 1. Project Information
 
-| Thông tin | Nội dung |
+| Field | Value |
 |---|---|
-| MSSV | DE180794 |
-| Sinh viên | Đỗ Thanh Tín |
+| Student ID | DE180794 |
+| Student | Do Thanh Tin |
 | Issue | #21 |
 | Repository | https://github.com/fptu-se-su26/prn232-su26-ai-audit-project-prn232_se18d05_group-07 |
-| Ngày hoàn thành | 06/06/2026 |
+| Completion Date | 06/06/2026 |
 
 ---
 
-## 2. Tổng quan giai đoạn
+## 2. Phase Overview
 
-| Giai đoạn | Nội dung | Trạng thái |
+| Phase | Scope | Status |
 |---|---|---|
-| Phase 01 | Schema moderation + migrations | Completed |
+| Phase 01 | Moderation schema + migrations | Completed |
 | Phase 02 | AI moderation pipeline (Groq + Gemini) | Completed |
 | Phase 03 | Listing service + owner/public/admin API | Completed |
 | Phase 04 | Frontend validation, owner actions, admin UI | Completed |
-| Phase 05 | Audit docs + commit chuẩn SKILL.md | Completed |
+| Phase 05 | Audit docs + SKILL.md commit workflow | Completed |
 
 ---
 
-# [Phase 01] Schema moderation & database
+# [Phase 01] Moderation Schema & Database
 
-**Ngày:** 05/06/2026  
-**Người thực hiện:** Đỗ Thanh Tín (DE180794)  
-**AI hỗ trợ:** Cursor — thiết kế entity và migration
+**Date:** 05/06/2026  
+**Author:** Do Thanh Tin (DE180794)  
+**AI Support:** Cursor — entity and migration design
 
-### Thay đổi
-- Thêm `ModerationStatus` enum: Pending, Approved, Rejected, Flagged
-- Mở rộng `Room`: `ModerationRemarks`, `ListingScore`, `AIFormattedDescription`, `HiddenByOwner`
+### Changes
+- Added `ModerationStatus` enum: Pending, Approved, Rejected, Flagged
+- Extended `Room` with `ModerationRemarks`, `ListingScore`, `AIFormattedDescription`, `HiddenByOwner`
 - Migrations: `AddListingModeration`, `FixModelWarnings`, `AddHiddenByOwner`
-- Cấu hình EF: `RoomConfiguration`, `SubscriptionConfiguration`
+- EF configuration: `RoomConfiguration`, `SubscriptionConfiguration`
 
-### Lỗi đã sửa
-- Migration `HiddenByOwner` thiếu Designer.cs → EF không apply → API 500 `Invalid column name`
+### Bugs Fixed
+- `HiddenByOwner` migration missing Designer.cs → EF skipped migration → API 500 `Invalid column name`
 
 ---
 
-# [Phase 02] AI moderation pipeline
+# [Phase 02] AI Moderation Pipeline
 
-**Ngày:** 05/06/2026
+**Date:** 05/06/2026
 
-### Thay đổi
-- `ModerationManager`: pipeline 3 giai đoạn (rules → heuristic → AI)
+### Changes
+- `ModerationManager`: 3-stage pipeline (rules → heuristic → AI)
 - `GroqModerationService`: text + vision fallback
-- `GeminiModerationService`: vision primary
+- `GeminiModerationService`: primary vision provider
 - `ListingModerationRules`, `ListingContentHeuristics`, `ModerationMessageCatalog`
-- Chấm điểm: Dữ liệu 15% + Nội dung 45% + Ảnh 40%
+- Scoring: Data 15% + Content 45% + Images 40%
 
 ---
 
-# [Phase 03] API backend
+# [Phase 03] Backend API
 
-**Ngày:** 05–06/06/2026
+**Date:** 05–06/06/2026
 
-### Thay đổi
-- `ListingService`: moderation khi publish/update, delete, duplicate, validate-content
-- `PublicListingsController`: GET listings/public (chỉ Approved + Published)
-- `ListingsController`: validate-content, get/delete/duplicate, trả moderation result
-- `AdminModerationController` + `AdminModerationService`: duyệt/từ chối tin Flagged
-- `DbInitializer`: seed admin `admin@roomhub.vn`, auto-migrate
+### Changes
+- `ListingService`: moderation on publish/update, delete, duplicate, validate-content
+- `PublicListingsController`: public GET listings (Approved + Published only)
+- `ListingsController`: validate-content, get/delete/duplicate, moderation response
+- `AdminModerationController` + `AdminModerationService`: approve/reject Flagged listings
+- `DbInitializer`: seed admin `admin@roomhub.vn`, auto-migrate on startup
 
 ---
 
 # [Phase 04] Frontend
 
-**Ngày:** 05–06/06/2026
+**Date:** 05–06/06/2026
 
-### Thay đổi
-- `listingValidation.ts`: validate client mirror backend, realtime bước 2
-- `ListingCreate.tsx`: checklist giá/diện tích, không block AI ở bước Next
-- `ListingList.tsx`: menu 5 chức năng (chi tiết, ẩn, xem public, nhân bản, xóa)
-- `Browse.tsx` + `RoomDetail.tsx`: gọi API public listings
-- `Moderation.tsx` + `Rooms.tsx`: admin duyệt tin Flagged thật từ API
+### Changes
+- `listingValidation.ts`: client validation mirroring backend, realtime at step 2
+- `ListingCreate.tsx`: price/area checklist, no blocking AI call on Next
+- `ListingList.tsx`: 5 menu actions (detail, hide, view public, duplicate, delete)
+- `Browse.tsx` + `RoomDetail.tsx`: consume public listings API
+- `Moderation.tsx` + `Rooms.tsx`: admin reviews real Flagged listings from API
 
 ---
 
-# [Phase 05] Git & audit
+# [Phase 05] Git & Audit
 
-**Ngày:** 06/06/2026
+**Date:** 06/06/2026
 
-### Thay đổi
-- Xóa file `.vs/` khỏi git tracking
-- Không commit secret (dùng `appsettings.Development.json` local)
-- Tách nhiều commit `[DE180794]` theo chức năng, `Refs #21`
-- Thêm 4 file audit trong `docs/Do Thanh Tin/#21/`
+### Changes
+- Removed `.vs/` from git tracking
+- No secrets committed (local keys in `appsettings.Development.json`)
+- Split into multiple `[DE180794]` commits with `Refs #21`
+- Added 4 audit files under `docs/Do Thanh Tin/#21/`

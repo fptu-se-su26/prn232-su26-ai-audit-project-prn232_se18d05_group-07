@@ -1,58 +1,59 @@
 # AI Learning Reflection
 
-## 1. Thông tin chung
+## 1. General Information
 
-| Thông tin | Nội dung |
+| Field | Value |
 |---|---|
-| MSSV | DE180794 |
-| Sinh viên | Đỗ Thanh Tín |
+| Student ID | DE180794 |
+| Student | Do Thanh Tin |
 | Issue | #21 |
-| Ngày hoàn thành | 06/06/2026 |
+| Completion Date | 06/06/2026 |
 
 ---
 
-## 2. Tóm tắt quá trình sử dụng AI
+## 2. Summary of AI Usage
 
 ```text
-Trong task kiểm duyệt tin đăng (rental post), em sử dụng Cursor AI xuyên suốt từ khảo sát codebase,
-debug moderation không chạy, thiết kế pipeline 3 giai đoạn, đến triển khai API và UI. AI giúp em
-nhanh chóng có khung code Clean Architecture đúng convention nhóm, nhưng em luôn tự chạy dotnet run,
-test đăng tin, kiểm tra HTTP 500 và migration DB. Khi AI gợi ý Groq Vision model gây BadRequest,
-em cùng AI thử model khác và xác nhận bằng log thực tế. Em học được cách tách commit theo chức năng
-và ghi audit trung thực thay vì ghi Co-Authored-By trong git.
+For the rental post moderation task, I used Cursor AI throughout — from codebase exploration,
+debugging moderation on publish, designing the 3-stage pipeline, to implementing APIs and UI.
+AI helped me quickly scaffold Clean Architecture code following team conventions, but I always
+ran dotnet run, tested listing publish, checked HTTP 500 errors, and verified DB migrations myself.
+When AI suggested a Groq Vision model that caused BadRequest, I worked with AI to try alternatives
+and confirmed fixes via real logs. I also learned to split commits by feature and document AI usage
+honestly in audit files instead of using Co-Authored-By in git history.
 ```
 
 ---
 
-## 3. AI hỗ trợ tốt ở đâu?
+## 3. Where AI Helped Most
 
-- **Thiết kế pipeline moderation** phức tạp (rules + heuristic + 2 AI provider).
-- **Debug nhanh** lỗi DI, migration thiếu cột, port 5143 bị lock.
-- **Mirror validation** client/server để UX báo lỗi ngay bước 2.
-- **Soạn nháp audit docs** theo template nhóm.
-
----
-
-## 4. Em tự làm / kiểm chứng gì?
-
-- Test tài khoản admin/owner/tenant trên local.
-- Chạy `dotnet ef database update` và xác nhận cột `HiddenByOwner`.
-- Điều chỉnh ngưỡng giá 500.000đ theo yêu cầu nghiệp vụ.
-- Review từng file trước commit, loại `.vs/` và secret khỏi git.
-- Đọc SKILL.md và tách commit đúng convention `[DE180794]`.
+- **Designing the moderation pipeline** (rules + heuristic + two AI providers).
+- **Fast debugging** of DI issues, missing DB columns, and port 5143 file locks.
+- **Mirroring client/server validation** for immediate feedback at form step 2.
+- **Drafting audit documentation** following the team template.
 
 ---
 
-## 5. Bài học về sử dụng AI minh bạch
+## 4. What I Verified Myself
 
-- Khai báo AI qua **file audit**, không qua `Co-Authored-By` — git history sạch hơn.
-- Chỉ ghi trong audit những gì **thực sự đã làm**, không bịa prompt hay kết quả.
-- AI soạn nháp, em **tự ký cam kết** sau khi hiểu và test được.
+- Tested admin/owner/tenant accounts locally.
+- Ran `dotnet ef database update` and confirmed `HiddenByOwner` column exists.
+- Adjusted minimum price threshold to 500,000 VND per business requirements.
+- Reviewed every file before commit; excluded `.vs/` and secrets from git.
+- Followed SKILL.md and split commits with `[DE180794]` prefix.
 
 ---
 
-## 6. Cam kết
+## 5. Lessons on Transparent AI Usage
 
-**Chữ ký:** [CẦN KÝ — Đỗ Thanh Tín]
+- Declare AI usage in **audit files**, not via `Co-Authored-By` — keeps git history clean.
+- Only document what was **actually done**; do not fabricate prompts or outcomes.
+- AI drafts content; I **sign the commitment** only after I understand and can test it.
 
-**Ngày ký:** [CẦN ĐIỀN]
+---
+
+## 6. Commitment
+
+**Signature:** [TO SIGN — Do Thanh Tin]
+
+**Date:** [TO FILL IN]

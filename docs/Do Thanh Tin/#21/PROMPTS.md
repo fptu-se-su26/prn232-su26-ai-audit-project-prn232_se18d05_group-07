@@ -1,104 +1,104 @@
 # Prompt Log
 
-## 1. Thông tin chung
+## 1. General Information
 
-| Thông tin | Nội dung |
+| Field | Value |
 |---|---|
-| Môn học | Lập trình C# |
-| Mã môn học | PRN232 |
-| Lớp | SE18D05 |
-| Học kỳ | SU26 |
-| Tên bài tập / Project | RoomHub - Quản lý phòng/nhà trọ |
-| Tên sinh viên / Nhóm | Đỗ Thanh Tín / Nhóm 07 |
-| MSSV | DE180794 |
-| Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
-| Ngày bắt đầu | 04/06/2026 |
-| Ngày cập nhật gần nhất | 06/06/2026 |
+| Course | C# Programming |
+| Course Code | PRN232 |
+| Class | SE18D05 |
+| Semester | SU26 |
+| Assignment / Project | RoomHub - Rental Room Management Platform |
+| Student / Group | Do Thanh Tin / Group 07 |
+| Student ID | DE180794 |
+| Instructor | Mr. Le Thien Nhat Quang |
+| Start Date | 04/06/2026 |
+| Last Updated | 06/06/2026 |
 
 ---
 
-## 2. Công cụ AI đã sử dụng
+## 2. AI Tools Used
 
 - [x] Cursor
-- [x] Groq API (runtime, không phải chatbot)
-- [x] Gemini API (runtime, không phải chatbot)
+- [x] Groq API (runtime integration, not chatbot)
+- [x] Gemini API (runtime integration, not chatbot)
 
 ---
 
-## 3. Bảng tổng hợp prompt đã sử dụng
+## 3. Prompt Summary Table
 
-| STT | Ngày | Công cụ AI | Mục đích | Prompt tóm tắt | Kết quả chính | Có sử dụng? |
+| No. | Date | AI Tool | Purpose | Prompt Summary | Main Result | Applied? |
 |---:|---|---|---|---|---|---|
-| 1 | 04/06 | Cursor | Khảo sát | Khảo sát codebase RoomHub | Hiểu kiến trúc Clean Architecture | Có |
-| 2 | 04/06 | Cursor | Fix bug | Fix AI moderation không chạy khi đăng bài | Sửa DI + ListingService | Có |
-| 3 | 05/06 | Cursor | Nghiệp vụ | Siết kiểm duyệt giá/ảnh | Rules + scoring pipeline | Có |
-| 4 | 05/06 | Cursor | Tối ưu | Pipeline 3 giai đoạn chuyên nghiệp | ModerationManager, Groq/Gemini | Có |
-| 5 | 05/06 | Cursor | UX | Validate từng bước form đăng tin | listingValidation.ts | Có |
-| 6 | 05/06 | Cursor | Admin | Luồng admin duyệt tin Flagged | AdminModerationService + UI | Có |
-| 7 | 06/06 | Cursor | Owner | 5 chức năng menu tin đăng | delete/duplicate/hide/view | Có |
-| 8 | 06/06 | Cursor | Debug | Lỗi Browse không kết nối máy chủ | Fix migration HiddenByOwner | Có |
-| 9 | 06/06 | Cursor | Git | Chuẩn hóa commit theo SKILL.md | Nhiều commit theo chức năng | Có |
+| 1 | 04/06 | Cursor | Exploration | Explore RoomHub codebase | Understood Clean Architecture layout | Yes |
+| 2 | 04/06 | Cursor | Bug fix | Fix moderation not running on publish | Fixed DI + ListingService | Yes |
+| 3 | 05/06 | Cursor | Business rules | Tighten price/image moderation | Rules + scoring pipeline | Yes |
+| 4 | 05/06 | Cursor | Optimization | Professional 3-stage pipeline | ModerationManager, Groq/Gemini | Yes |
+| 5 | 05/06 | Cursor | UX | Step-by-step listing form validation | listingValidation.ts | Yes |
+| 6 | 05/06 | Cursor | Admin flow | Admin review for Flagged listings | AdminModerationService + UI | Yes |
+| 7 | 06/06 | Cursor | Owner actions | 5 listing menu actions | delete/duplicate/hide/view | Yes |
+| 8 | 06/06 | Cursor | Debug | Browse page server connection error | Fixed HiddenByOwner migration | Yes |
+| 9 | 06/06 | Cursor | Git workflow | Standardize commits per SKILL.md | Multiple feature-based commits | Yes |
 
 ---
 
-## 4. Prompt chi tiết
+## 4. Detailed Prompts
 
-### Prompt số 1 — Khảo sát codebase
+### Prompt #1 — Codebase Exploration
 
-| Nội dung | Thông tin |
+| Field | Value |
 |---|---|
-| Ngày | 04/06/2026 |
-| Công cụ | Cursor |
-| Mục đích | Nắm cấu trúc dự án trước khi code |
+| Date | 04/06/2026 |
+| Tool | Cursor |
+| Purpose | Understand project structure before implementation |
 
-**Vai trò:** Trợ lý kỹ thuật  
-**Bối cảnh:** Dự án RoomHub monorepo ASP.NET Core + React  
-**Yêu cầu:** Khảo sát codebase, liệt kê module chính  
-**Ràng buộc:** Không sửa code  
-**Đầu ra:** Tóm tắt kiến trúc backend/frontend  
+**Role:** Technical assistant  
+**Context:** RoomHub monorepo with ASP.NET Core + React  
+**Request:** Explore codebase and list main modules  
+**Constraints:** Do not modify code  
+**Expected Output:** Architecture summary  
 
 ```text
-Khảo sát codebase RoomHub
+Explore the RoomHub codebase
 ```
 
-**Kết quả:** AI mô tả 4 layer backend, frontend routes, DB SQL Server. Em dùng làm bản đồ trước khi implement moderation.
+**Result:** AI described the 4 backend layers, frontend routes, and SQL Server DB. I used this as a map before implementing moderation.
 
 ---
 
-### Prompt số 2 — Fix moderation
+### Prompt #2 — Fix Moderation
 
 ```text
-Fix AI moderation không chạy khi đăng bài
+Fix AI moderation not running when publishing a listing
 ```
 
-**Kết quả:** Sửa `DependencyInjection`, `ListingService`, controller trả về `moderationStatus`. Em test publish tin và xác nhận AI chạy.
+**Result:** Fixed `DependencyInjection`, `ListingService`, and controller responses with `moderationStatus`. I tested publish and confirmed AI ran.
 
 ---
 
-### Prompt số 3 — Pipeline kiểm duyệt
+### Prompt #3 — Moderation Pipeline
 
 ```text
-Siết kiểm duyệt và tối ưu pipeline kiểm duyệt chuyên nghiệp (fix Groq Vision BadRequest)
+Tighten moderation and optimize a professional moderation pipeline (fix Groq Vision BadRequest)
 ```
 
-**Kết quả:** `ModerationManager` 3 giai đoạn, `ListingModerationRules`, đổi model Groq Vision. Em tự test ảnh anime bị reject.
+**Result:** `ModerationManager` with 3 stages, `ListingModerationRules`, updated Groq Vision model. I tested anime images being rejected.
 
 ---
 
-### Prompt số 4 — Validate & Admin
+### Prompt #4 — Validation & Admin
 
 ```text
-Validate theo từng bước form; luồng Admin duyệt tin thật (AI chuyển Flagged → Admin xử lý)
+Validate form step-by-step; implement real admin review flow (AI sets Flagged → Admin handles)
 ```
 
-**Kết quả:** Client validation bước 2, `AdminModerationController`, trang Moderation.tsx gọi API thật.
+**Result:** Client validation at step 2, `AdminModerationController`, Moderation.tsx calling real API.
 
 ---
 
-## 5. Cam kết
+## 5. Commitment
 
-Tôi xác nhận các prompt trên phản ánh đúng những gì đã sử dụng.
+I confirm the prompts above accurately reflect what I actually used.
 
-**Chữ ký:** [CẦN KÝ — Đỗ Thanh Tín]
+**Signature:** [TO SIGN — Do Thanh Tin]
 
-**Ngày ký:** [CẦN ĐIỀN]
+**Date:** [TO FILL IN]
