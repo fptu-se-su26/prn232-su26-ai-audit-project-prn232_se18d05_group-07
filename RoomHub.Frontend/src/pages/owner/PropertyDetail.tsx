@@ -774,7 +774,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-bold text-on-surface">Tin đăng tuyển khách ({activeListings.length} tin)</h3>
               <button 
-                onClick={() => alert('Mở giao diện Đăng tin cho thuê...')}
+                onClick={() => setCurrentPage('owner-listings-create')}
                 className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px] font-bold">add</span> Tạo tin cho thuê mới

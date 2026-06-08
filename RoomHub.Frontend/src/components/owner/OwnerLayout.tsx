@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { PageType } from '../../App';
+import { useAuth } from '../../hooks/useAuth';
 
 interface OwnerLayoutProps {
   currentPage: PageType;
@@ -8,6 +9,7 @@ interface OwnerLayoutProps {
 }
 
 const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, children }) => {
+  const { logout } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
@@ -87,6 +89,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
 
   const handleLogout = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Chủ nhà?')) {
+      logout();
       setCurrentPage('home');
     }
   };
