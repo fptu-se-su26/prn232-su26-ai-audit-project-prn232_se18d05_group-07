@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Browse from './pages/Browse';
@@ -82,11 +82,20 @@ export type PageType =
   | 'admin-subscriptions';
 
 const AppContent: React.FC = () => {
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+
+  const isAuthPage = 
+    location.pathname === '/login' || 
+    location.pathname === '/register' ||
+    location.pathname === '/verify-otp' ||
+    location.pathname === '/forgot-password' ||
+    location.pathname === '/verify-reset-otp' ||
+    location.pathname === '/reset-password';
 
   // 1. Listen for hash changes to support direct URL typing for owner routes
   useEffect(() => {
@@ -321,7 +330,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="bg-background text-on-surface antialiased overflow-x-hidden min-h-screen flex flex-col">
-      <Navbar />
+      {!isAuthPage && <Navbar />}
       <div className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -340,7 +349,7 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 };

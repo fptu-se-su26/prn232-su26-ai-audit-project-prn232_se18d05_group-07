@@ -116,11 +116,21 @@ const Register: React.FC = () => {
       {/* LEFT FORM */}
       <div className="w-full lg:w-[45%] flex flex-col justify-between p-8 sm:p-12 bg-white">
         {/* LOGO */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-            <span className="material-symbols-outlined text-orange-500">apartment</span>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+              <span className="material-symbols-outlined text-orange-500">apartment</span>
+            </div>
+            <span className="text-xl font-bold">RoomHub</span>
           </div>
-          <span className="text-xl font-bold">RoomHub</span>
+          <button 
+            type="button" 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-250 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-all cursor-pointer active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Quay lại trang chủ
+          </button>
         </div>
 
         {/* MAIN REGISTER CARD */}

@@ -79,17 +79,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
         </div>
       </div>
 
-      <div className="px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-3 bg-orange-50/50 rounded-2xl p-3 border border-orange-100/50">
-          <div className="w-10 h-10 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-on-surface truncate">{fullName}</p>
-            <p className="text-[11px] text-gray-500 font-medium truncate">{email}</p>
-          </div>
-        </div>
-      </div>
+
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
