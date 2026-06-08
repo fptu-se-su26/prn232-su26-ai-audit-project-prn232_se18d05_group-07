@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface Room {
   id: number;
@@ -15,9 +17,34 @@ export interface Room {
   isNew?: boolean;
 }
 
+
+
 interface BrowseProps {
   _unused?: string;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const API_BASE = 'http://localhost:5143/api/public/listings';
+const PAGE_SIZE = 12;
+
+const PRICE_RANGES: Record<string, { min?: number; max?: number }> = {
+  all:     {},
+  under2:  { max: 1_999_999 },
+  '2to4':  { min: 2_000_000, max: 4_000_000 },
+  above4:  { min: 4_000_001 },
+};
+
+const AMENITY_OPTIONS = [
+  'Wifi miễn phí',
+  'Điều hòa',
+  'Chỗ để xe',
+  'Ban công',
+  'Vệ sinh khép kín',
+  'Gác lửng',
+  'Máy giặt',
+  'Tủ lạnh',
+];
 
 export const MOCK_ROOMS: Room[] = [
   {
@@ -159,44 +186,78 @@ export const MOCK_ROOMS: Room[] = [
   }
 ];
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const Browse: React.FC<BrowseProps> = () => {
   const navigate = useNavigate();
-  // Search & Filters State
-  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // ── Search / Filter state ──────────────────────────────────────────────────
   const [inputKeyword, setInputKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedType, setSelectedType] = useState('Tất cả');
   const [selectedLocation, setSelectedLocation] = useState('Tất cả');
-  const [priceRange, setPriceRange] = useState('all'); // all, under2, 2to4, above4
+  const [priceRange, setPriceRange] = useState('all');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('newest'); // newest, priceAsc, priceDesc
-  
-  // UI Interaction State
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
   const [activeQuickTab, setActiveQuickTab] = useState('Tất cả');
 
-  // Handle Quick Tabs Select
-  const handleQuickTabSelect = (tab: string) => {
-    setActiveQuickTab(tab);
-    setSelectedType(tab);
-  };
+  // ── API / Loading state ───────────────────────────────────────────────────
+  const [dbRooms, setDbRooms] = useState<Room[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  // Toggle Amenity Checkbox
-  const handleAmenityToggle = (amenity: string) => {
-    if (selectedAmenities.includes(amenity)) {
-      setSelectedAmenities(selectedAmenities.filter(a => a !== amenity));
-    } else {
-      setSelectedAmenities([...selectedAmenities, amenity]);
+  // ── Modal state ───────────────────────────────────────────────────────────
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // ── Fetch listings from real API ──────────────────────────────────────────
+  const fetchListings = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
+
+    try {
+      const params = new URLSearchParams();
+
+      if (searchKeyword.trim()) params.set('searchQuery', searchKeyword.trim());
+      if (selectedType !== 'Tất cả') params.set('roomType', selectedType);
+      if (selectedLocation !== 'Tất cả') params.set('district', selectedLocation);
+      if (sortBy) params.set('sortBy', sortBy);
+
+      const priceFilter = PRICE_RANGES[priceRange] ?? {};
+      if (priceFilter.min != null) params.set('minPrice', String(priceFilter.min));
+      if (priceFilter.max != null) params.set('maxPrice', String(priceFilter.max));
+
+      if (selectedAmenities.length > 0) {
+        params.set('amenities', selectedAmenities.join(','));
+      }
+
+      // Fetch larger set from server for client-side merged pagination
+      params.set('page', '1');
+      params.set('pageSize', '50');
+
+      const response = await fetch(`${API_BASE}?${params.toString()}`);
+
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setDbRooms(data as Room[]);
+      } else if (data.items) {
+        setDbRooms(data.items as Room[]);
+      } else {
+        setDbRooms([]);
+      }
+    } catch {
+      setHasError(true);
+      setDbRooms([]);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
 
-  // Handle Search Trigger
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchKeyword(inputKeyword);
-  };
-
-  // Filter & Sort Logic
-  const filteredRooms = useMemo(() => {
+  // Filter & Sort Logic for Mock Rooms
+  const filteredMockRooms = useMemo(() => {
     let result = [...MOCK_ROOMS];
 
     // Filter by Keyword
@@ -219,12 +280,12 @@ const Browse: React.FC<BrowseProps> = () => {
     }
 
     // Filter by Price Range
-    if (priceRange === 'under2') {
-      result = result.filter(room => room.price < 2000000);
-    } else if (priceRange === '2to4') {
-      result = result.filter(room => room.price >= 2000000 && room.price <= 4000000);
-    } else if (priceRange === 'above4') {
-      result = result.filter(room => room.price > 4000000);
+    const priceFilter = PRICE_RANGES[priceRange] ?? {};
+    if (priceFilter.min != null) {
+      result = result.filter(room => room.price >= priceFilter.min!);
+    }
+    if (priceFilter.max != null) {
+      result = result.filter(room => room.price <= priceFilter.max!);
     }
 
     // Filter by Amenities
@@ -234,42 +295,119 @@ const Browse: React.FC<BrowseProps> = () => {
       );
     }
 
-    // Sorting
+    return result;
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities]);
+
+  const combinedRooms = useMemo(() => {
+    const mappedMock = filteredMockRooms.map((r: Room) => ({
+      ...r,
+      id: r.id + 100000 // avoid conflicts with database IDs
+    }));
+
+    const merged = [...dbRooms, ...mappedMock];
+
+    // Sort combined
     if (sortBy === 'priceAsc') {
-      result.sort((a, b) => a.price - b.price);
+      merged.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'priceDesc') {
-      result.sort((a, b) => b.price - a.price);
+      merged.sort((a, b) => b.price - a.price);
     } else {
-      // newest: sort by isNew desc first, then id desc
-      result.sort((a, b) => {
+      // newest
+      merged.sort((a, b) => {
         if (a.isNew && !b.isNew) return -1;
         if (!a.isNew && b.isNew) return 1;
         return b.id - a.id;
       });
     }
 
-    return result;
-  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+    return merged;
+  }, [dbRooms, filteredMockRooms, sortBy]);
 
-  const handleAlert = (message: string) => {
-    alert(message);
+  // Derived values for component
+  const rooms = useMemo(() => {
+    return combinedRooms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [combinedRooms, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(combinedRooms.length / PAGE_SIZE));
+
+  // Re-fetch whenever filters or sort change (reset to page 1)
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchListings();
+  }, [fetchListings]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchKeyword(inputKeyword);
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN');
+  const handleQuickTabSelect = (tab: string) => {
+    setActiveQuickTab(tab);
+    setSelectedType(tab);
   };
+
+  const handleAmenityToggle = (amenity: string) => {
+    setSelectedAmenities(prev =>
+      prev.includes(amenity) ? prev.filter(a => a !== amenity) : [...prev, amenity]
+    );
+  };
+
+  const handleResetFilters = () => {
+    setSearchKeyword('');
+    setInputKeyword('');
+    setSelectedType('Tất cả');
+    setSelectedLocation('Tất cả');
+    setPriceRange('all');
+    setSelectedAmenities([]);
+    setActiveQuickTab('Tất cả');
+    setSortBy('newest');
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Derived values ────────────────────────────────────────────────────────
+  const formatPrice = (price: number) => price.toLocaleString('vi-VN');
+
+  // ── Pagination page numbers ───────────────────────────────────────────────
+  const getPageNumbers = () => {
+    const pages: (number | '...')[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('...');
+      for (
+        let i = Math.max(2, currentPage - 1);
+        i <= Math.min(totalPages - 1, currentPage + 1);
+        i++
+      ) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <main className="bg-surface text-on-surface">
-      {/* Hero / Search Header Section */}
+      {/* ── Hero / Search Header ─────────────────────────────────────────── */}
       <section className="bg-gradient-to-b from-[#FFF7ED] to-surface pt-12 pb-24 relative px-margin-mobile md:px-margin-desktop">
         <div className="max-w-container-max mx-auto flex flex-col items-center text-center">
           {/* Breadcrumb */}
           <nav aria-label="Breadcrumb" className="flex text-on-surface-variant font-label-md text-label-md mb-6">
             <ol className="inline-flex items-center space-x-1 md:space-x-2">
               <li className="inline-flex items-center">
-                <a 
-                  className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer" 
+                <a
+                  className="inline-flex items-center hover:text-primary-container transition-colors cursor-pointer"
                   onClick={() => navigate('/')}
                 >
                   Trang chủ
@@ -289,7 +427,7 @@ const Browse: React.FC<BrowseProps> = () => {
               </li>
             </ol>
           </nav>
-          
+
           <h1 className="font-display-lg text-display-lg text-on-surface mb-8 max-w-3xl md:text-[54px] text-[36px]">
             Tìm chỗ ở cho thuê tại Đà Nẵng
           </h1>
@@ -301,9 +439,10 @@ const Browse: React.FC<BrowseProps> = () => {
                 <label className="font-label-md text-label-md text-on-surface-variant">Từ khoá</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                  <input 
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 focus:ring-1 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md text-on-surface outline-none transition-all" 
-                    placeholder="Tên đường, phường..." 
+                  <input
+                    id="browse-search-input"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-3 focus:ring-1 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md text-on-surface outline-none transition-all"
+                    placeholder="Tên đường, phường..."
                     type="text"
                     value={inputKeyword}
                     onChange={(e) => setInputKeyword(e.target.value)}
@@ -315,7 +454,8 @@ const Browse: React.FC<BrowseProps> = () => {
                 <label className="font-label-md text-label-md text-on-surface-variant">Loại chỗ ở</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">home_work</span>
-                  <select 
+                  <select
+                    id="browse-type-select"
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-10 py-3 focus:ring-1 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md text-on-surface outline-none appearance-none cursor-pointer transition-all"
                     value={selectedType}
                     onChange={(e) => {
@@ -337,7 +477,8 @@ const Browse: React.FC<BrowseProps> = () => {
                 <label className="font-label-md text-label-md text-on-surface-variant">Khu vực</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">location_on</span>
-                  <select 
+                  <select
+                    id="browse-location-select"
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-10 py-3 focus:ring-1 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md text-on-surface outline-none appearance-none cursor-pointer transition-all"
                     value={selectedLocation}
                     onChange={(e) => setSelectedLocation(e.target.value)}
@@ -355,7 +496,8 @@ const Browse: React.FC<BrowseProps> = () => {
                 </div>
               </div>
 
-              <button 
+              <button
+                id="browse-search-btn"
                 type="submit"
                 className="bg-primary-container text-white font-label-md text-label-md rounded-xl py-3 px-6 h-[48px] hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-sm font-bold active:scale-98"
               >
@@ -384,26 +526,18 @@ const Browse: React.FC<BrowseProps> = () => {
         </div>
       </section>
 
-      {/* Main Filter & Results Layout */}
+      {/* ── Main Layout: Sidebar + Results ─────────────────────────────────── */}
       <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-24 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 items-start relative z-20">
-        
-        {/* Left Sidebar Filters */}
+
+        {/* ── Left Sidebar Filters ──────────────────────────────────────────── */}
         <aside className="hidden lg:flex flex-col p-6 sticky top-24 bg-white border border-gray-100 rounded-2xl soft-shadow">
           <div className="mb-6 flex justify-between items-center">
             <div>
               <h2 className="text-headline-md font-headline-md font-bold text-primary-container">Bộ lọc</h2>
               <p className="text-xs text-gray-500">Tìm phòng ưng ý nhất</p>
             </div>
-            <button 
-              onClick={() => {
-                setSearchKeyword('');
-                setInputKeyword('');
-                setSelectedType('Tất cả');
-                setSelectedLocation('Tất cả');
-                setPriceRange('all');
-                setSelectedAmenities([]);
-                setActiveQuickTab('Tất cả');
-              }}
+            <button
+              onClick={handleResetFilters}
               className="text-xs text-primary-container hover:text-orange-600 transition-colors font-semibold"
             >
               Đặt lại
@@ -420,7 +554,7 @@ const Browse: React.FC<BrowseProps> = () => {
               <div className="space-y-2">
                 {['Phòng trọ', 'Studio', 'Căn hộ mini', 'Căn hộ'].map((type) => (
                   <label key={type} className="flex items-center gap-3 cursor-pointer group text-sm">
-                    <input 
+                    <input
                       type="checkbox"
                       checked={selectedType === type}
                       onChange={() => {
@@ -434,9 +568,7 @@ const Browse: React.FC<BrowseProps> = () => {
                       }}
                       className="rounded border-gray-300 text-primary-container focus:ring-primary-container w-4 h-4 cursor-pointer"
                     />
-                    <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">
-                      {type}
-                    </span>
+                    <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">{type}</span>
                   </label>
                 ))}
               </div>
@@ -449,46 +581,23 @@ const Browse: React.FC<BrowseProps> = () => {
                 Mức giá thuê
               </h3>
               <div className="space-y-2 text-sm">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    name="priceRange" 
-                    type="radio"
-                    checked={priceRange === 'all'}
-                    onChange={() => setPriceRange('all')}
-                    className="text-primary-container focus:ring-primary-container w-4 h-4 border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">Tất cả mức giá</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    name="priceRange" 
-                    type="radio"
-                    checked={priceRange === 'under2'}
-                    onChange={() => setPriceRange('under2')}
-                    className="text-primary-container focus:ring-primary-container w-4 h-4 border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">Dưới 2 triệu</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    name="priceRange" 
-                    type="radio"
-                    checked={priceRange === '2to4'}
-                    onChange={() => setPriceRange('2to4')}
-                    className="text-primary-container focus:ring-primary-container w-4 h-4 border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">2 triệu - 4 triệu</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    name="priceRange" 
-                    type="radio"
-                    checked={priceRange === 'above4'}
-                    onChange={() => setPriceRange('above4')}
-                    className="text-primary-container focus:ring-primary-container w-4 h-4 border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">Trên 4 triệu</span>
-                </label>
+                {[
+                  { value: 'all',    label: 'Tất cả mức giá' },
+                  { value: 'under2', label: 'Dưới 2 triệu' },
+                  { value: '2to4',   label: '2 triệu - 4 triệu' },
+                  { value: 'above4', label: 'Trên 4 triệu' },
+                ].map(({ value, label }) => (
+                  <label key={value} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      name="priceRange"
+                      type="radio"
+                      checked={priceRange === value}
+                      onChange={() => setPriceRange(value)}
+                      className="text-primary-container focus:ring-primary-container w-4 h-4 border-gray-300 cursor-pointer"
+                    />
+                    <span className="text-on-surface-variant group-hover:text-primary-container transition-colors">{label}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -499,9 +608,9 @@ const Browse: React.FC<BrowseProps> = () => {
                 Tiện ích phòng
               </h3>
               <div className="space-y-2 text-sm">
-                {["Wifi miễn phí", "Điều hòa", "Chỗ để xe", "Ban công", "Vệ sinh khép kín", "Gác lửng"].map((amenity) => (
+                {AMENITY_OPTIONS.map((amenity) => (
                   <label key={amenity} className="flex items-center gap-3 cursor-pointer group">
-                    <input 
+                    <input
                       type="checkbox"
                       checked={selectedAmenities.includes(amenity)}
                       onChange={() => handleAmenityToggle(amenity)}
@@ -515,16 +624,25 @@ const Browse: React.FC<BrowseProps> = () => {
           </div>
         </aside>
 
-        {/* Right Listings Main Panel */}
+        {/* ── Right: Results Panel ──────────────────────────────────────────── */}
         <main>
-          {/* Header row: result count & sorting */}
+          {/* Result count + sort row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h2 className="text-xl font-bold text-on-surface">
-              Tìm thấy <span className="text-primary-container">{filteredRooms.length}</span> chỗ ở phù hợp
+              {isLoading ? (
+                <span className="text-gray-400">Đang tìm kiếm...</span>
+              ) : (
+                <>
+                  Tìm thấy{' '}
+                  <span className="text-primary-container">{combinedRooms.length}</span>{' '}
+                  chỗ ở phù hợp
+                </>
+              )}
             </h2>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500 font-medium whitespace-nowrap">Sắp xếp:</span>
-              <select 
+              <select
+                id="browse-sort-select"
                 className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-body-md text-sm text-on-surface focus:ring-1 focus:ring-primary-container focus:border-primary-container outline-none cursor-pointer transition-all"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -536,149 +654,214 @@ const Browse: React.FC<BrowseProps> = () => {
             </div>
           </div>
 
-          {/* Fallback for empty results */}
-          {filteredRooms.length === 0 ? (
-            <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center soft-shadow">
-              <span className="material-symbols-outlined text-[64px] text-gray-300 mb-4">search_off</span>
-              <h3 className="text-lg font-bold text-on-surface mb-2">Không tìm thấy phòng phù hợp</h3>
-              <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">Bạn hãy thử xóa bớt các bộ lọc tiện ích, mở rộng khoảng giá hoặc tìm kiếm một từ khóa khác nhé!</p>
-              <button 
-                onClick={() => {
-                  setSearchKeyword('');
-                  setInputKeyword('');
-                  setSelectedType('Tất cả');
-                  setSelectedLocation('Tất cả');
-                  setPriceRange('all');
-                  setSelectedAmenities([]);
-                  setActiveQuickTab('Tất cả');
-                }}
-                className="bg-primary-container text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors soft-shadow"
-              >
-                Xóa tất cả bộ lọc
-              </button>
-            </div>
-          ) : (
-            /* Listings Grid */
+          {/* ── Loading Skeleton ─────────────────────────────────────────────── */}
+          {isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredRooms.map((room) => (
-                <div 
-                  key={room.id}
-                  onClick={() => {
-                    navigate(`/room/${room.id}`);
-                  }}
-                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"
-                >
-                  {/* Card Image Cover */}
-                  <div className="h-48 relative overflow-hidden bg-gray-100">
-                    <img 
-                      alt={room.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      src={room.image}
-                    />
-                    
-                    {/* Property Type Tag */}
-                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-primary-container text-[11px] font-bold px-2.5 py-1 rounded-md shadow-sm">
-                      {room.type === 'Căn hộ' ? 'Căn hộ Mini' : room.type === 'Chung cư' ? 'Căn hộ chung cư' : room.type}
-                    </span>
-
-                    {/* New/Verified Tag */}
-                    {room.isNew && (
-                      <span className="absolute top-3 left-20 bg-green-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
-                        Mới
-                      </span>
-                    )}
-
-                    {/* Favorite Heart Trigger */}
-                    <button 
-                      aria-label="Lưu yêu thích"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsLoginModalOpen(true);
-                      }}
-                      className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm active:scale-90 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">favorite</span>
-                    </button>
-                  </div>
-
-                  {/* Card Details Content */}
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="text-base font-bold text-on-surface mb-1.5 line-clamp-1 group-hover:text-primary-container transition-colors">
-                      {room.title}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mb-3.5">
-                      <span className="material-symbols-outlined text-[14px]">location_on</span>
-                      <span className="truncate">{room.location}</span>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-2 py-2 border-y border-gray-100 mb-4 text-xs text-gray-600">
-                      <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-gray-400">aspect_ratio</span>
-                        <span>{room.area}m²</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-gray-400">group</span>
-                        <span>Tối đa {room.maxPeople}</span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Pricing Row */}
-                    <div className="mt-auto flex justify-between items-center">
-                      <div>
-                        <p className="text-primary-container font-bold text-lg">
-                          {formatPrice(room.price)}đ<span className="text-xs text-gray-500 font-normal">/tháng</span>
-                        </p>
-                      </div>
-                      <button className="text-primary-container hover:bg-orange-50 px-3 py-1 rounded-lg text-xs font-semibold transition-colors">
-                        Chi tiết
-                      </button>
-                    </div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-3 bg-gray-100 rounded w-1/2" />
+                    <div className="h-3 bg-gray-100 rounded w-full" />
+                    <div className="h-5 bg-orange-100 rounded w-1/3 mt-2" />
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Pagination Component */}
-          {filteredRooms.length > 0 && (
-            <div className="mt-12 flex justify-center items-center gap-2">
-              <button className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-              </button>
-              <button className="w-9 h-9 rounded-full flex items-center justify-center bg-primary-container text-white font-bold text-sm">
-                1
-              </button>
-              <button 
-                onClick={() => handleAlert('Trang 2 giả lập chưa có thêm dữ liệu phòng!')}
-                className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-primary-container transition-colors font-semibold text-sm"
+          {/* ── API Error State ──────────────────────────────────────────────── */}
+          {!isLoading && hasError && (
+            <div className="bg-white border border-red-100 rounded-2xl p-12 text-center soft-shadow">
+              <span className="material-symbols-outlined text-[64px] text-red-300 mb-4 block">wifi_off</span>
+              <h3 className="text-lg font-bold text-on-surface mb-2">Không thể kết nối máy chủ</h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">
+                Hệ thống đang bảo trì hoặc kết nối mạng bị gián đoạn. Vui lòng thử lại sau ít phút.
+              </p>
+              <button
+                onClick={() => fetchListings()}
+                className="bg-primary-container text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors soft-shadow"
               >
-                2
-              </button>
-              <span className="text-gray-400 text-sm">...</span>
-              <button 
-                onClick={() => handleAlert('Trang 5 giả lập chưa có thêm dữ liệu phòng!')}
-                className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-primary-container transition-colors font-semibold text-sm"
-              >
-                5
-              </button>
-              <button className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                <span className="material-symbols-outlined align-middle mr-1 text-[18px]">refresh</span>
+                Thử lại
               </button>
             </div>
+          )}
+
+          {/* ── Empty Results ────────────────────────────────────────────────── */}
+          {!isLoading && !hasError && rooms.length === 0 && (
+            <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center soft-shadow">
+              <span className="material-symbols-outlined text-[64px] text-gray-300 mb-4 block">search_off</span>
+              <h3 className="text-lg font-bold text-on-surface mb-2">Không tìm thấy phòng phù hợp</h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">
+                Bạn hãy thử xóa bớt các bộ lọc tiện ích, mở rộng khoảng giá hoặc tìm kiếm từ khóa khác nhé!
+              </p>
+              <button
+                onClick={handleResetFilters}
+                className="bg-primary-container text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors soft-shadow"
+              >
+                Xóa tất cả bộ lọc
+              </button>
+            </div>
+          )}
+
+          {/* ── Listings Grid ────────────────────────────────────────────────── */}
+          {!isLoading && !hasError && rooms.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {rooms.map((room: Room) => (
+                  <div
+                    key={room.id}
+                    id={`room-card-${room.id}`}
+                    onClick={() => navigate(`/room/${room.id}`)}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover-lift flex flex-col group cursor-pointer"
+                  >
+                    {/* Card Image */}
+                    <div className="h-48 relative overflow-hidden bg-gray-100">
+                      <img
+                        alt={room.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        src={room.image}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+
+                      {/* Type Badge */}
+                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-primary-container text-[11px] font-bold px-2.5 py-1 rounded-md shadow-sm">
+                        {room.type}
+                      </span>
+
+                      {/* New Badge */}
+                      {room.isNew && (
+                        <span className="absolute top-3 right-14 bg-green-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                          Mới
+                        </span>
+                      )}
+
+                      {/* Favorite Button */}
+                      <button
+                        aria-label="Lưu yêu thích"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm active:scale-90 transition-all"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">favorite</span>
+                      </button>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-4 flex flex-col flex-grow">
+                      <h3 className="text-base font-bold text-on-surface mb-1.5 line-clamp-1 group-hover:text-primary-container transition-colors">
+                        {room.title}
+                      </h3>
+
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-3.5">
+                        <span className="material-symbols-outlined text-[14px]">location_on</span>
+                        <span className="truncate">{room.location}</span>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-2 py-2 border-y border-gray-100 mb-4 text-xs text-gray-600">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-gray-400">aspect_ratio</span>
+                          <span>{room.area}m²</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-gray-400">group</span>
+                          <span>Tối đa {room.maxPeople}</span>
+                        </div>
+                      </div>
+
+                      {/* Amenities Pills (max 3) */}
+                      {room.amenities.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {room.amenities.slice(0, 3).map((a) => (
+                            <span key={a} className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                              {a}
+                            </span>
+                          ))}
+                          {room.amenities.length > 3 && (
+                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                              +{room.amenities.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Price Row */}
+                      <div className="mt-auto flex justify-between items-center">
+                        <div>
+                          <p className="text-primary-container font-bold text-lg">
+                            {formatPrice(room.price)}đ
+                            <span className="text-xs text-gray-500 font-normal">/tháng</span>
+                          </p>
+                        </div>
+                        <button className="text-primary-container hover:bg-orange-50 px-3 py-1 rounded-lg text-xs font-semibold transition-colors">
+                          Chi tiết
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Pagination ──────────────────────────────────────────────── */}
+              {totalPages > 1 && (
+                <div className="mt-12 flex justify-center items-center gap-2">
+                  {/* Prev */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                  </button>
+
+                  {/* Page numbers */}
+                  {getPageNumbers().map((page, idx) =>
+                    page === '...' ? (
+                      <span key={`ellipsis-${idx}`} className="text-gray-400 text-sm px-1">...</span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page as number)}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                          currentPage === page
+                            ? 'bg-primary-container text-white'
+                            : 'border border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-primary-container'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+
+                  {/* Next */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-orange-50 hover:border-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
 
-      {/* Login Requirement Modal */}
+      {/* ── Login Requirement Modal ───────────────────────────────────────── */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md soft-shadow p-6 relative border border-gray-100 animate-scale-up">
-            
-            {/* Close Button */}
-            <button 
-              aria-label="Đóng modal" 
+            <button
+              aria-label="Đóng modal"
               onClick={() => setIsLoginModalOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
             >
@@ -693,21 +876,20 @@ const Browse: React.FC<BrowseProps> = () => {
               <p className="text-sm text-gray-500 mb-6 max-w-sm">
                 Vui lòng đăng nhập hoặc đăng ký tài khoản RoomHub để lưu chỗ ở yêu thích và gửi tin nhắn trao đổi trực tiếp với chủ nhà!
               </p>
-              
               <div className="w-full space-y-3">
-                <button 
+                <button
                   onClick={() => {
                     setIsLoginModalOpen(false);
-                    handleAlert('Tính năng Đăng nhập sẽ ra mắt ở giai đoạn tiếp theo!');
+                    navigate('/login');
                   }}
                   className="w-full bg-primary-container text-white text-sm font-bold py-3 rounded-xl hover:bg-orange-600 transition-all shadow-sm active:scale-98"
                 >
                   Đăng nhập ngay
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     setIsLoginModalOpen(false);
-                    handleAlert('Tính năng Đăng ký tài khoản sẽ ra mắt ở giai đoạn tiếp theo!');
+                    navigate('/register');
                   }}
                   className="w-full bg-transparent border border-gray-200 text-on-surface-variant text-sm font-bold py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-98"
                 >
