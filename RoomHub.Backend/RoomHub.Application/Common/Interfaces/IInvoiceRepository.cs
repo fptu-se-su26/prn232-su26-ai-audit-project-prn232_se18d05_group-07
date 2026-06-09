@@ -12,5 +12,6 @@ namespace Application.Common.Interfaces
         Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId);
         Task AddAsync(Invoice invoice);
         Task UpdateAsync(Invoice invoice);
+        Task<List<Invoice>> GetInvoicesByBuildingAndMonthAsync(int buildingId, int month, int year, string ownerId);
     }
 }

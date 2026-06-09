@@ -469,6 +469,53 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
     }
   };
 
+  const handleExportBatchExcel = async () => {
+    try {
+      const propNameToId: { [name: string]: number } = {};
+      properties.forEach(p => {
+        if (p.id !== 'all') {
+          propNameToId[p.name] = parseInt(p.id);
+        }
+      });
+
+      const uniqueBuildingIds = Array.from(new Set(
+        validSelectedUnits.map(u => propNameToId[u.propertyName]).filter(id => id !== undefined && !isNaN(id))
+      ));
+
+      if (uniqueBuildingIds.length === 0) {
+        triggerToast('Không tìm thấy tòa nhà hợp lệ để tải báo cáo!', 'error');
+        return;
+      }
+
+      const [yearStr, monthStr] = billingMonth.split('-');
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr);
+
+      for (const bId of uniqueBuildingIds) {
+        const response = await api.get(`/owner/invoices/export-batch?buildingId=${bId}&month=${month}&year=${year}`, {
+          responseType: 'blob'
+        });
+        const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        const bName = properties.find(p => p.id === bId.toString())?.name || `ToaNha_${bId}`;
+        link.setAttribute('download', `BaoCaoTongHop_${bName}_Thang_${String(month).padStart(2, '0')}_${year}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
+
+      setIsExportModalOpen(false);
+      triggerToast('Tải file Excel báo cáo tổng hợp thành công!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Có lỗi xảy ra khi tải báo cáo Excel.', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -1735,10 +1782,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 Đóng
               </button>
               <button
-                onClick={() => {
-                  setIsExportModalOpen(false);
-                  triggerToast('Tải file Excel hóa đơn dịch vụ tổng hợp thành công!', 'success');
-                }}
+                onClick={handleExportBatchExcel}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm"
               >
                 Tải file Excel

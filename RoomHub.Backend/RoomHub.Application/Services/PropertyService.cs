@@ -354,7 +354,9 @@ namespace Application.Services
                 return null;
 
             var building = room.Floor.Building;
-            var activeContract = room.Contracts.FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
+            var activeContract = room.Contracts
+                .OrderByDescending(c => c.Id)
+                .FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
 
             var dto = new UnitDetailDto
             {

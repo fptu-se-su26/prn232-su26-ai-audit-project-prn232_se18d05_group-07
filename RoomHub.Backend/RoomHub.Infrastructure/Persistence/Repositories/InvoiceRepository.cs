@@ -73,5 +73,23 @@ namespace Infrastructure.Persistence.Repositories
             _context.Invoices.Update(invoice);
             await Task.CompletedTask;
         }
+
+        public async Task<List<Invoice>> GetInvoicesByBuildingAndMonthAsync(int buildingId, int month, int year, string ownerId)
+        {
+            return await _context.Invoices
+                .Include(i => i.InvoiceItems)
+                .Include(i => i.Contract)
+                    .ThenInclude(c => c.Room)
+                        .ThenInclude(r => r.Floor)
+                            .ThenInclude(f => f.Building)
+                .Include(i => i.Contract)
+                    .ThenInclude(c => c.Tenant)
+                .Where(i => i.Contract.Room.Floor.BuildingId == buildingId
+                            && i.InvoiceDate.Month == month
+                            && i.InvoiceDate.Year == year
+                            && i.Contract.OwnerId == ownerId
+                            && !i.Contract.IsDeleted)
+                .ToListAsync();
+        }
     }
 }
