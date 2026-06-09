@@ -604,7 +604,8 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
       </div>
 
       {/* Main Form Content Split Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {currentStep === 1 && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Left Side: Scope & Table Form */}
         <div className="lg:col-span-3 space-y-6">
@@ -1212,7 +1213,9 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     triggerToast('Không có phòng hợp lệ nào được chọn để chốt tiền!', 'error');
                     return;
                   }
-                  setIsConfirmModalOpen(true);
+                  setCurrentStep(2);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  triggerToast('Đã chuyển sang bước rà soát hóa đơn!');
                 }}
                 disabled={hasSeriousError || validSelectedUnits.length === 0 || isAddLoading}
                 className="w-full py-3 bg-primary-container disabled:bg-gray-200 disabled:text-gray-400 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
@@ -1236,7 +1239,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                     triggerToast('Không có dữ liệu hợp lệ để xem trước!', 'error');
                     return;
                   }
-                  setCurrentStep(3); 
+                  setCurrentStep(2); 
                   triggerToast('Đã mở chế độ kiểm tra xem trước hóa đơn!');
                 }}
                 disabled={validSelectedUnits.length === 0}
@@ -1249,9 +1252,10 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
         </div>
 
       </div>
+      )}
 
-      {/* PART J: Invoice Preview Section (When step is 3 or manually triggered) */}
-      {currentStep === 3 && (
+      {/* PART J: Invoice Preview Section (When step is 2) */}
+      {currentStep === 2 && (
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-5 animate-scaleUp">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-gray-100">
             <div>
