@@ -10,8 +10,12 @@ interface OwnerLayoutProps {
 }
 
 const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, children }) => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const fullName = user?.fullName || 'Chủ nhà RoomHub';
+  const email = user?.email || 'owner@roomhub.vn';
+  const initials = fullName.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || 'CN';
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
@@ -121,18 +125,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         </div>
       </div>
 
-      {/* Mini User Card */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-3 bg-orange-50/50 rounded-2xl p-3 border border-orange-100/50">
-          <div className="w-10 h-10 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            AN
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-on-surface truncate">Phan Hoài An</p>
-            <p className="text-[11px] text-gray-500 font-medium truncate">owner@roomhub.vn</p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Navigation Menu */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -340,7 +333,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
                 className="flex items-center gap-2 hover:bg-orange-50/50 p-1.5 rounded-xl transition-all cursor-pointer outline-none"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                  AN
+                  {initials}
                 </div>
                 <span className="material-symbols-outlined text-[18px] text-gray-400 hidden sm:inline">expand_more</span>
               </button>
@@ -349,11 +342,11 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
                 <div className="absolute right-0 top-12 mt-2 w-56 bg-white rounded-2xl border border-gray-100 soft-shadow p-3 z-50 flex flex-col gap-2 animate-scaleUp">
                   <div className="flex items-center gap-2 p-2 border-b border-gray-100">
                     <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-xs">
-                      AN
+                      {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-on-surface truncate">Phan Hoài An</p>
-                      <p className="text-[9px] text-gray-500 truncate">owner@roomhub.vn</p>
+                      <p className="text-xs font-bold text-on-surface truncate">{fullName}</p>
+                      <p className="text-[9px] text-gray-500 truncate">{email}</p>
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">

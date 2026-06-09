@@ -60,6 +60,8 @@ namespace Application.Common.DTOs.Invoices
         public decimal AdditionalPrice { get; set; }
         public decimal ReductionPrice { get; set; }
         public string? Note { get; set; }
+        public bool IsWaterFixed { get; set; } = false;
+        public decimal WaterFixedAmount { get; set; } = 0;
     }
 
     public class BatchInvoiceRequest

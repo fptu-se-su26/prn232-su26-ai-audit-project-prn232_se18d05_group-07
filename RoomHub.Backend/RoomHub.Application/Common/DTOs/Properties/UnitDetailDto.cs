@@ -63,6 +63,7 @@ namespace Application.Common.DTOs.Properties
         public int MaxCapacity { get; set; }
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
         public decimal InternetPrice { get; set; }
         public decimal GarbagePrice { get; set; }
         public string InternalNotes { get; set; } = "";

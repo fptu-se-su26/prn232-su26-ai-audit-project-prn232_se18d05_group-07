@@ -39,6 +39,7 @@ namespace Infrastructure.Persistence.Configurations
             // Bổ sung các cấu hình Decimal này vào bên trong hàm Configure(EntityTypeBuilder<Room> builder)
             builder.Property(r => r.ElectricityPrice).HasColumnType("decimal(18, 2)");
             builder.Property(r => r.WaterPrice).HasColumnType("decimal(18, 2)");
+            builder.Property(r => r.WaterBillingType).HasMaxLength(50);
             builder.Property(r => r.InternetPrice).HasColumnType("decimal(18, 2)");
             builder.Property(r => r.GarbagePrice).HasColumnType("decimal(18, 2)");
             

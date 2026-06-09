@@ -12,5 +12,6 @@ namespace Application.Common.Interfaces
         Task<UnitDetailDto?> GetUnitDetailAsync(int roomId, string ownerId);
         Task<bool> UpdateUnitStatusAsync(int roomId, string status, string ownerId);
         Task<bool> UpdateUnitNotesAsync(int roomId, string notes, string ownerId);
+        Task<bool> UpdateUnitDetailsAsync(int roomId, UpdateUnitDetailsRequest request, string ownerId);
     }
 }

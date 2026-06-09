@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -24,6 +24,7 @@ namespace Domain.Entities
         public bool IsDeleted { get; set; }
         public decimal ElectricityPrice { get; set; } = 0;
         public decimal WaterPrice { get; set; } = 0;
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
         public decimal InternetPrice { get; set; } = 0;
         public decimal GarbagePrice { get; set; } = 0;
         public string? ThumbnailUrl { get; set; }

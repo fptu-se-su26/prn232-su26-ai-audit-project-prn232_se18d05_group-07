@@ -27,6 +27,8 @@ namespace Infrastructure.Persistence.Repositories
         public async Task<List<Room>> GetRoomsByBuildingAsync(int buildingId)
         {
             return await _context.Rooms
+                .Include(r => r.Floor)
+                    .ThenInclude(f => f.Building)
                 .Where(r => r.Floor.BuildingId == buildingId && !r.IsDeleted)
                 .ToListAsync();
         }

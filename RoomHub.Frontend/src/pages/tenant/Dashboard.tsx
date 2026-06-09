@@ -5,6 +5,7 @@ import api from '../../services/api';
 
 interface Props {
   setCurrentPage: (page: PageType) => void;
+  setSelectedInvoiceId?: (id: string | null) => void;
 }
 
 interface RoomData {
@@ -26,9 +27,11 @@ interface RoomData {
   roomImage: string;
 }
 
-const TenantDashboard: React.FC<Props> = ({ setCurrentPage }) => {
+const TenantDashboard: React.FC<Props> = ({ setCurrentPage, setSelectedInvoiceId }) => {
   const [roomData, setRoomData] = useState<RoomData | null>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
 
   const fetchRoom = async () => {
     try {
@@ -43,8 +46,22 @@ const TenantDashboard: React.FC<Props> = ({ setCurrentPage }) => {
     }
   };
 
+  const fetchInvoices = async () => {
+    try {
+      setLoadingInvoices(true);
+      const res = await api.get('/tenant/invoices');
+      setInvoices(res.data);
+    } catch (err: any) {
+      console.error(err);
+      setInvoices([]);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
   useEffect(() => {
     fetchRoom();
+    fetchInvoices();
   }, []);
 
   const formatVND = (value: number) => {
@@ -233,15 +250,52 @@ const TenantDashboard: React.FC<Props> = ({ setCurrentPage }) => {
                 </button>
               )}
             </div>
-            <div className="p-6 flex-grow flex flex-col justify-center items-center text-center">
-              <span className="material-symbols-outlined text-[44px] text-gray-300 mb-2">task_alt</span>
-              <h4 className="font-bold text-gray-800 text-sm">Không có hóa đơn chưa trả</h4>
-              <p className="text-xs text-gray-500 max-w-[200px] mt-1 leading-relaxed">
-                {roomData 
-                  ? 'Tuyệt vời! Hiện tại bạn không có hóa đơn chờ thanh toán nào trên RoomHub.'
-                  : 'Hãy liên kết phòng thuê để nhận hóa đơn dịch vụ hàng tháng.'}
-              </p>
-            </div>
+            {loadingInvoices ? (
+              <div className="p-10 flex flex-col items-center justify-center text-center flex-grow">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-container mb-2"></div>
+                <p className="text-gray-500 text-xs">Đang tải hóa đơn...</p>
+              </div>
+            ) : (() => {
+              const pendingInvoice = invoices.find(inv => inv.status === 'Chưa thanh toán' || inv.status === 'Quá hạn');
+              if (pendingInvoice) {
+                return (
+                  <div className="p-6 flex-grow flex flex-col justify-between gap-4">
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 text-left">
+                      <span className="material-symbols-outlined text-red-500 text-[24px] shrink-0 mt-0.5 animate-pulse">warning</span>
+                      <div>
+                        <h4 className="font-bold text-red-700 text-sm">Hóa đơn chưa thanh toán!</h4>
+                        <p className="text-xs text-red-650 mt-1 leading-relaxed">
+                          Bạn có hóa đơn <strong>Tháng {pendingInvoice.month}</strong> chưa đóng với số tiền <strong>{formatVND(pendingInvoice.totalAmount)}</strong>.
+                        </p>
+                        <p className="text-[10px] text-red-500 mt-0.5">Hạn thanh toán: {pendingInvoice.dueDate}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (setSelectedInvoiceId) {
+                          setSelectedInvoiceId(pendingInvoice.id.toString());
+                        }
+                        setCurrentPage('tenant-invoice-detail');
+                      }}
+                      className="w-full py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">lock</span> Thanh toán ngay
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="p-6 flex-grow flex flex-col justify-center items-center text-center">
+                  <span className="material-symbols-outlined text-[44px] text-gray-300 mb-2">task_alt</span>
+                  <h4 className="font-bold text-gray-800 text-sm">Không có hóa đơn chưa trả</h4>
+                  <p className="text-xs text-gray-500 max-w-[200px] mt-1 leading-relaxed">
+                    {roomData 
+                      ? 'Tuyệt vời! Hiện tại bạn không có hóa đơn chờ thanh toán nào trên RoomHub.'
+                      : 'Hãy liên kết phòng thuê để nhận hóa đơn dịch vụ hàng tháng.'}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </Reveal>
       </div>

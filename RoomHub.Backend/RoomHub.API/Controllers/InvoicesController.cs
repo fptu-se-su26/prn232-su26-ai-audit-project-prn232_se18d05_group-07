@@ -146,7 +146,31 @@ namespace RoomHub.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"Export Excel Error for Owner: {ex}");
+                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
+            }
+        }
+
+        // ==========================================
+        // 7. EXPORT BATCH INVOICES TO EXCEL FILE (.xlsx)
+        // ==========================================
+        [HttpGet("export-batch")]
+        public async Task<IActionResult> ExportBatchInvoices([FromQuery] int buildingId, [FromQuery] int month, [FromQuery] int year)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            try
+            {
+                var fileBytes = await _invoiceService.ExportBatchInvoicesToExcelAsync(buildingId, month, year, ownerId);
+                var fileName = $"BaoCaoTongHop_ToaNha_{buildingId}_{month:D2}_{year}.xlsx";
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Export Batch Excel Error for Owner: {ex}");
+                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
             }
         }
     }

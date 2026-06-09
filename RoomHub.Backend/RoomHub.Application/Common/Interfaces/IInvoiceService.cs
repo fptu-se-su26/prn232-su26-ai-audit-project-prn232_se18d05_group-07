@@ -12,5 +12,10 @@ namespace Application.Common.Interfaces
         Task<bool> RecordPaymentAsync(int invoiceId, RecordPaymentRequest request, string ownerId);
         Task<bool> CancelInvoiceAsync(int invoiceId, string ownerId);
         Task<byte[]> ExportInvoiceToExcelAsync(int invoiceId, string ownerId);
+        Task<List<InvoiceHeaderDto>> GetTenantInvoicesAsync(string tenantId);
+        Task<InvoiceDetailDto?> GetTenantInvoiceDetailAsync(int invoiceId, string tenantId);
+        Task<bool> TenantPayInvoiceAsync(int invoiceId, RecordPaymentRequest request, string tenantId);
+        Task<byte[]> ExportTenantInvoiceToExcelAsync(int invoiceId, string tenantId);
+        Task<byte[]> ExportBatchInvoicesToExcelAsync(int buildingId, int month, int year, string ownerId);
     }
 }
