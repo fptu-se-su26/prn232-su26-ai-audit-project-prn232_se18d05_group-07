@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import type { PageType } from '../../App';
+import api from '../../services/api';
 
 interface OwnerLayoutProps {
   currentPage: PageType;
@@ -17,12 +18,11 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   const email = user?.email || 'owner@roomhub.vn';
   const initials = fullName.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || 'CN';
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
-  const notificationRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const quickAddRef = useRef<HTMLDivElement>(null);
 
@@ -30,9 +30,6 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (notificationRef.current && !notificationRef.current.contains(target)) {
-        setIsNotificationOpen(false);
-      }
       if (avatarRef.current && !avatarRef.current.contains(target)) {
         setIsAvatarOpen(false);
       }
@@ -41,8 +38,29 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    fetchUnreadCount();
+    const handleNotificationChange = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('notification_changed', handleNotificationChange);
+    const interval = setInterval(fetchUnreadCount, 15000); // 15 seconds
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('notification_changed', handleNotificationChange);
+      clearInterval(interval);
+    };
   }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await api.get('/notifications/unread-count');
+      setUnreadNotifCount(res.data.unreadCount);
+    } catch (err) {
+      console.error('Lỗi khi fetch unread count:', err);
+    }
+  };
 
   // Title and subtitle mapping based on current page
   const getPageInfo = () => {
@@ -90,7 +108,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
     { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType, activeMatches: ['owner-invoices', 'owner-invoices-create', 'owner-invoice-detail'] },
     { label: 'Cài đặt chi phí', icon: 'calculate', route: 'owner-cost-settings' as PageType },
-    { label: 'Thông báo', icon: 'notifications', route: 'owner-notifications' as PageType, badge: 3 },
+    { label: 'Thông báo', icon: 'notifications', route: 'owner-notifications' as PageType, badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
     { label: 'Hồ sơ', icon: 'person', route: 'owner-profile' as PageType },
   ];
 
@@ -281,47 +299,18 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
               )}
             </div>
 
-            {/* Notification Bell Dropdown */}
-            <div className="relative" ref={notificationRef}>
-              <button 
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className="w-10 h-10 rounded-xl hover:bg-orange-50 border border-gray-200/50 flex items-center justify-center text-gray-500 hover:text-primary-container transition-colors relative cursor-pointer outline-none"
-              >
-                <span className="material-symbols-outlined text-[22px]">notifications</span>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-              </button>
-
-              {isNotificationOpen && (
-                <div className="absolute right-0 top-12 mt-2 w-80 bg-white rounded-2xl border border-gray-100 soft-shadow p-3 z-50 flex flex-col gap-2 animate-scaleUp">
-                  <div className="flex justify-between items-center px-2 py-1.5 border-b border-gray-50">
-                    <span className="text-xs font-bold text-on-surface">Thông báo mới</span>
-                    <button 
-                      onClick={() => { setIsNotificationOpen(false); setCurrentPage('owner-notifications'); }}
-                      className="text-[10px] font-bold text-primary-container hover:text-orange-600 cursor-pointer"
-                    >
-                      Xem tất cả
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    {/* Item 1 */}
-                    <div className="p-2 hover:bg-orange-50/50 rounded-xl transition-colors cursor-pointer text-left border-l-2 border-primary-container pl-3">
-                      <p className="text-xs font-semibold text-on-surface">Nguyễn Văn An báo đã thanh toán</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Phòng 201 - Tòa Hải Châu · 15 phút trước</p>
-                    </div>
-                    {/* Item 2 */}
-                    <div className="p-2 hover:bg-orange-50/50 rounded-xl transition-colors cursor-pointer text-left border-l-2 border-red-500 pl-3">
-                      <p className="text-xs font-semibold text-on-surface">02 hóa đơn đã quá hạn thanh toán</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Tòa RoomHub FPT · 2 giờ trước</p>
-                    </div>
-                    {/* Item 3 */}
-                    <div className="p-2 hover:bg-orange-50/50 rounded-xl transition-colors cursor-pointer text-left border-l-2 border-green-500 pl-3">
-                      <p className="text-xs font-semibold text-on-surface">Tin "Studio view biển" đã được duyệt</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Hệ thống RoomHub · Hôm qua</p>
-                    </div>
-                  </div>
-                </div>
+            {/* Notification Bell */}
+            <button 
+              onClick={() => setCurrentPage('owner-notifications')}
+              className="w-10 h-10 rounded-xl hover:bg-orange-50 border border-gray-200/50 flex items-center justify-center text-gray-500 hover:text-primary-container transition-colors relative cursor-pointer outline-none"
+            >
+              <span className="material-symbols-outlined text-[22px]">notifications</span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                  {unreadNotifCount}
+                </span>
               )}
-            </div>
+            </button>
 
             {/* Vertical Separator */}
             <div className="h-6 w-[1px] bg-gray-200"></div>
@@ -363,7 +352,12 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
                       <span className="material-symbols-outlined text-[16px]">settings</span> Cấu hình dịch vụ
                     </button>
                     <button 
-                      onClick={() => { setIsAvatarOpen(false); setCurrentPage('home'); }}
+                      onClick={() => { 
+                        setIsAvatarOpen(false); 
+                        window.location.hash = ''; 
+                        navigate('/'); 
+                        setCurrentPage('home'); 
+                      }}
                       className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-gray-700 hover:bg-orange-50 hover:text-primary-container rounded-lg text-left transition-colors cursor-pointer w-full"
                     >
                       <span className="material-symbols-outlined text-[16px]">arrow_back</span> Về trang chủ

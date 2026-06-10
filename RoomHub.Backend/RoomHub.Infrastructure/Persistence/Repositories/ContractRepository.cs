@@ -67,6 +67,7 @@ namespace Infrastructure.Persistence.Repositories
                         .ThenInclude(f => f.Building)
                 .Include(c => c.Room.RoomPhotos)
                 .Include(c => c.Owner)
+                .Include(c => c.Tenant)
                 .OrderByDescending(c => c.Id)
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId && 
                     (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && 

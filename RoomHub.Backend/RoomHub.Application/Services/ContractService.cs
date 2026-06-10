@@ -15,17 +15,20 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly INotificationRepository _notificationRepository;
 
         public ContractService(
             IContractRepository contractRepository,
             IRoomRepository roomRepository,
             IUnitOfWork unitOfWork,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            INotificationRepository notificationRepository)
         {
             _contractRepository = contractRepository;
             _roomRepository = roomRepository;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
+            _notificationRepository = notificationRepository;
         }
 
         public async Task<TenantSearchResultDto?> SearchTenantAsync(string query)
@@ -116,6 +119,26 @@ namespace Application.Services
                 // Contract.DepositAmount stores the lease deposit.
 
                 await _unitOfWork.SaveChangesAsync();
+
+                // Gửi thông báo đến Tenant nếu có tài khoản liên kết
+                if (linkedTenant != null)
+                {
+                    var ownerUser = await _userManager.FindByIdAsync(ownerId);
+                    var ownerName = ownerUser?.FullName ?? "Chủ nhà";
+                    var notification = new Notification
+                    {
+                        UserId = linkedTenant.Id,
+                        Type = "RoomInvitation",
+                        Title = "Lời mời nhận phòng",
+                        Content = $"Chủ nhà {ownerName} đã thêm bạn vào phòng {room.RoomNumber} thuộc tòa nhà {room.Floor.Building.Name}.",
+                        LinkedId = contract.Id,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _notificationRepository.AddAsync(notification);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
                 await _unitOfWork.CommitTransactionAsync();
                 return true;
             }
@@ -239,6 +262,33 @@ namespace Application.Services
                 }
 
                 await _unitOfWork.SaveChangesAsync();
+
+                // Tạo thông báo phản hồi cho Chủ nhà
+                var tenantUser = await _userManager.FindByIdAsync(tenantId);
+                var tenantName = tenantUser?.FullName ?? "Khách thuê";
+                var notification = new Notification
+                {
+                    UserId = contract.OwnerId,
+                    Type = "ContractResponse",
+                    Title = "Lời mời nhận phòng được chấp nhận",
+                    Content = $"Khách thuê {tenantName} đã chấp nhận lời mời nhận phòng {contract.Room.RoomNumber} của tòa nhà {contract.Room.Floor.Building.Name}.",
+                    LinkedId = contract.Id,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _notificationRepository.AddAsync(notification);
+
+                // Đánh dấu thông báo mời nhận phòng cũ là đã đọc
+                var inviteNotif = await _notificationRepository.GetInvitationNotificationAsync(tenantId, contract.Id);
+                if (inviteNotif != null)
+                {
+                    inviteNotif.IsRead = true;
+                    inviteNotif.Type = "RoomInvitationAccepted";
+                    inviteNotif.Content = $"Bạn đã đồng ý nhận phòng {contract.Room.RoomNumber} thuộc tòa nhà {contract.Room.Floor.Building.Name}.";
+                    await _notificationRepository.UpdateAsync(inviteNotif);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
                 return true;
             }
@@ -269,6 +319,33 @@ namespace Application.Services
                     room.Status = RoomStatus.Available;
                     room.UpdatedAt = DateTime.UtcNow;
                     await _roomRepository.UpdateAsync(room);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                // Tạo thông báo phản hồi cho Chủ nhà
+                var tenantUser = await _userManager.FindByIdAsync(tenantId);
+                var tenantName = tenantUser?.FullName ?? "Khách thuê";
+                var notification = new Notification
+                {
+                    UserId = contract.OwnerId,
+                    Type = "ContractResponse",
+                    Title = "Lời mời nhận phòng bị từ chối",
+                    Content = $"Khách thuê {tenantName} đã từ chối lời mời nhận phòng {contract.Room.RoomNumber} của tòa nhà {contract.Room.Floor.Building.Name}.",
+                    LinkedId = contract.Id,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _notificationRepository.AddAsync(notification);
+
+                // Đánh dấu thông báo mời nhận phòng cũ là đã đọc
+                var inviteNotif = await _notificationRepository.GetInvitationNotificationAsync(tenantId, contract.Id);
+                if (inviteNotif != null)
+                {
+                    inviteNotif.IsRead = true;
+                    inviteNotif.Type = "RoomInvitationRejected";
+                    inviteNotif.Content = $"Bạn đã từ chối lời mời nhận phòng {contract.Room.RoomNumber} thuộc tòa nhà {contract.Room.Floor.Building.Name}.";
+                    await _notificationRepository.UpdateAsync(inviteNotif);
                 }
 
                 await _unitOfWork.SaveChangesAsync();
