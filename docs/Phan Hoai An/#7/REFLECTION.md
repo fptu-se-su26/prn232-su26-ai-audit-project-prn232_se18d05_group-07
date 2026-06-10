@@ -32,7 +32,7 @@ Reflection cần thể hiện:
 ## 3. Tóm tắt quá trình sử dụng AI
 
 ```text
-Trong đợt cập nhật #7, AI trợ lý Antigravity đã hỗ trợ tích cực trong việc khắc phục lỗi điều hướng "Về trang chủ" từ Dashboard và tích hợp hệ thống thông báo hai chiều về hóa đơn giữa Chủ nhà và Khách thuê. AI giúp em thiết kế Custom Modal Confirm thay cho window.confirm mặc định, đồng thời triển khai DTO, API gửi thông báo nhắc hóa đơn hàng loạt và tự động gửi thông báo thanh toán hóa đơn thành công cho chủ nhà ở Backend.
+Trong đợt cập nhật #7: Tích hợp gửi thông báo email đồng thời cho hợp đồng và hóa đơn dịch vụ (áp dụng cả khách thuê online và khách thuê offline), em đã làm việc chặt chẽ với AI Antigravity. AI hỗ trợ em thiết kế cấu trúc phương thức gửi email bất đồng bộ HTML dùng chung và tích hợp luồng gửi email tự động vào các dịch vụ ContractService và InvoiceService ở phía Backend. Em đã thực hiện tự động hóa việc lấy thông tin email người dùng qua UserManager và cấu hình gửi trực tiếp email cho khách offline qua hòm thư TemporaryTenantEmail trong hợp đồng.
 ```
 
 ---
@@ -60,7 +60,7 @@ Antigravity
 ### Lý do sử dụng công cụ đó
 
 ```text
-Antigravity có khả năng đọc hiểu mã nguồn hiện tại của toàn bộ dự án, hỗ trợ sửa đổi trực tiếp các file Backend (C#) và Frontend (TypeScript) đồng bộ và chính xác mà không làm hỏng cấu trúc định dạng hoặc gây lỗi compile.
+Antigravity có khả năng hiểu rõ kiến trúc Clean Architecture của dự án RoomHub, giúp xác định đúng vị trí tiêm các Service phụ thuộc (Dependency Injection) và hỗ trợ viết mã nguồn C# chất lượng cao, hạn chế tối đa các lỗi tham chiếu rỗng hoặc sai cấu trúc API.
 ```
 
 ---
@@ -73,7 +73,7 @@ Antigravity có khả năng đọc hiểu mã nguồn hiện tại của toàn b
 - [x] Phân tích bài toán
 - [x] Tìm ý tưởng giải pháp
 - [ ] Thiết kế database
-- [x] Thiết kế giao diện
+- [ ] Thiết kế giao diện
 - [x] Thiết kế kiến trúc hệ thống
 - [x] Viết code mẫu
 - [ ] Debug lỗi
@@ -89,7 +89,7 @@ Antigravity có khả năng đọc hiểu mã nguồn hiện tại của toàn b
 ### Mô tả chi tiết
 
 ```text
-AI đã hỗ trợ thiết kế các endpoint API chuẩn RESTful để xử lý tác vụ gửi thông báo hàng loạt (notify-batch), xây dựng logic nghiệp vụ tìm hóa đơn tương ứng của phòng để làm LinkedId cho thông báo. Ở frontend, AI hỗ trợ kết nối đồng bộ state tin nhắn trong textarea và gọi API khi bấm nút. Đồng thời, AI thiết kế các Custom Modal Confirm có hiệu ứng CSS tốt (fade-in, scale-up) để tăng tính chuyên nghiệp của UI.
+AI đã hỗ trợ em phác thảo quy trình gửi mail tự động song song với hệ thống lưu thông báo database hiện tại. Bằng cách bổ sung IEmailService, AI đã viết mã mẫu cho việc khởi tạo SMTP Client và cấu hình email HTML. Ở mức độ dịch vụ, AI hỗ trợ tiêm UserManager để lấy email tài khoản chính xác của khách thuê online và chủ nhà, đồng thời thiết kế luồng xử lý riêng biệt cho khách thuê offline (chỉ gửi email mà không tạo thông báo hệ thống do họ không có tài khoản).
 ```
 
 ---
@@ -97,99 +97,21 @@ AI đã hỗ trợ thiết kế các endpoint API chuẩn RESTful để xử lý
 ## 6. Phần nào em/nhóm không sử dụng theo gợi ý của AI? Vì sao?
 
 ```text
-Em đã áp dụng đầy đủ các gợi ý của AI vì các đề xuất đều cực kỳ hợp lý, giải quyết đúng mục tiêu nghiệp vụ và sửa lỗi triệt để mà không gây dư thừa mã nguồn.
+AI đề xuất ném một Exception cụ thể khi phương thức SendEmailAsync gặp sự cố kết nối tới SMTP Server. Tuy nhiên, em nhận thấy việc gửi email là một dịch vụ bổ trợ và không được làm gián đoạn luồng nghiệp vụ cốt lõi (như chốt tiền phòng hoặc thanh toán hóa đơn). Nếu ném exception ra ngoài, transaction database sẽ bị rollback, khiến khách thuê không thể thanh toán được hóa đơn khi hòm thư SMTP gặp sự cố. Vì vậy, em đã chỉnh sửa để bọc try-catch bên ngoài tác vụ gửi mail, chỉ ghi log lỗi ra Console và cho phép transaction database tiếp tục commit thành công.
 ```
 
 ---
 
-## 7. Em/nhóm đã kiểm tra tính đúng đắn của kết quả AI như thế nào?
+## 7. Bài học kinh nghiệm / Thu hoạch sau quá trình làm việc với AI
+
+### Về kiến thức chuyên môn (C# / Web Development / Database / ...)
 
 ```text
-Quy trình kiểm chứng được thực hiện như sau:
-1. Compile Check: Chạy build dự án backend (dotnet build) thành công. Chạy build frontend (npm run build) biên dịch thành công 100% không phát sinh bất kỳ lỗi compile nào.
-2. E2E Testing: 
-   - Đăng nhập Owner và Tenant: Thực hiện xóa thông báo, giao diện hiển thị Custom Modal Confirm đúng chuẩn, bấm Xóa bỏ thì thông báo biến mất.
-   - Nhấn "Từ chối" ở lời mời nhận phòng của Tenant, modal cảnh báo màu cam hiển thị chính xác.
-   - Nhấn "Về trang chủ" ở Avatar dropdown hoặc bấm Logo thương hiệu, URL chuyển về "/" sạch hash, màn hình hiển thị đúng trang chủ.
-   - Nhấn "Gửi thông báo nhắc" sau khi tạo hóa đơn thành công trên giao diện chủ nhà: Nhập tin nhắn tùy ý và gửi, tài khoản khách thuê nhận được thông báo dịch vụ ngay lập tức.
-   - Khách thuê bấm "Thanh toán ngay" cho hóa đơn: Khi hoàn thành, chủ nhà nhận được thông báo phản hồi thanh toán thành công chính xác.
+Qua đợt này, em đã nắm vững cơ chế gửi email bất đồng bộ SMTP trong C# .NET Core, cách cấu hình và đọc thông tin cấu hình từ file appsettings.json thông qua Dependency Injection. Em cũng hiểu sâu sắc hơn về cách lấy dữ liệu tài khoản người dùng thông qua UserManager<ApplicationUser> và cách thiết kế ứng dụng có tính chịu lỗi cao (fault-tolerant) bằng việc phân tách luồng xử lý chính và phụ (gửi mail).
 ```
 
----
-
-## 8. Nếu không có AI, phần nào sẽ khó khăn nhất?
+### Về cách làm việc với AI (cách viết prompt, cách đánh giá kết quả, cách cải tiến, ...)
 
 ```text
-Phần khó khăn nhất là phân tích cách thức tích hợp một nút bấm gửi thông báo hàng loạt trên giao diện tạo hóa đơn hàng loạt sao cho đồng bộ giữa danh sách phòng trọ được chọn và nội dung tin nhắn được nhập trong textarea. AI đã hướng dẫn em kết hợp state của React với payload của API một cách có hệ thống.
+Em nhận ra rằng khi giao tiếp với AI cho các tác vụ liên quan đến dịch vụ mạng bên thứ ba (như gửi email, thanh toán...), cần mô tả rõ ràng biên giới lỗi và hướng xử lý ngoại lệ (Exception Handling). Việc này giúp AI đề xuất mã nguồn an toàn hơn, tránh gây lỗi sập lan truyền (cascading failures) cho toàn bộ hệ thống. Luôn luôn chạy dotnet build để kiểm tra biên dịch trước khi đưa vào kiểm thử thực tế.
 ```
-
----
-
-## 9. Sau bài tập/project này, em/nhóm học được gì về môn học?
-
-```text
-Em học được:
-1. Cách tổ chức phân quyền bảo mật và tạo các endpoint POST nhận DTO phức tạp trong ASP.NET Core API.
-2. Cách xây dựng và quản lý hệ thống thông báo hai chiều (tạo và lưu Notification vào cơ sở dữ liệu) để tăng tính tương tác giữa các vai trò người dùng.
-3. Cách sử dụng React state để đồng bộ dữ liệu của các modal và textarea phức tạp trong một trang giao diện lớn.
-```
-
----
-
-## 10. Sau bài tập/project này, em/nhóm học được gì về cách sử dụng AI có trách nhiệm?
-
-```text
-Sử dụng AI có trách nhiệm là luôn kiểm duyệt nội dung tin nhắn và logic phân quyền. Khi AI đề xuất code gửi thông báo hàng loạt, em cần kiểm tra kỹ xem có bước xác thực `ownerId` đăng nhập để đảm bảo chủ nhà đó chỉ có quyền gửi thông báo nhắc nợ tới khách thuê của chính họ, tránh rò rỉ dữ liệu hoặc quấy nhiễu khách thuê ở các tòa nhà khác.
-```
-
----
-
-## 11. Tự đánh giá mức độ hoàn thành & Điểm tự đánh giá
-
-| Tiêu chí | Điểm tự đánh giá 1-5 | Ghi chú |
-|---|:---:|---|
-| Ghi nhận việc dùng AI trung thực | 5 | Ghi nhận chi tiết 3 prompt thực tế |
-| Prompt có mục tiêu rõ ràng | 5 | Xác định rõ lỗi điều hướng, Custom Modal và hệ thống thông báo |
-| Kiểm chứng kết quả AI | 5 | Build thành công và kiểm tra trực quan trên browser |
-| Tự chỉnh sửa/cải tiến | 5 | Tự kiểm soát transaction khi tạo thông báo ở Backend |
-| Hiểu nội dung đã nộp | 5 | Nắm rõ cơ chế lưu thông báo và cập nhật số lượng badge |
-| Reflection có chiều sâu | 5 | Bài học sâu sắc về phân quyền và an toàn dữ liệu |
-| Sử dụng AI có trách nhiệm | 5 | Đảm bảo tính nhất quán của giao diện và URL |
-
----
-
-## 12. Câu hỏi tự vấn cuối bài
-
-### 12.1. Nếu giảng viên hỏi về phần AI đã hỗ trợ, em/nhóm có giải thích lại được không?
-
-```text
-Hoàn toàn giải thích được. Em nắm rõ luồng DTO gửi lên, cách service mở transaction, truy vấn hợp đồng, tạo Notification entity và lưu DB, cũng như cơ chế Axios kết nối ở Frontend.
-```
-
-### 12.2. Nếu không có AI, em/nhóm có thể tự làm lại phần quan trọng nhất không?
-
-```text
-Chắc chắn tự làm lại được vì đây là các kiến thức thiết kế API Controller/Service cơ bản và điều hướng phổ biến trong C# và React.
-```
-
-### 12.3. Phần nào trong bài thể hiện rõ nhất năng lực thật sự của em/nhóm?
-
-```text
-Năng lực tổ chức hệ thống thông báo hai chiều mượt mà, tự động kết nối logic giữa hành động của chủ nhà (chốt tiền) và khách thuê (thanh toán) một cách nhất quán.
-```
-
-### 12.4. Em/nhóm muốn cải thiện kỹ năng nào sau bài này?
-
-```text
-Cải thiện khả năng tối ưu hóa truy vấn cơ sở dữ liệu để gửi thông báo hàng loạt nhanh hơn đối với các tòa nhà có hàng trăm phòng trọ.
-```
-
----
-
-## 13. Cam kết Reflection
-
-Em/nhóm cam kết nội dung phản ánh trung thực quá trình học tập.
-
-| Đại diện sinh viên/nhóm | Ngày xác nhận |
-|---|---|
-| Phan Hoài An | 10/06/2026 |

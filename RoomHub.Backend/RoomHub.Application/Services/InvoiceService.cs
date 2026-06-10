@@ -7,6 +7,7 @@ using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using OfficeOpenXml;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -18,6 +19,8 @@ namespace Application.Services
         private readonly IUtilityReadingRepository _utilityReadingRepository;
         private readonly INotificationRepository _notificationRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmailService _emailService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public InvoiceService(
             IInvoiceRepository invoiceRepository,
@@ -25,7 +28,9 @@ namespace Application.Services
             IRoomRepository roomRepository,
             IUtilityReadingRepository utilityReadingRepository,
             INotificationRepository notificationRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IEmailService emailService,
+            UserManager<ApplicationUser> userManager)
         {
             _invoiceRepository = invoiceRepository;
             _contractRepository = contractRepository;
@@ -33,6 +38,8 @@ namespace Application.Services
             _utilityReadingRepository = utilityReadingRepository;
             _notificationRepository = notificationRepository;
             _unitOfWork = unitOfWork;
+            _emailService = emailService;
+            _userManager = userManager;
         }
 
         public async Task<List<InvoiceHeaderDto>> GetOwnerInvoicesAsync(string ownerId)
@@ -532,6 +539,26 @@ namespace Application.Services
                         CreatedAt = DateTime.UtcNow
                     };
                     await _notificationRepository.AddAsync(notification);
+
+                    // Gửi email thông báo cho Chủ nhà
+                    try
+                    {
+                        var ownerUser = await _userManager.FindByIdAsync(invoice.Contract.OwnerId);
+                        if (ownerUser != null && !string.IsNullOrEmpty(ownerUser.Email))
+                        {
+                            var emailSubject = "RoomHub - Thông báo hóa đơn đã được thanh toán";
+                            var emailBody = $"Xin chào {ownerUser.FullName},<br/><br/>" +
+                                            $"Khách thuê <b>{tenantName}</b> (phòng <b>{roomNumber}</b> - tòa nhà <b>{buildingName}</b>) đã thanh toán thành công hóa đơn tháng <b>{monthStr}</b> với số tiền <b>{request.Amount:N0}đ</b>.<br/>" +
+                                            $"Vui lòng kiểm tra tài khoản nhận tiền và lịch sử giao dịch trên hệ thống RoomHub.<br/><br/>" +
+                                            $"Trân trọng,<br/>RoomHub Platform.";
+
+                            await _emailService.SendEmailAsync(ownerUser.Email, emailSubject, emailBody, true);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Email Service Error] Không thể gửi email thông báo thanh toán cho chủ nhà: {ex.Message}");
+                    }
                 }
 
                 await _invoiceRepository.UpdateAsync(invoice);
@@ -675,7 +702,7 @@ namespace Application.Services
                         continue;
 
                     var activeContract = await _contractRepository.GetActiveContractByRoomIdAsync(roomId);
-                    if (activeContract == null || activeContract.OwnerId != ownerId || string.IsNullOrEmpty(activeContract.TenantId))
+                    if (activeContract == null || activeContract.OwnerId != ownerId)
                         continue;
 
                     // Tìm hóa đơn chưa thanh toán tương ứng với tháng/năm này
@@ -685,18 +712,67 @@ namespace Application.Services
                                                                 i.InvoiceDate.Month == request.Month);
                     int? linkedInvoiceId = invoice?.Id;
 
-                    var notification = new Notification
-                    {
-                        UserId = activeContract.TenantId,
-                        Type = "InvoiceNew",
-                        Title = "Thông báo hóa đơn dịch vụ",
-                        Content = request.Message,
-                        LinkedId = linkedInvoiceId,
-                        IsRead = false,
-                        CreatedAt = DateTime.UtcNow
-                    };
+                    string? tenantEmail = null;
+                    string tenantName = "Khách thuê";
 
-                    await _notificationRepository.AddAsync(notification);
+                    if (!string.IsNullOrEmpty(activeContract.TenantId))
+                    {
+                        // Khách thuê online: Tạo thông báo trên hệ thống
+                        var notification = new Notification
+                        {
+                            UserId = activeContract.TenantId,
+                            Type = "InvoiceNew",
+                            Title = "Thông báo hóa đơn dịch vụ",
+                            Content = request.Message,
+                            LinkedId = linkedInvoiceId,
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        await _notificationRepository.AddAsync(notification);
+
+                        // Lấy email tài khoản chính xác của khách thuê online
+                        var tenantUser = await _userManager.FindByIdAsync(activeContract.TenantId);
+                        if (tenantUser != null)
+                        {
+                            tenantEmail = tenantUser.Email;
+                            tenantName = tenantUser.FullName ?? "Khách thuê";
+                        }
+                    }
+                    else
+                    {
+                        // Khách thuê offline: Lấy email và tên tạm thời từ hợp đồng
+                        tenantEmail = activeContract.TemporaryTenantEmail;
+                        tenantName = activeContract.TemporaryTenantName ?? "Khách thuê";
+                    }
+
+                    // Gửi email nhắc hóa đơn (cho cả online và offline)
+                    if (!string.IsNullOrEmpty(tenantEmail))
+                    {
+                        try
+                        {
+                            var emailSubject = $"RoomHub - Thông báo hóa đơn dịch vụ phòng {room.RoomNumber} - Tháng {request.Month:D2}/{request.Year}";
+                            var emailBody = $"Xin chào {tenantName},<br/><br/>" +
+                                            $"Bạn nhận được thông báo nhắc hóa đơn dịch vụ cho phòng <b>{room.RoomNumber}</b> thuộc tòa nhà <b>{room.Floor.Building.Name}</b>.<br/>" +
+                                            $"<b>Lời nhắn từ chủ nhà:</b> {request.Message}<br/><br/>";
+
+                            if (invoice != null)
+                            {
+                                emailBody += $"<b>Thông tin chi tiết hóa đơn:</b><br/>" +
+                                             $"- Tổng tiền thanh toán: <b>{invoice.TotalAmount:N0}đ</b><br/>" +
+                                             $"- Hạn thanh toán: <b>{invoice.DueDate:dd/MM/yyyy}</b><br/><br/>" +
+                                             $"Vui lòng kiểm tra và thanh toán đúng hạn.<br/><br/>";
+                            }
+
+                            emailBody += $"Trân trọng,<br/>RoomHub Platform.";
+
+                            await _emailService.SendEmailAsync(tenantEmail, emailSubject, emailBody, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[Email Service Error] Không thể gửi email nhắc hóa đơn tới {tenantEmail}: {ex.Message}");
+                        }
+                    }
                 }
 
                 await _unitOfWork.SaveChangesAsync();

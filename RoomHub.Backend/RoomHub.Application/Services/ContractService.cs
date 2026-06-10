@@ -16,19 +16,22 @@ namespace Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INotificationRepository _notificationRepository;
+        private readonly IEmailService _emailService;
 
         public ContractService(
             IContractRepository contractRepository,
             IRoomRepository roomRepository,
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
-            INotificationRepository notificationRepository)
+            INotificationRepository notificationRepository,
+            IEmailService emailService)
         {
             _contractRepository = contractRepository;
             _roomRepository = roomRepository;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _notificationRepository = notificationRepository;
+            _emailService = emailService;
         }
 
         public async Task<TenantSearchResultDto?> SearchTenantAsync(string query)
@@ -121,10 +124,11 @@ namespace Application.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 // Gửi thông báo đến Tenant nếu có tài khoản liên kết
+                var ownerUser = await _userManager.FindByIdAsync(ownerId);
+                var ownerName = ownerUser?.FullName ?? "Chủ nhà";
+
                 if (linkedTenant != null)
                 {
-                    var ownerUser = await _userManager.FindByIdAsync(ownerId);
-                    var ownerName = ownerUser?.FullName ?? "Chủ nhà";
                     var notification = new Notification
                     {
                         UserId = linkedTenant.Id,
@@ -137,6 +141,31 @@ namespace Application.Services
                     };
                     await _notificationRepository.AddAsync(notification);
                     await _unitOfWork.SaveChangesAsync();
+
+                    if (!string.IsNullOrEmpty(linkedTenant.Email))
+                    {
+                        await _emailService.SendEmailAsync(
+                            linkedTenant.Email,
+                            "RoomHub - Lời mời nhận phòng dịch vụ",
+                            $"Xin chào {linkedTenant.FullName},<br/><br/>" +
+                            $"Chủ nhà <b>{ownerName}</b> đã thêm bạn vào phòng <b>{room.RoomNumber}</b> thuộc tòa nhà <b>{room.Floor.Building.Name}</b> trên hệ thống RoomHub.<br/>" +
+                            $"Vui lòng đăng nhập vào tài khoản Khách thuê trên hệ thống RoomHub để xem chi tiết hợp đồng và xác nhận nhận phòng.<br/><br/>" +
+                            $"Trân trọng,<br/>RoomHub Platform.",
+                            true
+                        );
+                    }
+                }
+                else if (!string.IsNullOrEmpty(request.TemporaryTenantEmail))
+                {
+                    await _emailService.SendEmailAsync(
+                        request.TemporaryTenantEmail,
+                        "RoomHub - Thông báo nhận phòng thành công",
+                        $"Xin chào {request.TemporaryTenantName ?? "Khách thuê"},<br/><br/>" +
+                        $"Chủ nhà <b>{ownerName}</b> đã thêm bạn vào phòng <b>{room.RoomNumber}</b> thuộc tòa nhà <b>{room.Floor.Building.Name}</b> trên hệ thống RoomHub.<br/>" +
+                        $"Hợp đồng thuê phòng của bạn đã được kích hoạt. Vui lòng liên hệ với chủ nhà để nhận chìa khóa phòng và ký kết văn bản bàn giao.<br/><br/>" +
+                        $"Trân trọng,<br/>RoomHub Platform.",
+                        true
+                    );
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
@@ -278,6 +307,20 @@ namespace Application.Services
                 };
                 await _notificationRepository.AddAsync(notification);
 
+                var ownerUser = await _userManager.FindByIdAsync(contract.OwnerId);
+                if (ownerUser != null && !string.IsNullOrEmpty(ownerUser.Email))
+                {
+                    await _emailService.SendEmailAsync(
+                        ownerUser.Email,
+                        "RoomHub - Lời mời nhận phòng được chấp nhận",
+                        $"Xin chào {ownerUser.FullName},<br/><br/>" +
+                        $"Khách thuê <b>{tenantName}</b> đã chính thức chấp nhận lời mời nhận phòng <b>{contract.Room.RoomNumber}</b> thuộc tòa nhà <b>{contract.Room.Floor.Building.Name}</b>.<br/>" +
+                        $"Hợp đồng hiện đã được chuyển sang trạng thái hoạt động (Active). Bạn có thể truy cập Bảng điều khiển dành cho Chủ nhà để theo dõi dịch vụ.<br/><br/>" +
+                        $"Trân trọng,<br/>RoomHub Platform.",
+                        true
+                    );
+                }
+
                 // Đánh dấu thông báo mời nhận phòng cũ là đã đọc
                 var inviteNotif = await _notificationRepository.GetInvitationNotificationAsync(tenantId, contract.Id);
                 if (inviteNotif != null)
@@ -337,6 +380,20 @@ namespace Application.Services
                     CreatedAt = DateTime.UtcNow
                 };
                 await _notificationRepository.AddAsync(notification);
+
+                var ownerUser = await _userManager.FindByIdAsync(contract.OwnerId);
+                if (ownerUser != null && !string.IsNullOrEmpty(ownerUser.Email))
+                {
+                    await _emailService.SendEmailAsync(
+                        ownerUser.Email,
+                        "RoomHub - Lời mời nhận phòng bị từ chối",
+                        $"Xin chào {ownerUser.FullName},<br/><br/>" +
+                        $"Khách thuê <b>{tenantName}</b> đã từ chối lời mời nhận phòng <b>{contract.Room.RoomNumber}</b> thuộc tòa nhà <b>{contract.Room.Floor.Building.Name}</b>.<br/>" +
+                        $"Hợp đồng của phòng này đã được hệ thống hủy bỏ để bạn có thể tiếp tục cho thuê hoặc gửi lời mời mới.<br/><br/>" +
+                        $"Trân trọng,<br/>RoomHub Platform.",
+                        true
+                    );
+                }
 
                 // Đánh dấu thông báo mời nhận phòng cũ là đã đọc
                 var inviteNotif = await _notificationRepository.GetInvitationNotificationAsync(tenantId, contract.Id);

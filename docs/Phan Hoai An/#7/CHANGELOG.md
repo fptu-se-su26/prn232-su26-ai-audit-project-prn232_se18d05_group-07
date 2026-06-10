@@ -27,7 +27,7 @@ Nguyên tắc ghi changelog:
 | MSSV / Danh sách MSSV | DE180303 |
 | Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
 | Repository URL | https://github.com/fptu-se-su26/prn232-su26-ai-audit-project-prn232_se18d05_group-07 |
-| Ngày bắt đầu | 10/06/2026 |
+| Ngày bắt đầu | 09/06/2026 |
 | Ngày hoàn thành | 10/06/2026 |
 
 ---
@@ -43,79 +43,41 @@ Nguyên tắc ghi changelog:
 | Phase 06 | 07/06/2026 | Luồng Xác nhận nhận phòng/từ chối của Khách thuê (Tenant Room Acceptance/Rejection Flow) | Completed |
 | Phase 07 | 08/06/2026 | Trang Quản lý Khách thuê dành cho Chủ nhà, sửa giao diện sidebar/avatar, tạo EF migration | Completed |
 | Phase 08 | 08/06/2026 | Triển Khai & Cải Tiến Tính Năng Hóa Đơn & Chốt Tiền (Chủ nhà & Khách thuê) | Completed |
-| Phase 09 | 10/06/2026 | Tính năng xóa thông báo với Custom Confirm & Sửa lỗi điều hướng "Về trang chủ" | Completed |
+| Phase 09 | 10/06/2026 | Tích hợp Gửi Email Thông Báo Tự Động Song Song Cho Hợp Đồng & Hóa Đơn (Khách thuê Online & Offline) | Completed |
 
 ---
 
-# [Phase 09] Tính năng xóa thông báo với Custom Confirm & Sửa lỗi điều hướng "Về trang chủ"
+# [Phase 09] Tích hợp Gửi Email Thông Báo Tự Động Song Song Cho Hợp Đồng & Hóa Đơn (Khách thuê Online & Offline)
 
 ## Ngày thực hiện
 
 ```text
-10/06/2026
+09/06/2026 - 10/06/2026
 ```
 
 ## Đã hoàn thành
 
-- [x] **Xóa thông báo cho Chủ nhà (Owner Notifications)**:
-  - Thêm state `deleteTargetId` để mở dialog xác nhận xóa và gọi API `DELETE /api/notifications/{id}`.
-  - Tích hợp thêm icon thùng rác bên cạnh thời gian thông báo trong danh sách để chủ nhà chủ động xóa.
-  - Phát đi sự kiện `notification_changed` để cập nhật lại số thông báo chưa đọc trên thanh Navbar.
-- [x] **Custom Modal Confirm (Thay thế `window.confirm` mặc định của trình duyệt)**:
-  - Tạo các Modal xác nhận tùy chỉnh bằng React State và Tailwind CSS có animation đẹp mắt, chuyên nghiệp.
-  - Áp dụng khi xóa thông báo ở cả giao diện của Chủ nhà (`OwnerNotifications.tsx`) và Khách thuê (`TenantNotifications.tsx`).
-  - Áp dụng khi từ chối lời mời nhận phòng của Khách thuê (`TenantNotifications.tsx`).
-  - Loại bỏ hoàn toàn dòng chữ `localhost says` của trình duyệt giúp nâng cao trải nghiệm người dùng (UX).
-- [x] **Khắc phục lỗi điều hướng "Về trang chủ"**:
-  - Cập nhật sự kiện click nút "Về trang chủ" trong menu Avatar của `OwnerLayout.tsx` và `TenantLayout.tsx` để xóa hash, chuyển URL trình duyệt về `/` và cập nhật state `currentPage = 'home'`.
-  - Cập nhật hàm `navTo` và sự kiện click Logo trên `Navbar.tsx` để xóa hash trước khi `navigate` sang bất kỳ trang public nào, tránh lỗi hiển thị đè màn hình Dashboard.
-- [x] **Gửi thông báo nhắc nhở hóa đơn thực tế (Owner -> Tenant)**:
-  - Định nghĩa DTO `NotifyBatchRequest` nhận danh sách phòng và tin nhắn.
-  - Viết logic `SendInvoiceNotificationsAsync` trong `InvoiceService.cs` và endpoint `POST /api/owner/invoices/notify-batch` trong `InvoicesController.cs`.
-  - Đồng bộ state `notificationMessage` vào textarea ở modal thành công của `InvoiceCreate.tsx` và thực hiện gọi API gửi thông báo thực tế khi bấm gửi.
-- [x] **Thông báo thanh toán thành công tự động (Tenant -> Owner)**:
-  - Tự động tạo `Notification` cho chủ nhà khi khách thuê thanh toán thành công hóa đơn ở hàm `TenantPayInvoiceAsync` (`InvoiceService.cs`).
-- [x] **Biên dịch Hệ thống**:
-  - Chạy lệnh build backend/frontend thành công, loại bỏ tất cả các cảnh báo kiểu dữ liệu.
+- [x] **Dịch vụ Email dùng chung (Email Service)**:
+  - Khai báo phương thức `SendEmailAsync` trong [IEmailService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Common/Interfaces/IEmailService.cs).
+  - Triển khai dịch vụ SMTP hỗ trợ gửi nội dung HTML và Text trong [EmailService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Infrastructure/Services/EmailService.cs) (sử dụng cấu hình SMTP trong `appsettings.json`).
+- [x] **Tự động gửi email khi phát hành Hợp đồng & Lời mời nhận phòng**:
+  - Tiêm `IEmailService` vào constructor của [ContractService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/ContractService.cs).
+  - Bổ sung logic gửi email thông báo khi tạo hợp đồng: Khách thuê online nhận được email mời nhận phòng kèm hướng dẫn đăng nhập; Khách thuê offline nhận được email thông báo kích hoạt hợp đồng trực tiếp thông qua hòm thư `TemporaryTenantEmail`.
+- [x] **Gửi email phản hồi hợp đồng của Khách thuê về hòm thư Chủ nhà**:
+  - Trong `AcceptContractAsync` và `RejectContractAsync` tại [ContractService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/ContractService.cs), tự động lấy email chủ nhà bằng `UserManager` và gửi email thông báo kết quả đồng ý hoặc từ chối nhận phòng của khách thuê.
+- [x] **Tích hợp Email thông báo hóa đơn dịch vụ hàng loạt**:
+  - Tiêm `IEmailService` và `UserManager<ApplicationUser>` vào [InvoiceService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/InvoiceService.cs).
+  - Cập nhật phương thức `SendInvoiceNotificationsAsync`: hỗ trợ tìm kiếm và gửi email nhắc hóa đơn đến cả hòm thư chính xác của khách thuê online (truy xuất qua `UserManager`) và hòm thư của khách thuê offline (lưu trữ trong `TemporaryTenantEmail` của hợp đồng).
+  - Bao bọc tác vụ gửi email trong khối `try-catch` để đảm bảo nếu dịch vụ SMTP lỗi thì nghiệp vụ chốt tiền/gửi thông báo chính vẫn hoàn tất thành công.
+- [x] **Gửi email báo Chủ nhà khi hóa đơn được thanh toán thành công**:
+  - Trong phương thức `TenantPayInvoiceAsync` tại [InvoiceService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/InvoiceService.cs), khi khách thuê thanh toán thành công (hóa đơn chuyển sang trạng thái `Paid`), tự động gửi email thông báo xác nhận thanh toán kèm thông tin số tiền đóng về email của chủ nhà.
 
 ## Thay đổi chi tiết
 
 | STT | Nội dung thay đổi | Người thực hiện | File/Module liên quan | Minh chứng |
 |---:|---|---|---|---|
-| 1 | Thêm DTO nhận yêu cầu gửi thông báo nhắc hóa đơn | Phan Hoài An | `InvoiceDtos.cs` | Code compiled |
-| 2 | Khai báo và triển khai nghiệp vụ gửi thông báo nhắc hóa đơn hàng loạt | Phan Hoài An | `IInvoiceService.cs`, `InvoiceService.cs` | Code compiled |
-| 3 | Tự động tạo thông báo gửi cho chủ nhà khi khách thuê thanh toán | Phan Hoài An | `InvoiceService.cs` | Code compiled |
-| 4 | Bổ sung API endpoint gửi thông báo nhắc nhở | Phan Hoài An | `InvoicesController.cs` | POST /api/owner/invoices/notify-batch |
-| 5 | Kết nối API gửi thông báo nhắc nợ trên giao diện chốt hóa đơn hàng loạt | Phan Hoài An | `InvoiceCreate.tsx` | UI đồng bộ và gửi thông báo nhắc nợ thành công |
-| 6 | Thêm state, hàm xóa và Custom Modal Confirm xóa thông báo cho Chủ nhà | Phan Hoài An | `pages/owner/Notifications.tsx` | UI hiển thị Custom Confirm modal & xóa thành công |
-| 7 | Thay thế `window.confirm` bằng Custom Modal Confirm khi xóa thông báo ở Khách thuê | Phan Hoài An | `pages/tenant/Notifications.tsx` | Hộp thoại Custom Confirm modal thay thế hoàn toàn browser default |
-| 8 | Thay thế `window.confirm` bằng Custom Modal Confirm khi từ chối nhận phòng ở Khách thuê | Phan Hoài An | `pages/tenant/Notifications.tsx` | Hộp thoại cảnh báo từ chối màu cam hoạt động tốt |
-| 9 | Sửa nút Về trang chủ trong Avatar menu để làm sạch hash và định hướng đúng URL `/` | Phan Hoài An | `OwnerLayout.tsx`, `TenantLayout.tsx` | Điều hướng chuẩn và URL sạch hash |
-| 10 | Tự động dọn dẹp hash trên URL khi bấm Logo hoặc danh mục điều hướng chính | Phan Hoài An | `Navbar.tsx` | Tránh bị đè dashboard khi điều hướng về các trang công cộng |
-| 11 | Biên dịch kiểm thử backend và build thành công | Phan Hoài An | Backend / Frontend | Build succeeded |
-
-## Bug Report chi tiết
-
-| STT | Tên lỗi | Nguyên nhân | Cách sửa |
-|---:|---|---|---|
-| B-01 | Nhấn Về trang chủ nhưng hiển thị trang Tìm chỗ ở | Browser path trước đó là `/browse` và nút Về trang chủ chỉ đổi state currentPage = 'home' chứ không navigate về `/` | Gọi `navigate('/')` để chuyển hướng chính xác |
-| B-02 | Nhấn Về trang chủ nhưng URL giữ nguyên hash dashboard cũ | Nút Về trang chủ không dọn dẹp hash (`#/owner/...`) làm ứng dụng tự load lại dashboard sau khi reload trang | Gọi `window.location.hash = ''` để xóa sạch hash trên URL |
-
-## AI có hỗ trợ không?
-
-- [x] Có
-- [ ] Không
-
-Nếu có, mô tả AI đã hỗ trợ phần nào:
-
-```text
-AI trợ lý Antigravity đã hỗ trợ tích cực trong việc: (1) Thiết kế Custom Modal Confirm bằng React State & Tailwind CSS, tích hợp hoạt ảnh mượt mà cho các hành động xóa thông báo và từ chối nhận phòng; (2) Phân tích lỗi cấu trúc hash-routing dẫn đến hành vi hiển thị chồng lấn trang và đề xuất cách làm sạch hash trên Navbar và Layouts; (3) Triển khai DTO, API endpoint gửi thông báo nhắc hóa đơn hàng loạt từ chủ nhà tới người thuê, đồng thời kết nối gọi API thực tế từ UI chốt tiền; (4) Tích hợp thông báo thanh toán thành công tự động gửi cho chủ nhà ở Backend; (5) Tiến hành biên dịch thành công cả dự án Backend và Frontend.
-```
-
-## Cam kết cập nhật Changelog
-
-Sinh viên/nhóm cam kết rằng nội dung changelog phản ánh đúng các thay đổi đã thực hiện trong quá trình làm bài tập/project.
-
-| Đại diện sinh viên/nhóm | Ngày xác nhận |
-|---|---|
-| Phan Hoài An | 10/06/2026 |
+| 1 | Thêm phương thức gửi email bất đồng bộ | Phan Hoài An | [IEmailService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Common/Interfaces/IEmailService.cs) | File code |
+| 2 | Hiện thực hóa SMTP Client gửi mail HTML | Phan Hoài An | [EmailService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Infrastructure/Services/EmailService.cs) | File code |
+| 3 | Tích hợp gửi email trong luồng hợp đồng | Phan Hoài An | [ContractService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/ContractService.cs) | File code |
+| 4 | Cấu hình gửi email hóa đơn và thanh toán | Phan Hoài An | [InvoiceService.cs](file:///d:/Ky8/PRN232/Project/prn232-su26-ai-audit-project-prn232_se18d05_group-07/RoomHub.Backend/RoomHub.Application/Services/InvoiceService.cs) | File code |
+| 5 | Biên dịch kiểm thử thành công hệ thống | Phan Hoài An | Backend Solution | Output terminal |
