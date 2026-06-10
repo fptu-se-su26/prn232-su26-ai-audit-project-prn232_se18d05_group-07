@@ -37,6 +37,8 @@ import TenantFavorites from './pages/tenant/Favorites';
 import TenantMaintenance from './pages/tenant/Maintenance';
 import TenantMessages from './pages/tenant/Messages';
 import TenantProfile from './pages/tenant/Profile';
+import TenantNotifications from './pages/tenant/Notifications';
+import OwnerNotifications from './pages/owner/Notifications';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
@@ -74,6 +76,7 @@ export type PageType =
   | 'tenant-maintenance'
   | 'tenant-messages'
   | 'tenant-profile'
+  | 'tenant-notifications'
   | 'admin-dashboard'
   | 'admin-users'
   | 'admin-buildings'
@@ -125,6 +128,7 @@ const AppContent: React.FC = () => {
           'maintenance': 'tenant-maintenance',
           'messages': 'tenant-messages',
           'profile': 'tenant-profile',
+          'notifications': 'tenant-notifications',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
       }
@@ -286,6 +290,8 @@ const AppContent: React.FC = () => {
           <TenantMessages />
         ) : currentPage === 'tenant-profile' ? (
           <TenantProfile />
+        ) : currentPage === 'tenant-notifications' ? (
+          <TenantNotifications setCurrentPage={setCurrentPage} />
         ) : (
           <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}
@@ -320,6 +326,8 @@ const AppContent: React.FC = () => {
           <InvoiceDetail invoiceId={selectedInvoiceId} setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-tenants' ? (
           <Tenants setCurrentPage={setCurrentPage} setSelectedUnitId={setSelectedUnitId} />
+        ) : currentPage === 'owner-notifications' ? (
+          <OwnerNotifications setCurrentPage={setCurrentPage} />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

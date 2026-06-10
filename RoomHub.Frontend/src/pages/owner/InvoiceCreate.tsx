@@ -71,6 +71,15 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   const [isBulkSurchargeModalOpen, setIsBulkSurchargeModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
+  const [notificationMessage, setNotificationMessage] = useState<string>('');
+
+  useEffect(() => {
+    if (currentStep === 3) {
+      const [yearStr, monthStr] = billingMonth.split('-');
+      const formattedDueDate = dueDate.split('-').reverse().join('/');
+      setNotificationMessage(`Chào bạn, RoomHub đã cập nhật hóa đơn dịch vụ tháng ${monthStr}/${yearStr} của bạn. Vui lòng kiểm tra ứng dụng RoomHub để đối soát chi tiết chỉ số và thanh toán trước ngày ${formattedDueDate}. Cảm ơn bạn!`);
+    }
+  }, [currentStep, billingMonth, dueDate]);
   
   // Bulk input values
   const [bulkSurchargeAmount, setBulkSurchargeAmount] = useState<string>('');
@@ -1831,7 +1840,8 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 <label className="text-xs font-bold text-on-surface">Nội dung tin nhắn thông báo <span className="text-red-500">*</span></label>
                 <textarea
                   rows={4}
-                  defaultValue={`Chào bạn, RoomHub đã cập nhật hóa đơn dịch vụ tháng ${billingMonth.split('-')[1]}/${billingMonth.split('-')[0]} của bạn. Vui lòng kiểm tra ứng dụng RoomHub để đối soát chi tiết chỉ số và thanh toán trước ngày ${dueDate.split('-').reverse().join('/')}. Cảm ơn bạn!`}
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:bg-white focus:border-primary-container"
                 />
               </div>
@@ -1839,18 +1849,39 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
 
             <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
               <button
+                disabled={isAddLoading}
                 onClick={() => setIsNotificationModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg cursor-pointer disabled:opacity-50"
               >
                 Hủy bỏ
               </button>
               <button
-                onClick={() => {
-                  setIsNotificationModalOpen(false);
-                  triggerToast(`Đã gửi thông báo nhắc hóa đơn thành công!`, 'success');
+                disabled={isAddLoading || !notificationMessage.trim()}
+                onClick={async () => {
+                  try {
+                    setIsAddLoading(true);
+                    const [yearStr, monthStr] = billingMonth.split('-');
+                    const payload = {
+                      roomIds: validSelectedUnits.map(u => parseInt(u.id)),
+                      month: parseInt(monthStr),
+                      year: parseInt(yearStr),
+                      message: notificationMessage
+                    };
+                    await api.post('/owner/invoices/notify-batch', payload);
+                    setIsNotificationModalOpen(false);
+                    triggerToast(`Đã gửi thông báo nhắc hóa đơn thành công!`, 'success');
+                  } catch (err: any) {
+                    console.error(err);
+                    triggerToast(err.response?.data?.message || 'Gửi thông báo nhắc hóa đơn thất bại.', 'error');
+                  } finally {
+                    setIsAddLoading(false);
+                  }
                 }}
-                className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm flex items-center gap-1 disabled:opacity-50"
               >
+                {isAddLoading && (
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
+                )}
                 Gửi thông báo
               </button>
             </div>

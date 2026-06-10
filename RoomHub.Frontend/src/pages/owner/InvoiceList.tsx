@@ -554,23 +554,31 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
   return (
     <div className="space-y-6 pb-12 relative animate-fadeIn">
       
-      {/* 1. BREADCRUMB */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-          <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
-          <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span className="text-gray-800 font-bold">Hóa đơn & Chốt tiền</span>
+      {/* 1. HEADER & BREADCRUMB */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-1.5">
+            <span className="hover:text-orange-500 cursor-pointer transition-colors" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
+            <span className="material-symbols-outlined text-[13px]">chevron_right</span>
+            <span className="text-gray-700 font-bold">Hóa đơn & Chốt tiền</span>
+          </div>
+          <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[22px] text-orange-500">receipt_long</span>
+            Hóa đơn & Chốt tiền
+            <span className="ml-1 px-2.5 py-0.5 bg-orange-50 text-orange-600 border border-orange-100 rounded-full text-xs font-black">{invoices.length} bill</span>
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">Quản lý toàn bộ hóa đơn thu chi và theo dõi tình trạng thanh toán.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button 
             onClick={() => setIsExportModalOpen(true)}
-            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 hover:border-gray-350 text-gray-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-white shadow-sm"
+            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-white shadow-sm active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px]">file_download</span> Xuất Excel
           </button>
           <button 
             onClick={() => setCurrentPage('owner-invoices-create')}
-            className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 animate-scaleUp"
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-orange-200 flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px] font-bold">calculate</span> + Chốt tiền tháng
           </button>
@@ -580,58 +588,58 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
       {/* 2. FINANCIAL SUMMARY CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         
-        <div className="bg-white p-4.5 rounded-3xl border border-gray-150 soft-shadow flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary-container text-[20px]">receipt</span>
+        <div className="group bg-white p-4.5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-orange-500/5 flex items-center gap-3 transition-all duration-300 hover:-translate-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span className="material-symbols-outlined text-orange-500 text-[20px]">receipt</span>
           </div>
           <div>
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">Tổng hóa đơn</span>
-            <span className="text-sm font-black text-on-surface leading-tight block">{stats.monthCount} bills</span>
+            <span className="text-sm font-black text-gray-900 leading-tight block">{stats.monthCount} bills</span>
             <span className="text-[9px] text-gray-400 font-semibold">Tất cả các kỳ</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 rounded-3xl border border-gray-150 soft-shadow flex items-center gap-3 animate-scaleUp">
-          <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-green-600 text-[20px]">check_circle</span>
+        <div className="group bg-white p-4.5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 flex items-center gap-3 transition-all duration-300 hover:-translate-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span className="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
           </div>
           <div>
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">Đã thu về</span>
-            <span className="text-[13px] font-black text-green-600 leading-tight block">{stats.collected.toLocaleString('vi-VN')}đ</span>
-            <span className="text-[9px] text-green-500 font-semibold">Tiền thu an toàn</span>
+            <span className="text-[13px] font-black text-emerald-600 leading-tight block">{stats.collected.toLocaleString('vi-VN')}đ</span>
+            <span className="text-[9px] text-emerald-500 font-semibold">Tiền thu an toàn</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 rounded-3xl border border-gray-150 soft-shadow flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-yellow-50 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-yellow-600 text-[20px]">wallet</span>
+        <div className="group bg-white p-4.5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 flex items-center gap-3 transition-all duration-300 hover:-translate-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span className="material-symbols-outlined text-amber-600 text-[20px]">wallet</span>
           </div>
           <div>
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">Chưa thu</span>
-            <span className="text-[13px] font-black text-yellow-600 leading-tight block">{stats.uncollected.toLocaleString('vi-VN')}đ</span>
-            <span className="text-[9px] text-yellow-500 font-semibold">Đang chờ chuyển</span>
+            <span className="text-[13px] font-black text-amber-600 leading-tight block">{stats.uncollected.toLocaleString('vi-VN')}đ</span>
+            <span className="text-[9px] text-amber-500 font-semibold">Đang chờ chuyển</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 rounded-3xl border border-gray-150 soft-shadow flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-red-600 text-[20px]">warning</span>
+        <div className="group bg-white p-4.5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-red-500/5 flex items-center gap-3 transition-all duration-300 hover:-translate-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span className="material-symbols-outlined text-red-500 text-[20px]">warning</span>
           </div>
           <div>
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">Quá hạn nợ</span>
-            <span className="text-[13px] font-black text-red-600 leading-tight block">{stats.overdue.toLocaleString('vi-VN')}đ</span>
-            <span className="text-[9px] text-red-500 font-semibold">Cần gửi nhắc nợ</span>
+            <span className="text-[13px] font-black text-red-500 leading-tight block">{stats.overdue.toLocaleString('vi-VN')}đ</span>
+            <span className="text-[9px] text-red-400 font-semibold">Cần gửi nhắc nợ</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 rounded-3xl border border-gray-150 soft-shadow flex items-center gap-3 col-span-2 md:col-span-1">
-          <div className="w-10 h-10 rounded-2xl bg-orange-100/50 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-orange-700 text-[20px]">bar_chart</span>
+        <div className="group bg-white p-4.5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 flex items-center gap-3 col-span-2 md:col-span-1 transition-all duration-300 hover:-translate-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+            <span className="material-symbols-outlined text-blue-500 text-[20px]">bar_chart</span>
           </div>
           <div>
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">Dự kiến thu</span>
-            <span className="text-[13px] font-black text-gray-700 leading-tight block">{stats.expected.toLocaleString('vi-VN')}đ</span>
-            <span className="text-[9px] text-gray-400 font-semibold">Tổng doanh thu kỳ</span>
+            <span className="text-[13px] font-black text-blue-600 leading-tight block">{stats.expected.toLocaleString('vi-VN')}đ</span>
+            <span className="text-[9px] text-blue-400 font-semibold">Tổng doanh thu kỳ</span>
           </div>
         </div>
 
@@ -805,40 +813,42 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
 
       {/* 6. BULK ACTIONS BAR */}
       {selectedIds.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 p-3.5 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3.5 animate-scaleUp">
-          <div className="flex items-center gap-2.5 text-xs font-bold text-primary-container">
-            <span className="material-symbols-outlined text-[20px] font-bold">check_box</span>
-            <span>Đã chọn <strong className="text-lg text-primary-container font-black px-0.5">{selectedIds.length}</strong> hóa đơn</span>
+        <div className="bg-gradient-to-r from-orange-50 to-orange-50/50 border border-orange-200/60 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3.5 animate-scaleUp backdrop-blur-sm">
+          <div className="flex items-center gap-2.5 text-xs font-bold text-orange-700">
+            <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[18px] font-bold text-white">check_box</span>
+            </div>
+            <span>Đã chọn <strong className="text-base text-orange-600 font-black px-0.5">{selectedIds.length}</strong> hóa đơn</span>
           </div>
 
-          <div className="flex gap-2 w-full sm:w-auto justify-end text-xs font-bold">
+          <div className="flex gap-1.5 w-full sm:w-auto justify-end text-xs font-bold flex-wrap">
             <button 
               onClick={handleBulkExportExcel}
-              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-orange-100/30 hover:text-primary-container hover:border-orange-200 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">file_download</span> Xuất Excel
+              <span className="material-symbols-outlined text-[15px]">file_download</span> Xuất Excel
             </button>
             <button 
               onClick={handleBulkNotification}
-              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-orange-100/30 hover:text-primary-container hover:border-orange-200 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">notifications_active</span> Nhắc nợ
+              <span className="material-symbols-outlined text-[15px]">notifications_active</span> Nhắc nợ
             </button>
             <button 
               onClick={handleBulkMarkPaid}
-              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-orange-100/30 hover:text-primary-container hover:border-orange-200 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-400 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">credit_score</span> Đóng đủ
+              <span className="material-symbols-outlined text-[15px]">credit_score</span> Đóng đủ
             </button>
             <button 
               onClick={handleBulkCancel}
-              className="px-3 py-1.5 bg-red-50 text-red-655 hover:bg-red-100/50 border border-red-150 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px] font-bold">cancel</span> Hủy hóa đơn
+              <span className="material-symbols-outlined text-[15px]">cancel</span> Hủy hóa đơn
             </button>
             <button 
               onClick={() => setSelectedIds([])}
-              className="px-3.5 py-1.5 text-gray-400 hover:text-gray-655 rounded-xl transition-all cursor-pointer outline-none font-bold"
+              className="px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-white rounded-xl transition-all cursor-pointer font-bold border border-transparent hover:border-gray-200"
             >
               Bỏ chọn
             </button>
@@ -889,31 +899,31 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
       ) : viewMode === 'table' ? (
         
         /* TABLE VIEW */
-        <div className="bg-white rounded-3xl border border-gray-150 soft-shadow overflow-hidden">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto border-0">
             <table className="w-full border-collapse text-left text-xs font-semibold text-gray-500">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-150 uppercase tracking-wider text-[10px] text-gray-400 font-black">
-                  <th className="py-4.5 px-4 w-10 text-center">
+                <tr className="bg-gray-50/80 border-b border-gray-100 uppercase tracking-widest text-[10px] text-gray-400 font-black">
+                  <th className="py-3.5 px-4 w-10 text-center">
                     <input 
                       type="checkbox" 
                       onChange={handleSelectAll}
                       checked={filteredInvoices.length > 0 && selectedIds.length === filteredInvoices.length}
-                      className="w-4 h-4 text-primary-container accent-primary-container rounded cursor-pointer" 
+                      className="w-4 h-4 text-orange-500 accent-orange-500 rounded cursor-pointer" 
                     />
                   </th>
-                  <th className="py-4.5 px-4 min-w-[150px]">Hóa đơn</th>
-                  <th className="py-4.5 px-4">Kỳ hóa đơn</th>
-                  <th className="py-4.5 px-4">Phòng / Căn</th>
-                  <th className="py-4.5 px-4 min-w-[180px]">Người thuê trọ</th>
-                  <th className="py-4.5 px-4 min-w-[160px]">Chi tiết tiền</th>
-                  <th className="py-4.5 px-4">Tổng tiền</th>
-                  <th className="py-4.5 px-4">Trạng thái</th>
-                  <th className="py-4.5 px-4">Hạn đóng</th>
-                  <th className="py-4.5 px-4 text-right">Thao tác</th>
+                  <th className="py-3.5 px-4 min-w-[150px]">Hóa đơn</th>
+                  <th className="py-3.5 px-4">Kỳ hóa đơn</th>
+                  <th className="py-3.5 px-4">Phòng / Căn</th>
+                  <th className="py-3.5 px-4 min-w-[180px]">Người thuê trọ</th>
+                  <th className="py-3.5 px-4 min-w-[160px]">Chi tiết tiền</th>
+                  <th className="py-3.5 px-4">Tổng tiền</th>
+                  <th className="py-3.5 px-4">Trạng thái</th>
+                  <th className="py-3.5 px-4">Hạn đóng</th>
+                  <th className="py-3.5 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-50">
                 {filteredInvoices.slice((currentPageNum - 1) * pageSize, currentPageNum * pageSize).map((list) => {
                   const isSelected = selectedIds.includes(list.id);
                   const isOverdueReal = list.status === 'Quá hạn' || (list.status === 'Chưa thanh toán' && new Date(list.dueDate) < new Date());
@@ -921,8 +931,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
                   return (
                     <tr 
                       key={list.id} 
-                      className={`hover:bg-orange-50/10 transition-colors ${
-                        isSelected ? 'bg-orange-50/5' : ''
+                      className={`hover:bg-orange-50/20 transition-colors duration-150 group ${
+                        isSelected ? 'bg-orange-50/10' : ''
                       }`}
                     >
                       <td className="py-4.5 px-4 text-center">

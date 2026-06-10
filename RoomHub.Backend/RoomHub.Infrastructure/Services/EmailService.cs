@@ -80,5 +80,39 @@ namespace Infrastructure.Services
                 throw new Exception("Failed to send password reset email", ex);
             }
         }
+
+        public async Task SendEmailAsync(string email, string subject, string body, bool isHtml = false)
+        {
+            if (string.IsNullOrEmpty(email)) return;
+
+            using var smtpClient = new SmtpClient(_config["EmailSettings:Host"])
+            {
+                Port = int.Parse(_config["EmailSettings:Port"] ?? "587"),
+                Credentials = new NetworkCredential(
+                    _config["EmailSettings:Email"],
+                    _config["EmailSettings:Password"]
+                ),
+                EnableSsl = true
+            };
+
+            var mail = new MailMessage
+            {
+                From = new MailAddress(_config["EmailSettings:Email"] ?? "no-reply@roomhub.com"),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = isHtml
+            };
+
+            mail.To.Add(email);
+
+            try
+            {
+                await smtpClient.SendMailAsync(mail);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Email Error] Failed to send email to {email}: {ex.Message}");
+            }
+        }
     }
 }

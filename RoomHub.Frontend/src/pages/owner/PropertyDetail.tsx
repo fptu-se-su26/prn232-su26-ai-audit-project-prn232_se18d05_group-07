@@ -209,12 +209,12 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
       
       {/* Breadcrumb Section */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-          <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
+        <div className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold">
+          <span className="hover:text-primary-container cursor-pointer transition-colors" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-properties')}>Tài sản & Phòng</span>
+          <span className="hover:text-primary-container cursor-pointer transition-colors" onClick={() => setCurrentPage('owner-properties')}>Tài sản & Phòng</span>
           <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-          <span className="text-gray-800 font-bold">{property.name}</span>
+          <span className="text-slate-800 font-bold">{property.name}</span>
         </div>
         <button 
           onClick={() => setCurrentPage('owner-properties')}
@@ -227,20 +227,20 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-gray-100 soft-shadow">
         <div className="space-y-1">
-          <h2 className="text-2xl font-black text-on-surface flex items-center gap-2">
+          <h2 className="text-2xl font-black text-slate-850 flex items-center gap-2">
             {property.name}
             <span className="px-3 py-1 bg-green-50 text-green-600 border border-green-200 text-xs font-bold rounded-full">
               Đang hoạt động
             </span>
           </h2>
-          <p className="text-xs text-gray-500 flex items-center gap-1 font-semibold">
+          <p className="text-xs text-gray-400 flex items-center gap-1 font-semibold">
             <span className="material-symbols-outlined text-[16px] text-gray-400">location_on</span>
             {property.address}
           </p>
           <div className="flex items-center gap-4 pt-1">
-            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{property.type}</span>
-            <span className="text-xs font-bold text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{stats.total} phòng/căn</span>
-            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">{Math.round((stats.occupied / stats.total) * 100)}% lấp đầy</span>
+            <span className="text-xs font-bold text-gray-650 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{property.type}</span>
+            <span className="text-xs font-bold text-gray-650 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{stats.total} phòng/căn</span>
+            <span className="text-xs font-bold text-orange-605 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">{Math.round((stats.occupied / stats.total) * 100)}% lấp đầy</span>
           </div>
         </div>
 
@@ -273,7 +273,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
         {/* Technical overview list */}
         <div className="bg-white p-6 rounded-3xl border border-gray-100 soft-shadow lg:col-span-2 flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-on-surface border-b border-gray-100 pb-3 mb-4 flex items-center gap-1.5">
+            <h3 className="text-sm font-bold text-slate-800 border-b border-gray-100 pb-3 mb-4 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-primary-container text-[18px]">info</span>
               Thông số vận hành chi tiết
             </h3>
@@ -281,11 +281,11 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
               <div className="space-y-1">
                 <span className="text-gray-400 block font-medium">Quy mô tài sản:</span>
-                <span className="font-bold text-on-surface block text-sm">{property.floors} Tầng · {property.roomsPerFloor} phòng/tầng</span>
+                <span className="font-bold text-slate-800 block text-sm">{property.floors} Tầng · {property.roomsPerFloor} phòng/tầng</span>
               </div>
               <div className="space-y-1">
                 <span className="text-gray-400 block font-medium">Tổng phòng trọ:</span>
-                <span className="font-bold text-on-surface block text-sm">{stats.total} phòng khép kín</span>
+                <span className="font-bold text-slate-800 block text-sm">{stats.total} phòng khép kín</span>
               </div>
               <div className="space-y-1">
                 <span className="text-gray-400 block font-medium">Đơn giá thuê trung bình:</span>
@@ -316,28 +316,34 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
 
         {/* Circular Occupancy Progress Card */}
         <div className="bg-white p-6 rounded-3xl border border-gray-100 soft-shadow flex flex-col items-center justify-center text-center">
-          <h3 className="text-sm font-bold text-on-surface mb-3">Tỷ lệ lấp đầy tài sản</h3>
+          <h3 className="text-sm font-bold text-slate-800 mb-3">Tỷ lệ lấp đầy tài sản</h3>
           
           {/* Radial SVG Gauge */}
           <div className="relative w-32 h-32 flex items-center justify-center mb-2">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" stroke="#F3F4F6" strokeWidth="9" fill="transparent" />
+              <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="8" fill="transparent" />
               <circle 
                 cx="50" 
                 cy="50" 
                 r="40" 
-                stroke="#F97316" 
-                strokeWidth="9" 
+                stroke="url(#radial-orange-gradient)" 
+                strokeWidth="8" 
                 fill="transparent" 
                 strokeDasharray="251.2" 
                 strokeDashoffset={251.2 - (251.2 * (stats.occupied / stats.total))}
                 strokeLinecap="round"
-                className="transition-all duration-700 ease-out"
+                className="transition-all duration-1000 ease-out"
               />
+              <defs>
+                <linearGradient id="radial-orange-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f97316" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </linearGradient>
+              </defs>
             </svg>
             <div className="absolute text-center">
-              <span className="text-2xl font-black text-on-surface block leading-none">{Math.round((stats.occupied / stats.total) * 100)}%</span>
-              <span className="text-[9px] font-bold text-gray-400 mt-1 block">Lấp đầy</span>
+              <span className="text-2xl font-black text-slate-800 block leading-none">{Math.round((stats.occupied / stats.total) * 100)}%</span>
+              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 block">Lấp đầy</span>
             </div>
           </div>
           
@@ -350,34 +356,34 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
       {/* 6 Summary Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Stat 1 */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
-          <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Tổng phòng/căn</p>
-          <h4 className="text-xl font-black text-on-surface">{stats.total}</h4>
+        <div className="bg-white p-4 rounded-2xl border border-gray-100/80 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Tổng phòng/căn</p>
+          <h4 className="text-xl font-black text-slate-800 tracking-tight">{stats.total}</h4>
         </div>
         {/* Stat 2 */}
-        <div className="bg-green-50/70 p-4 rounded-2xl border border-green-100 soft-shadow">
-          <p className="text-[10px] text-green-700 font-bold uppercase mb-1">Còn trống</p>
-          <h4 className="text-xl font-black text-green-700">{stats.vacant}</h4>
+        <div className="bg-green-50/50 p-4 rounded-2xl border border-green-150/50 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-green-655 font-bold uppercase mb-1">Còn trống</p>
+          <h4 className="text-xl font-black text-green-700 tracking-tight">{stats.vacant}</h4>
         </div>
         {/* Stat 3 */}
-        <div className="bg-orange-50/70 p-4 rounded-2xl border border-orange-100 soft-shadow">
-          <p className="text-[10px] text-orange-700 font-bold uppercase mb-1">Đang thuê</p>
-          <h4 className="text-xl font-black text-orange-700">{stats.occupied}</h4>
+        <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100/60 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-orange-605 font-bold uppercase mb-1">Đang thuê</p>
+          <h4 className="text-xl font-black text-orange-700 tracking-tight">{stats.occupied}</h4>
         </div>
         {/* Stat 4 */}
-        <div className="bg-gray-100/70 p-4 rounded-2xl border border-gray-200/50 soft-shadow">
-          <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Bảo trì</p>
-          <h4 className="text-xl font-black text-gray-500">{stats.maintenance}</h4>
+        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200/60 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Bảo trì</p>
+          <h4 className="text-xl font-black text-slate-600 tracking-tight">{stats.maintenance}</h4>
         </div>
         {/* Stat 5 */}
-        <div className="bg-yellow-50/70 p-4 rounded-2xl border border-yellow-200/50 soft-shadow">
-          <p className="text-[10px] text-yellow-700 font-bold uppercase mb-1">Chưa đóng tiền</p>
-          <h4 className="text-xl font-black text-yellow-700">{stats.unpaidInvoices}</h4>
+        <div className="bg-yellow-50/50 p-4 rounded-2xl border border-yellow-150/60 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-yellow-650 font-bold uppercase mb-1">Chưa đóng tiền</p>
+          <h4 className="text-xl font-black text-yellow-750 tracking-tight">{stats.unpaidInvoices}</h4>
         </div>
         {/* Stat 6 */}
-        <div className="bg-red-50/70 p-4 rounded-2xl border border-red-150/50 soft-shadow">
-          <p className="text-[10px] text-red-700 font-bold uppercase mb-1">Quá hạn</p>
-          <h4 className="text-xl font-black text-red-700">{stats.overdueInvoices}</h4>
+        <div className="bg-red-50/50 p-4 rounded-2xl border border-red-150/60 soft-shadow hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+          <p className="text-[10px] text-red-600 font-bold uppercase mb-1">Quá hạn</p>
+          <h4 className="text-xl font-black text-red-700 tracking-tight">{stats.overdueInvoices}</h4>
         </div>
       </div>
 

@@ -21,6 +21,7 @@ namespace Application.Common.DTOs.Dashboard
     {
         public string Month { get; set; } = null!;
         public decimal Revenue { get; set; }
+        public decimal Unpaid { get; set; }
     }
 
     public class DashboardDto
@@ -32,6 +33,7 @@ namespace Application.Common.DTOs.Dashboard
         public int ActiveListings { get; set; }
         public int UnpaidInvoicesCount { get; set; }
         public decimal RevenueThisMonth { get; set; }
+        public bool IsMockData { get; set; }
 
         public List<DashboardTaskDto> Tasks { get; set; } = new();
         public List<DashboardActivityDto> RecentActivities { get; set; } = new();

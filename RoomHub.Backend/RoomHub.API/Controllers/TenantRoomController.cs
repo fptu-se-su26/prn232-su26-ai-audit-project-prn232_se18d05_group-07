@@ -63,7 +63,13 @@ namespace RoomHub.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"[AcceptRoom Error] Exception: {ex.Message}");
+                Console.WriteLine($"[AcceptRoom Error] StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[AcceptRoom Error] InnerException: {ex.InnerException.Message}");
+                }
+                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
             }
         }
 
@@ -87,7 +93,13 @@ namespace RoomHub.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"[RejectRoom Error] Exception: {ex.Message}");
+                Console.WriteLine($"[RejectRoom Error] StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[RejectRoom Error] InnerException: {ex.InnerException.Message}");
+                }
+                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
             }
         }
     }

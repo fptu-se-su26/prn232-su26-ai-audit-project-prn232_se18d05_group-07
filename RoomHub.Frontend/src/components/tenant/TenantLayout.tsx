@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PageType } from '../../App';
 import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api';
 
 interface TenantLayoutProps {
   currentPage: PageType;
@@ -9,15 +10,7 @@ interface TenantLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems: { label: string; icon: string; route: PageType; activeMatches?: string[]; badge?: number }[] = [
-  { label: 'Tổng quan', icon: 'space_dashboard', route: 'tenant-dashboard' },
-  { label: 'Phòng của tôi', icon: 'meeting_room', route: 'tenant-room' },
-  { label: 'Hóa đơn', icon: 'receipt_long', route: 'tenant-invoices', activeMatches: ['tenant-invoices', 'tenant-invoice-detail'] },
-  { label: 'Phòng yêu thích', icon: 'favorite', route: 'tenant-favorites' },
-  { label: 'Yêu cầu bảo trì', icon: 'build', route: 'tenant-maintenance' },
-  { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: 2 },
-  { label: 'Hồ sơ', icon: 'person', route: 'tenant-profile' },
-];
+// menuItems dynamically computed inside component
 
 const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage, children }) => {
   const { user, logout } = useAuth();
@@ -25,7 +18,33 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const avatarRef = useRef<HTMLDivElement>(null);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await api.get('/notifications/unread-count');
+      setUnreadNotifCount(res.data.unreadCount);
+    } catch (err) {
+      console.error('Lỗi khi fetch unread count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    const handleNotificationChange = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('notification_changed', handleNotificationChange);
+
+    const interval = setInterval(fetchUnreadCount, 15000); // 15 seconds
+
+    return () => {
+      window.removeEventListener('notification_changed', handleNotificationChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   const fullName = user?.fullName || 'Khách thuê RoomHub';
   const email = user?.email || 'tenant@roomhub.vn';
@@ -50,10 +69,11 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     'tenant-maintenance': { title: 'Yêu cầu bảo trì', subtitle: 'Gửi và theo dõi các yêu cầu sửa chữa.' },
     'tenant-messages': { title: 'Tin nhắn', subtitle: 'Trao đổi trực tiếp với chủ trọ.' },
     'tenant-profile': { title: 'Hồ sơ cá nhân', subtitle: 'Thông tin tài khoản và xác minh danh tính.' },
+    'tenant-notifications': { title: 'Thông báo', subtitle: 'Xem các cập nhật và lời mời nhận phòng mới nhất.' },
   };
   const pageInfo = pageInfoMap[currentPage] || { title: 'Khách thuê', subtitle: 'RoomHub Platform' };
 
-  const isActive = (item: typeof menuItems[number]) =>
+  const isActive = (item: { label: string; icon: string; route: PageType; activeMatches?: string[]; badge?: number }) =>
     item.activeMatches ? item.activeMatches.some((m) => currentPage.startsWith(m)) : currentPage === item.route;
 
   const handleLogout = () => {
@@ -66,6 +86,17 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     setCurrentPage('home');
     navigate('/login');
   };
+
+  const menuItems: { label: string; icon: string; route: PageType; activeMatches?: string[]; badge?: number }[] = [
+    { label: 'Tổng quan', icon: 'space_dashboard', route: 'tenant-dashboard' },
+    { label: 'Phòng của tôi', icon: 'meeting_room', route: 'tenant-room' },
+    { label: 'Hóa đơn', icon: 'receipt_long', route: 'tenant-invoices', activeMatches: ['tenant-invoices', 'tenant-invoice-detail'] },
+    { label: 'Phòng yêu thích', icon: 'favorite', route: 'tenant-favorites' },
+    { label: 'Yêu cầu bảo trì', icon: 'build', route: 'tenant-maintenance' },
+    { label: 'Thông báo', icon: 'notifications', route: 'tenant-notifications', badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
+    { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: 2 },
+    { label: 'Hồ sơ', icon: 'person', route: 'tenant-profile' },
+  ];
 
   const renderSidebar = () => (
     <div className="flex flex-col h-full bg-white">
@@ -144,11 +175,15 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setCurrentPage('tenant-messages')}
+              onClick={() => setCurrentPage('tenant-notifications')}
               className="w-10 h-10 rounded-xl hover:bg-orange-50 border border-gray-200/50 flex items-center justify-center text-gray-500 hover:text-primary-container transition-colors relative cursor-pointer"
             >
               <span className="material-symbols-outlined text-[22px]">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                  {unreadNotifCount}
+                </span>
+              )}
             </button>
             <div className="h-6 w-[1px] bg-gray-200"></div>
             <div className="relative" ref={avatarRef}>
@@ -168,7 +203,12 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
                   <button onClick={() => { setIsAvatarOpen(false); setCurrentPage('tenant-profile'); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-gray-700 hover:bg-orange-50 hover:text-primary-container rounded-lg text-left transition-colors cursor-pointer w-full">
                     <span className="material-symbols-outlined text-[16px]">person</span> Hồ sơ của tôi
                   </button>
-                  <button onClick={() => { setIsAvatarOpen(false); setCurrentPage('home'); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-gray-700 hover:bg-orange-50 hover:text-primary-container rounded-lg text-left transition-colors cursor-pointer w-full">
+                  <button onClick={() => { 
+                    setIsAvatarOpen(false); 
+                    window.location.hash = ''; 
+                    navigate('/'); 
+                    setCurrentPage('home'); 
+                  }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-gray-700 hover:bg-orange-50 hover:text-primary-container rounded-lg text-left transition-colors cursor-pointer w-full">
                     <span className="material-symbols-outlined text-[16px]">arrow_back</span> Về trang chủ
                   </button>
                   <button onClick={() => { setIsAvatarOpen(false); handleLogout(); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg text-left transition-colors cursor-pointer w-full">
