@@ -147,8 +147,11 @@ namespace Application.Services
                 dto.RecentActivities = dto.RecentActivities.OrderByDescending(a => DateTime.ParseExact(a.Time, "dd/MM/yyyy HH:mm", null)).ToList();
             }
 
-            // 3. Revenue Chart Data (Last 5 Months)
-            for (int i = 4; i >= 0; i--)
+            // 3. Revenue Chart Data (Last 6 Months)
+            var tempChartData = new List<RevenueChartDataDto>();
+            bool hasRealData = false;
+
+            for (int i = 5; i >= 0; i--)
             {
                 var targetMonthDate = DateTime.UtcNow.AddMonths(-i);
                 var m = targetMonthDate.Month;
@@ -158,12 +161,43 @@ namespace Application.Services
                     .Where(inv => inv.Status == InvoiceStatus.Paid && inv.InvoiceDate.Month == m && inv.InvoiceDate.Year == y)
                     .Sum(inv => inv.TotalAmount);
 
-                dto.RevenueChartData.Add(new RevenueChartDataDto
+                var monthUnpaidRevenue = invoices
+                    .Where(inv => (inv.Status == InvoiceStatus.Unpaid || inv.Status == InvoiceStatus.Overdue) && inv.InvoiceDate.Month == m && inv.InvoiceDate.Year == y)
+                    .Sum(inv => inv.TotalAmount);
+
+                if (monthPaidRevenue > 0 || monthUnpaidRevenue > 0)
                 {
-                    Month = $"Th{m}",
-                    Revenue = monthPaidRevenue > 0 ? monthPaidRevenue : 30000000 + (m * 2000000) // Realistic placeholder mock for visual preview if no real paid data yet
+                    hasRealData = true;
+                }
+
+                tempChartData.Add(new RevenueChartDataDto
+                {
+                    Month = $"Th{m}/{y.ToString().Substring(2)}",
+                    Revenue = monthPaidRevenue,
+                    Unpaid = monthUnpaidRevenue
                 });
             }
+
+            if (!hasRealData)
+            {
+                // Nếu hoàn toàn chưa có dữ liệu thật trong hệ thống, tự động điền dữ liệu mô phỏng để biểu đồ sinh động
+                dto.IsMockData = true;
+                for (int i = 5; i >= 0; i--)
+                {
+                    var targetMonthDate = DateTime.UtcNow.AddMonths(-i);
+                    var m = targetMonthDate.Month;
+                    var y = targetMonthDate.Year;
+
+                    tempChartData[5 - i].Revenue = 15000000 + (m * 1500000);
+                    tempChartData[5 - i].Unpaid = 5000000 + (m * 500000);
+                }
+            }
+            else
+            {
+                dto.IsMockData = false;
+            }
+
+            dto.RevenueChartData = tempChartData;
 
             return dto;
         }

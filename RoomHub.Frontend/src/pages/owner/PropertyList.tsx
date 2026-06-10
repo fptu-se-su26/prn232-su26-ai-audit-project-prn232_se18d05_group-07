@@ -34,16 +34,6 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Tất cả');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form states for simulator
-  const [newPropName, setNewPropName] = useState('');
-  const [newPropType, setNewPropType] = useState<'Phòng trọ' | 'Studio' | 'Căn hộ mini' | 'Căn hộ'>('Phòng trọ');
-  const [newPropAddress, setNewPropAddress] = useState('');
-  const [newPropDistrict, setNewPropDistrict] = useState('Quận Ngũ Hành Sơn');
-  const [newPropFloors, setNewPropFloors] = useState(2);
-  const [newPropRoomsPerFloor, setNewPropRoomsPerFloor] = useState(4);
-  const [newPropPrice, setNewPropPrice] = useState(2500000);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('vi-VN') + 'đ';
@@ -57,7 +47,7 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
       setError(null);
     } catch (err: any) {
       console.error(err);
-      setError('Không thể kết nối danh sách tài sản. Vui lòng đăng nhập lại.');
+      setError('Không thể kết nối danh sách tài sản. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -76,7 +66,6 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
     });
   }, [properties, searchQuery, selectedTypeFilter]);
 
-  // Calculations for loaded state
   const metrics = useMemo(() => {
     const total = properties.length;
     const active = properties.filter(p => p.status === 'Đang hoạt động').length;
@@ -91,16 +80,6 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
     setCurrentPage('owner-property-detail');
   };
 
-  const handleAddPropertySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPropName || !newPropAddress) {
-      alert('Vui lòng điền đầy đủ tên và địa chỉ tài sản.');
-      return;
-    }
-    alert(`Mô phỏng thành công! Đã tạo cấu trúc toà nhà "${newPropName}" với ${newPropFloors} tầng, tổng ${newPropFloors * newPropRoomsPerFloor} phòng cho thuê. Danh sách sơ đồ phòng đã được khởi tạo tự động.`);
-    setIsAddModalOpen(false);
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -112,105 +91,114 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center space-y-3 max-w-md mx-auto mt-12 shadow-sm">
-        <span className="material-symbols-outlined text-[36px] text-red-500 block">error</span>
-        <h3 className="text-sm font-bold">{error}</h3>
-        <button onClick={fetchProperties} className="px-4 py-2 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
-          Thử lại
+      <div className="min-h-[400px] flex flex-col items-center justify-center space-y-4 text-center">
+        <span className="material-symbols-outlined text-[48px] text-red-500">error_outline</span>
+        <p className="text-sm font-bold text-red-655">{error}</p>
+        <button 
+          onClick={fetchProperties}
+          className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+        >
+          Thử tải lại dữ liệu
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-
+    <div className="space-y-6 animate-fadeIn pb-10">
 
       {/* Page Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-        <span className="hover:text-primary-container cursor-pointer" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
+      <div className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold">
+        <span className="hover:text-primary-container cursor-pointer transition-colors" onClick={() => setCurrentPage('owner-dashboard')}>Chủ nhà</span>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-gray-800 font-bold">Tài sản & Phòng</span>
+        <span className="text-slate-800 font-bold">Tài sản & Phòng</span>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 soft-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-500">Tổng tài sản</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-50 text-primary-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">corporate_fare</span>
+      {/* Metrics Row (Giao diện Premium đồng bộ Dashboard) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* Metric 1: Tổng tài sản */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100/80 soft-shadow hover:shadow-lg hover:shadow-orange-100/30 hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-3.5">
+            <span className="text-xs font-semibold text-gray-400">Tổng tài sản</span>
+            <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-[20px]">corporate_fare</span>
             </div>
           </div>
-          <h3 className="text-2xl font-black text-on-surface">{metrics.total}</h3>
-          <p className="text-[10px] text-gray-400 mt-1 font-medium">{metrics.active} đang hoạt động</p>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">{metrics.total}</h3>
+          <p className="text-[10px] text-gray-400 mt-2 font-medium">{metrics.active} đang hoạt động</p>
         </div>
 
-        {/* Metric 2 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 soft-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-500">Tổng số phòng/căn</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">meeting_room</span>
+        {/* Metric 2: Tổng số phòng */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100/80 soft-shadow hover:shadow-lg hover:shadow-blue-100/30 hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-3.5">
+            <span className="text-xs font-semibold text-gray-400">Tổng số phòng/căn</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-[20px]">meeting_room</span>
             </div>
           </div>
-          <h3 className="text-2xl font-black text-on-surface">{metrics.totalRooms}</h3>
-          <p className="text-[10px] text-gray-400 mt-1 font-medium">{metrics.occupied} phòng đang thuê</p>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">{metrics.totalRooms}</h3>
+          <p className="text-[10px] text-gray-400 mt-2 font-medium">{metrics.occupied} phòng đang thuê</p>
         </div>
 
-        {/* Metric 3 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 soft-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-500">Phòng trống</span>
-            <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">vpn_key</span>
+        {/* Metric 3: Phòng trống */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100/80 soft-shadow hover:shadow-lg hover:shadow-emerald-100/30 hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-3.5">
+            <span className="text-xs font-semibold text-gray-400">Phòng trống</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-[20px]">vpn_key</span>
             </div>
           </div>
-          <h3 className="text-2xl font-black text-on-surface">{metrics.totalRooms - metrics.occupied}</h3>
-          <p className="text-[10px] text-gray-400 mt-1 font-medium">Sẵn sàng chào đón khách</p>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">{metrics.totalRooms - metrics.occupied}</h3>
+          <p className="text-[10px] text-gray-400 mt-2 font-medium">Sẵn sàng chào đón khách</p>
         </div>
 
-        {/* Metric 4 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 soft-shadow">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-500">Tỷ lệ lấp đầy TB</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">percent</span>
+        {/* Metric 4: Tỷ lệ lấp đầy TB */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-100/80 soft-shadow hover:shadow-lg hover:shadow-indigo-100/30 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-400">Tỷ lệ lấp đầy TB</span>
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm">
+                <span className="material-symbols-outlined text-[20px]">percent</span>
+              </div>
             </div>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{metrics.rate}%</h3>
           </div>
-          <h3 className="text-2xl font-black text-on-surface">{metrics.rate}%</h3>
-          <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${metrics.rate}%` }}></div>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden relative shadow-inner">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
+              style={{ width: `${metrics.rate}%` }}
+            ></div>
           </div>
         </div>
+
       </div>
 
-      {/* Action Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow flex flex-col md:flex-row gap-4 items-center justify-between">
+      {/* Action Bar (Giao diện Kính mờ cao cấp) */}
+      <div className="bg-white/90 backdrop-blur-md p-4 rounded-3xl border border-gray-100/85 soft-shadow flex flex-col lg:flex-row gap-4 items-center justify-between">
         
         {/* Search */}
-        <div className="relative w-full md:w-80">
+        <div className="relative w-full lg:w-80">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
           <input 
             type="text" 
             placeholder="Tìm kiếm tài sản, địa chỉ..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-on-surface placeholder-gray-400 focus:outline-none focus:bg-white focus:border-primary-container transition-all"
+            className="w-full pl-9 pr-4 py-2.5 bg-gray-50/50 hover:bg-gray-50 border border-gray-200/80 rounded-xl text-xs font-semibold text-slate-700 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-primary-container focus:ring-1 focus:ring-primary-container/30 transition-all duration-300"
           />
         </div>
 
         {/* Type Filters Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto py-1 no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto py-1 no-scrollbar">
           {['Tất cả', 'Phòng trọ', 'Studio', 'Căn hộ mini', 'Căn hộ'].map((type) => (
             <button
               key={type}
               onClick={() => setSelectedTypeFilter(type)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-300 cursor-pointer border ${
                 selectedTypeFilter === type
-                  ? 'bg-orange-50 text-primary-container border border-orange-100'
-                  : 'bg-white text-gray-600 border border-gray-200/60 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-orange-500 to-primary-container text-white border-transparent shadow-sm shadow-orange-100/50'
+                  : 'bg-white text-gray-600 border-gray-200/80 hover:bg-gray-50/60 hover:text-primary-container hover:border-orange-100/50'
               }`}
             >
               {type}
@@ -221,7 +209,7 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
         {/* Add Property Trigger */}
         <button 
           onClick={() => setCurrentPage('owner-properties-create')}
-          className="w-full md:w-auto px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+          className="w-full lg:w-auto px-5 py-2.5 bg-gradient-to-r from-orange-500 to-primary-container hover:brightness-110 text-white rounded-xl text-xs font-extrabold transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md shadow-orange-100/30 active:scale-95 cursor-pointer"
         >
           <span className="material-symbols-outlined text-[16px] font-bold">add</span> Thêm tài sản mới
         </button>
@@ -230,16 +218,16 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
       {/* Property Cards Grid or Empty State */}
       {filteredProperties.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 soft-shadow p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-20 h-20 rounded-full bg-orange-50 text-primary-container flex items-center justify-center mb-5">
+          <div className="w-20 h-20 rounded-full bg-orange-50 text-primary-container flex items-center justify-center mb-5 animate-bounce">
             <span className="material-symbols-outlined text-[36px]">corporate_fare</span>
           </div>
-          <h3 className="text-xl font-bold text-on-surface mb-2">Tài sản này chưa có phòng/căn nào</h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Tài sản này chưa có phòng/căn nào</h3>
           <p className="text-sm text-gray-500 max-w-md leading-relaxed mb-6">
             Hãy thêm tòa nhà trọ, studio hoặc căn hộ mini mới của bạn để bắt đầu thiết lập sơ đồ phòng trọ, chốt tiền phòng hàng tháng.
           </p>
           <button 
             onClick={() => setCurrentPage('owner-properties-create')}
-            className="px-6 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-primary-container text-white rounded-xl text-xs font-bold hover:brightness-110 transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined text-[16px] font-bold">add</span> Tạo sơ đồ tài sản ngay
           </button>
@@ -251,90 +239,111 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
             return (
               <div 
                 key={property.id} 
-                className="bg-white rounded-3xl border border-gray-100 overflow-hidden soft-shadow hover-lift flex flex-col h-full group"
+                className="bg-white rounded-3xl border border-gray-100 overflow-hidden soft-shadow hover:shadow-xl hover:shadow-orange-100/20 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group"
               >
                 {/* Image section */}
                 <div className="h-44 w-full relative overflow-hidden bg-gray-100">
                   <img 
                     src={property.image} 
                     alt={property.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
                   />
-                  <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider">
+                  {/* Dark gradient overlay on bottom of image for readability */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent"></div>
+                  
+                  <div className="absolute top-3 left-3 bg-black/45 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-extrabold text-white uppercase tracking-wider border border-white/10">
                     {property.type}
                   </div>
-                  <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-extrabold border ${
                     property.status === 'Đang hoạt động'
-                      ? 'bg-green-500/90 text-white border-green-400'
-                      : 'bg-gray-500/90 text-white border-gray-400'
+                      ? 'bg-emerald-500/90 text-white border-emerald-400/30 backdrop-blur-sm'
+                      : 'bg-slate-500/90 text-white border-slate-400/30 backdrop-blur-sm'
                   }`}>
                     {property.status}
                   </div>
                 </div>
 
                 {/* Details Section */}
-                <div className="p-5 flex-grow flex flex-col justify-between">
-                  <div className="space-y-3">
+                <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
+                  <div className="space-y-3.5">
                     <div>
-                      <h4 className="text-base font-bold text-on-surface mb-0.5 line-clamp-1 group-hover:text-primary-container transition-colors">
+                      <h4 className="text-base font-extrabold text-slate-800 line-clamp-1 group-hover:text-primary-container transition-colors duration-205">
                         {property.name}
                       </h4>
-                      <p className="text-[11px] text-gray-500 flex items-center gap-1 leading-normal">
+                      <p className="text-[11px] text-gray-400 font-semibold flex items-center gap-1 mt-1 leading-normal">
                         <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">location_on</span>
                         <span className="truncate">{property.address}</span>
                       </p>
                     </div>
 
                     {/* Occupancy Indicator */}
-                    <div className="space-y-1 bg-gray-50 p-3 rounded-2xl border border-gray-100/50">
+                    <div className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-gray-100/50">
                       <div className="flex justify-between items-center text-[10px] font-bold">
-                        <span className="text-gray-500">Đã lấp đầy</span>
-                        <span className="text-primary-container">{property.occupiedRooms}/{property.totalRooms} phòng ({occupancyRate}%)</span>
+                        <span className="text-gray-500 font-bold">Đã lấp đầy</span>
+                        <span className="text-primary-container bg-orange-50 px-2 py-0.5 rounded-full font-bold">
+                          {property.occupiedRooms}/{property.totalRooms} phòng ({occupancyRate}%)
+                        </span>
                       </div>
-                      <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden relative shadow-inner">
                         <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            occupancyRate >= 75 ? 'bg-emerald-500' : occupancyRate >= 40 ? 'bg-orange-400' : 'bg-red-400'
+                          className={`h-full rounded-full transition-all duration-1000 ease-out shadow-sm ${
+                            occupancyRate >= 75 
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
+                              : occupancyRate >= 40 
+                                ? 'bg-gradient-to-r from-orange-400 to-amber-300' 
+                                : 'bg-gradient-to-r from-rose-500 to-red-400'
                           }`} 
                           style={{ width: `${occupancyRate}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    {/* Fees Details Grid */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px] border-t border-gray-100 pt-3">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Giá điện:</span>
-                        <span className="font-bold text-gray-700">{formatPrice(property.electricityPrice)}/kWh</span>
+                    {/* Fees Details Grid (Icons and styling) */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[10px] border-t border-gray-100 pt-3.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-yellow-500">bolt</span>
+                          Giá điện:
+                        </span>
+                        <span className="font-extrabold text-slate-700">{formatPrice(property.electricityPrice)}/kWh</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Giá nước:</span>
-                        <span className="font-bold text-gray-700">{formatPrice(property.waterPrice)}/m³</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-blue-500">water_drop</span>
+                          Giá nước:
+                        </span>
+                        <span className="font-extrabold text-slate-700">{formatPrice(property.waterPrice)}/m³</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Giá thuê sàn:</span>
-                        <span className="font-bold text-gray-700">{formatPrice(property.basePrice)}/th</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-emerald-500">payments</span>
+                          Giá thuê sàn:
+                        </span>
+                        <span className="font-extrabold text-slate-700">{formatPrice(property.basePrice)}/th</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Quy mô:</span>
-                        <span className="font-bold text-gray-700">{property.floors} tầng - {property.roomsPerFloor}p/t</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-purple-500">domain</span>
+                          Quy mô:
+                        </span>
+                        <span className="font-extrabold text-slate-700">{property.floors} tầng · {property.roomsPerFloor}p/t</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions buttons */}
-                  <div className="grid grid-cols-3 gap-2 mt-5 border-t border-gray-100 pt-4">
+                  <div className="grid grid-cols-3 gap-2 border-t border-gray-150/60 pt-4">
                     <button 
                       onClick={() => handleManageRooms(property.id)}
-                      className="col-span-2 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-[11px] font-bold text-center transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      className="col-span-2 py-2.5 bg-gradient-to-r from-orange-500 to-primary-container hover:brightness-110 text-white rounded-xl text-[11px] font-extrabold text-center transition-all duration-300 flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">grid_view</span> Quản lý sơ đồ phòng
+                      <span className="material-symbols-outlined text-[16px] font-bold">grid_view</span> Quản lý sơ đồ phòng
                     </button>
                     <button 
                       onClick={() => setCurrentPage('owner-listings-create')}
-                      className="py-2 bg-orange-50 hover:bg-orange-100/80 text-primary-container rounded-xl text-[11px] font-bold text-center transition-all flex items-center justify-center gap-0.5 cursor-pointer active:scale-95"
+                      className="py-2.5 bg-orange-50/70 hover:bg-orange-100/60 text-primary-container rounded-xl text-[11px] font-extrabold text-center transition-all duration-300 flex items-center justify-center gap-0.5 cursor-pointer active:scale-95"
                     >
-                      <span className="material-symbols-outlined text-[16px]">campaign</span> Đăng tin
+                      <span className="material-symbols-outlined text-[16px] font-bold">campaign</span> Đăng tin
                     </button>
                   </div>
                 </div>
@@ -344,155 +353,6 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
         </div>
       )}
 
-      {/* Mock Add Property Dialog Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-gray-100 soft-shadow w-full max-w-lg overflow-hidden animate-scaleUp">
-            
-            {/* Header */}
-            <div className="px-6 py-4 bg-orange-50/50 border-b border-orange-100/50 flex justify-between items-center">
-              <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary-container">corporate_fare</span>
-                Thêm tài sản trọ & sơ đồ phòng mới
-              </h3>
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="w-8 h-8 rounded-full hover:bg-orange-100/30 flex items-center justify-center text-gray-400 hover:text-gray-700 cursor-pointer transition-colors outline-none"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleAddPropertySubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                
-                {/* Property Name */}
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Tên tòa nhà/khu trọ</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ví dụ: RoomHub Ngũ Hành Sơn" 
-                    value={newPropName}
-                    onChange={(e) => setNewPropName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container"
-                    required
-                  />
-                </div>
-
-                {/* Property Type */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Loại hình</label>
-                  <select 
-                    value={newPropType}
-                    onChange={(e) => setNewPropType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container bg-white"
-                  >
-                    <option value="Phòng trọ">Phòng trọ</option>
-                    <option value="Studio">Studio</option>
-                    <option value="Căn hộ mini">Căn hộ mini</option>
-                    <option value="Căn hộ">Căn hộ</option>
-                  </select>
-                </div>
-
-                {/* District */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Quận/Huyện</label>
-                  <select 
-                    value={newPropDistrict}
-                    onChange={(e) => setNewPropDistrict(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container bg-white"
-                  >
-                    <option value="Quận Ngũ Hành Sơn">Quận Ngũ Hành Sơn</option>
-                    <option value="Quận Hải Châu">Quận Hải Châu</option>
-                    <option value="Quận Sơn Trà">Quận Sơn Trà</option>
-                    <option value="Quận Liên Chiểu">Quận Liên Chiểu</option>
-                    <option value="Quận Cẩm Lệ">Quận Cẩm Lệ</option>
-                    <option value="Quận Thanh Khê">Quận Thanh Khê</option>
-                  </select>
-                </div>
-
-                {/* Address */}
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Địa chỉ chi tiết</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ví dụ: 123 Võ Nguyên Giáp, Phước Mỹ..." 
-                    value={newPropAddress}
-                    onChange={(e) => setNewPropAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container"
-                    required
-                  />
-                </div>
-
-                {/* Floors */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Số tầng</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="10"
-                    value={newPropFloors}
-                    onChange={(e) => setNewPropFloors(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container"
-                  />
-                </div>
-
-                {/* Rooms per floor */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Số phòng mỗi tầng</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="20"
-                    value={newPropRoomsPerFloor}
-                    onChange={(e) => setNewPropRoomsPerFloor(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container"
-                  />
-                </div>
-
-                {/* Default Rent Price */}
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Giá thuê mặc định (VNĐ/tháng)</label>
-                  <input 
-                    type="number" 
-                    step="50000"
-                    value={newPropPrice}
-                    onChange={(e) => setNewPropPrice(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-primary-container"
-                  />
-                </div>
-
-              </div>
-
-              {/* Notice */}
-              <div className="bg-orange-50 border border-orange-100 p-3 rounded-2xl flex items-start gap-2">
-                <span className="material-symbols-outlined text-primary-container text-[18px] shrink-0 mt-0.5">info</span>
-                <p className="text-[10px] text-gray-600 leading-normal">
-                  Hệ thống sẽ **tự động khởi tạo sơ đồ phòng dạng lưới** (ví dụ: phòng 101, 102... cho tầng 1; 201, 202... cho tầng 2) dựa trên số tầng và số phòng mỗi tầng bạn cấu hình ở trên.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 justify-end pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Hủy bỏ
-                </button>
-                <button 
-                  type="submit"
-                  className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
-                >
-                  Tạo sơ đồ tài sản
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
