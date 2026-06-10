@@ -53,6 +53,7 @@ Sinh viên/nhóm cần ghi lại:
 |---:|---|---|---|---|---|---|---|
 | 1 | 10/06/2026 | Antigravity | Tích hợp nghiệp vụ & Sửa lỗi điều hướng | Xóa thông báo cho chủ nhà và sửa lỗi nút Về trang chủ trong Dashboard | Lập kế hoạch thêm nút xóa, gọi API delete và cơ chế làm sạch hash trên Navbar, Layouts | Có | Commit Git / implementation_plan.md |
 | 2 | 10/06/2026 | Antigravity | Hiện thực hóa giao diện Custom Modal | Thay thế window.confirm mặc định bằng Custom Modal Confirm tránh localhost says | Thiết lập state deleteTargetId, rejectTargetId, viết JSX cho Custom Modal Confirm, sửa code hàng loạt | Có | Commit Git / Code frontend |
+| 3 | 10/06/2026 | Antigravity | Tích hợp luồng thông báo hai chiều | Gửi thông báo nhắc hóa đơn (Chủ nhà -> Khách thuê) và gửi thông báo khi thanh toán thành công (Khách thuê -> Chủ nhà) | Thêm DTO NotifyBatchRequest, API notify-batch, tự động tạo Notification khi thanh toán, và kết nối UI | Có | Commit Git / Backend & Frontend code |
 
 ---
 
@@ -125,6 +126,41 @@ AI đề xuất xây dựng UI Modal Xác nhận Xóa/Từ chối tùy chỉnh b
 #### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
 
 Chạy biên dịch `npm run build` thành công và chạy thực tế trên trình duyệt: Custom Modal Confirm hiển thị mượt mà với hiệu ứng scale-up đẹp mắt, không còn cảnh báo thô kệch mặc định của trình duyệt.
+
+---
+
+### Prompt số 3
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 10/06/2026 |
+| Công cụ AI | Antigravity |
+| Mục đích | Tạo luồng gửi thông báo nhắc hóa đơn (Chủ nhà -> Khách thuê) và gửi thông báo khi thanh toán thành công (Khách thuê -> Chủ nhà) |
+| Phần việc liên quan | Backend DTOs, InvoiceService, InvoicesController, Frontend InvoiceCreate |
+| Mức độ sử dụng | Hỏi sinh code và hiện thực hóa |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+tiếp theo về tính năng thông báo tôi muốn thực hiện bô rsung tiếp nhưu sau: về vấn đề tạo xuất hóa đơn thfi bây giờ ở trang giao diện http://localhost:5173/browse#/owner/invoices/create khi nhấn nút gửi thông báo nhắc thì đồng thời bên phía người thuê tôi muốn thông báo hóa đơn sẽ được gửi đến thông báo và đồng thời khi bến phía người thuê thanh toán thì đồng thời bên phía chủ nhà cung xsex nhận thông báo đã thanh toán của người thuê nhé hãy thực hiện cập nhật bổ sung đảm bảo thực hiện tốt tính năng
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+Chủ nhà muốn có khả năng gửi trực tiếp tin nhắn thông báo (ở bước chốt hóa đơn thành công) tới cổng thông báo của khách thuê một cách thực tế thông qua API thay vì chỉ thông báo toast giả. Đồng thời, khách thuê khi bấm thanh toán hóa đơn thì chủ nhà cũng phải nhận được thông báo phản hồi.
+
+#### 5.3. Kết quả AI trả về
+
+AI hướng dẫn thiết kế:
+1. Thêm `NotifyBatchRequest` vào DTOs của Backend.
+2. Tiêm `INotificationRepository` vào `InvoiceService` và viết phương thức `SendInvoiceNotificationsAsync` gửi thông báo cho tập hợp các phòng trọ.
+3. Tạo API endpoint `POST /api/owner/invoices/notify-batch` trong `InvoicesController.cs`.
+4. Cập nhật `TenantPayInvoiceAsync` để tự động tạo `Notification` cho chủ nhà khi trạng thái hóa đơn đổi thành `Paid`.
+5. Đồng bộ state `notificationMessage` vào textarea ở `InvoiceCreate.tsx` và gọi API `api.post('/owner/invoices/notify-batch')` khi chủ nhà click gửi.
+
+#### 5.4. Sự kiểm chứng và cải tiến của sinh viên/nhóm
+
+Chạy biên dịch thành công cả backend (`dotnet build`) và frontend (`npm run build`). Kiểm thử E2E: chủ nhà gửi thông báo nhắc, khách thuê lập tức nhận được thông báo; khách thuê thanh toán hóa đơn, chủ nhà nhận được thông báo phản hồi thanh toán thành công ngay tức khắc.
 
 ---
 

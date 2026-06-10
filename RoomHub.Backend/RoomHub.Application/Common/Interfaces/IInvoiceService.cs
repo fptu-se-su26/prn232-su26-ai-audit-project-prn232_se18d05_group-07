@@ -17,5 +17,6 @@ namespace Application.Common.Interfaces
         Task<bool> TenantPayInvoiceAsync(int invoiceId, RecordPaymentRequest request, string tenantId);
         Task<byte[]> ExportTenantInvoiceToExcelAsync(int invoiceId, string tenantId);
         Task<byte[]> ExportBatchInvoicesToExcelAsync(int buildingId, int month, int year, string ownerId);
+        Task<bool> SendInvoiceNotificationsAsync(NotifyBatchRequest request, string ownerId);
     }
 }

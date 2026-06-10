@@ -79,4 +79,12 @@ namespace Application.Common.DTOs.Invoices
         public string PaymentMethod { get; set; } = "BankTransfer"; // BankTransfer, Cash, EWallet
         public string? TransactionId { get; set; }
     }
+
+    public class NotifyBatchRequest
+    {
+        public List<int> RoomIds { get; set; } = new List<int>();
+        public int Month { get; set; }
+        public int Year { get; set; }
+        public string Message { get; set; } = null!;
+    }
 }

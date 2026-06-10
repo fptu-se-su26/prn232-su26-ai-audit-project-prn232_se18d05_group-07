@@ -83,6 +83,34 @@ namespace RoomHub.API.Controllers
         }
 
         // ==========================================
+        // 3.1 SEND BATCH INVOICE NOTIFICATIONS
+        // ==========================================
+        [HttpPost("notify-batch")]
+        public async Task<IActionResult> SendBatchNotifications([FromBody] NotifyBatchRequest request)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            if (request == null || request.RoomIds == null || request.RoomIds.Count == 0)
+                return BadRequest(new { message = "Dữ liệu yêu cầu gửi thông báo không hợp lệ." });
+
+            try
+            {
+                var success = await _invoiceService.SendInvoiceNotificationsAsync(request, ownerId);
+                if (success)
+                {
+                    return Ok(new { success = true, message = "Đã gửi thông báo nhắc hóa đơn tới các khách thuê thành công." });
+                }
+                return BadRequest(new { message = "Gửi thông báo nhắc hóa đơn thất bại." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // ==========================================
         // 4. RECORD OFFLINE/MANUAL PAYMENT
         // ==========================================
         [HttpPost("{id}/payment")]

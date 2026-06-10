@@ -16,6 +16,7 @@ namespace Application.Services
         private readonly IContractRepository _contractRepository;
         private readonly IRoomRepository _roomRepository;
         private readonly IUtilityReadingRepository _utilityReadingRepository;
+        private readonly INotificationRepository _notificationRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public InvoiceService(
@@ -23,12 +24,14 @@ namespace Application.Services
             IContractRepository contractRepository,
             IRoomRepository roomRepository,
             IUtilityReadingRepository utilityReadingRepository,
+            INotificationRepository notificationRepository,
             IUnitOfWork unitOfWork)
         {
             _invoiceRepository = invoiceRepository;
             _contractRepository = contractRepository;
             _roomRepository = roomRepository;
             _utilityReadingRepository = utilityReadingRepository;
+            _notificationRepository = notificationRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -511,6 +514,24 @@ namespace Application.Services
                 if (totalPaid >= invoice.TotalAmount)
                 {
                     invoice.Status = InvoiceStatus.Paid;
+
+                    // Tạo thông báo cho Chủ nhà khi khách thuê thanh toán hóa đơn thành công
+                    var tenantName = invoice.Contract.Tenant?.FullName ?? invoice.Contract.TemporaryTenantName ?? "Khách thuê";
+                    var roomNumber = invoice.Contract.Room.RoomNumber;
+                    var buildingName = invoice.Contract.Room.Floor.Building.Name;
+                    var monthStr = invoice.InvoiceDate.ToString("MM/yyyy");
+
+                    var notification = new Notification
+                    {
+                        UserId = invoice.Contract.OwnerId,
+                        Type = "InvoicePaid",
+                        Title = "Hóa đơn đã được thanh toán",
+                        Content = $"Khách thuê {tenantName} (phòng {roomNumber} - {buildingName}) đã thanh toán thành công hóa đơn tháng {monthStr} số tiền {request.Amount:N0}đ.",
+                        LinkedId = invoice.Id,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _notificationRepository.AddAsync(notification);
                 }
 
                 await _invoiceRepository.UpdateAsync(invoice);
@@ -638,7 +659,54 @@ namespace Application.Services
 
                 worksheet.Cells.AutoFitColumns();
 
-                return await Task.FromResult(package.GetAsByteArray());
+                 return await Task.FromResult(package.GetAsByteArray());
+            }
+        }
+
+        public async Task<bool> SendInvoiceNotificationsAsync(NotifyBatchRequest request, string ownerId)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                foreach (var roomId in request.RoomIds)
+                {
+                    var room = await _roomRepository.GetByIdAsync(roomId);
+                    if (room == null || room.IsDeleted)
+                        continue;
+
+                    var activeContract = await _contractRepository.GetActiveContractByRoomIdAsync(roomId);
+                    if (activeContract == null || activeContract.OwnerId != ownerId || string.IsNullOrEmpty(activeContract.TenantId))
+                        continue;
+
+                    // Tìm hóa đơn chưa thanh toán tương ứng với tháng/năm này
+                    var invoices = await _invoiceRepository.GetInvoicesByOwnerAsync(ownerId);
+                    var invoice = invoices.FirstOrDefault(i => i.ContractId == activeContract.Id &&
+                                                                i.InvoiceDate.Year == request.Year &&
+                                                                i.InvoiceDate.Month == request.Month);
+                    int? linkedInvoiceId = invoice?.Id;
+
+                    var notification = new Notification
+                    {
+                        UserId = activeContract.TenantId,
+                        Type = "InvoiceNew",
+                        Title = "Thông báo hóa đơn dịch vụ",
+                        Content = request.Message,
+                        LinkedId = linkedInvoiceId,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _notificationRepository.AddAsync(notification);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
         }
     }
