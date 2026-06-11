@@ -13,5 +13,9 @@ namespace Application.Common.Interfaces
         Task<bool> UpdateUnitStatusAsync(int roomId, string status, string ownerId);
         Task<bool> UpdateUnitNotesAsync(int roomId, string notes, string ownerId);
         Task<bool> UpdateUnitDetailsAsync(int roomId, UpdateUnitDetailsRequest request, string ownerId);
+        Task<bool> UpdatePropertyAsync(int propertyId, UpdatePropertyRequestDto request, string ownerId);
+        Task<bool> DeletePropertyAsync(int propertyId, string ownerId);
+        Task<bool> AddRoomToPropertyAsync(int propertyId, AddRoomRequestDto request, string ownerId);
     }
 }
+

@@ -32,6 +32,152 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Add Room Modal states
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
+  const [addRoomNumber, setAddRoomNumber] = useState('');
+  const [addFloorNumber, setAddFloorNumber] = useState(1);
+  const [addRoomType, setAddRoomType] = useState('BoardingHouse');
+  const [addBasePrice, setAddBasePrice] = useState(2500000);
+  const [addSurfaceArea, setAddSurfaceArea] = useState(25);
+  const [addMaxCapacity, setAddMaxCapacity] = useState(2);
+  const [addRoomError, setAddRoomError] = useState<string | null>(null);
+  const [addRoomLoading, setAddRoomLoading] = useState(false);
+
+  // Edit Property Modal states
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editDistrict, setEditDistrict] = useState('');
+  const [editWard, setEditWard] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editElectricityPrice, setEditElectricityPrice] = useState(3500);
+  const [editWaterPrice, setEditWaterPrice] = useState(15000);
+  const [editWaterBillingType, setEditWaterBillingType] = useState('PerCubicMeter');
+  const [editInternetPrice, setEditInternetPrice] = useState(100000);
+  const [editGarbagePrice, setEditGarbagePrice] = useState(30000);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Delete Confirmation states
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const openEditModal = () => {
+    if (!property) return;
+    setEditName(property.name);
+    setEditAddress(property.address);
+    setEditDistrict(property.district || '');
+    setEditWard(property.ward || '');
+    setEditImageUrl(property.image || '');
+    setEditElectricityPrice(property.electricityPrice);
+    setEditWaterPrice(property.waterPrice);
+    setEditWaterBillingType(property.waterBillingType || 'PerCubicMeter');
+    setEditInternetPrice(property.internetPrice);
+    setEditGarbagePrice(property.garbagePrice);
+    setEditError(null);
+    setIsEditOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setIsUploadingImage(true);
+      const res = await api.post('/owner/properties/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setEditImageUrl(res.data.url);
+    } catch (err) {
+      console.error(err);
+      alert('Không thể tải lên hình ảnh.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError(null);
+    setEditLoading(true);
+
+    try {
+      await api.put(`/owner/properties/${activePropertyId}`, {
+        name: editName,
+        address: editAddress,
+        district: editDistrict,
+        ward: editWard,
+        imageUrl: editImageUrl,
+        electricityPrice: editElectricityPrice,
+        waterPrice: editWaterPrice,
+        waterBillingType: editWaterBillingType,
+        internetPrice: editInternetPrice,
+        garbagePrice: editGarbagePrice
+      });
+      setIsEditOpen(false);
+      await fetchPropertyDetail();
+    } catch (err: any) {
+      console.error(err);
+      setEditError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleAddRoomSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddRoomError(null);
+    setAddRoomLoading(true);
+
+    try {
+      await api.post(`/owner/properties/${activePropertyId}/rooms`, {
+        roomNumber: addRoomNumber,
+        floorNumber: addFloorNumber,
+        roomType: addRoomType,
+        basePrice: addBasePrice,
+        surfaceArea: addSurfaceArea,
+        maxCapacity: addMaxCapacity
+      });
+      setIsAddRoomOpen(false);
+      // Reset form
+      setAddRoomNumber('');
+      setAddFloorNumber(1);
+      setAddRoomType('BoardingHouse');
+      setAddBasePrice(2500000);
+      setAddSurfaceArea(25);
+      setAddMaxCapacity(2);
+      await fetchPropertyDetail();
+    } catch (err: any) {
+      console.error(err);
+      setAddRoomError(err.response?.data?.message || 'Có lỗi xảy ra khi thêm phòng.');
+    } finally {
+      setAddRoomLoading(false);
+    }
+  };
+
+  const handleDeleteSubmit = async () => {
+    setDeleteError(null);
+    setDeleteLoading(true);
+
+    try {
+      const res = await api.delete(`/owner/properties/${activePropertyId}`);
+      if (res.data.success) {
+        setIsDeleteConfirmOpen(false);
+        setCurrentPage('owner-properties');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setDeleteError(err.response?.data?.message || 'Có lỗi xảy ra khi xóa tài sản.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // Tab State
   const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'tenants' | 'invoices' | 'listings' | 'settings'>('grid');
   // Selected Month State
@@ -247,22 +393,28 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
         {/* Action Header Panel */}
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button 
-            onClick={() => alert('Thêm phòng mới cho tòa nhà này...')}
+            onClick={() => setIsAddRoomOpen(true)}
             className="px-4 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
           >
             <span className="material-symbols-outlined text-[16px] font-bold">add</span> Thêm phòng/căn
           </button>
           <button 
-            onClick={() => alert('Đang chuyển đến tạo tin cho thuê cho tòa nhà này...')}
+            onClick={() => setCurrentPage('owner-listings-create')}
             className="px-4 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 border border-orange-100"
           >
             <span className="material-symbols-outlined text-[16px]">campaign</span> Tạo tin đăng
           </button>
           <button 
-            onClick={() => alert('Mở form sửa chi tiết tài sản...')}
+            onClick={openEditModal}
             className="px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">edit</span> Chỉnh sửa
+          </button>
+          <button 
+            onClick={() => setIsDeleteConfirmOpen(true)}
+            className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-550 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 border border-red-100"
+          >
+            <span className="material-symbols-outlined text-[16px]">delete</span> Xóa tài sản
           </button>
         </div>
       </div>
@@ -1102,6 +1254,326 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
 
           </div>
         </>
+      )}
+
+      {/* Edit Property Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-2xl w-full p-6 md:p-8 soft-shadow border border-gray-100 overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center border-b border-gray-105 pb-4 mb-6">
+              <h3 className="text-lg font-black text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary-container">edit</span>
+                Chỉnh sửa tài sản
+              </h3>
+              <button onClick={() => setIsEditOpen(false)} className="text-gray-400 hover:text-on-surface cursor-pointer bg-transparent border-0 outline-none">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {editError && (
+              <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">error</span> {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs font-bold text-gray-500">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="text-left">
+                  <label className="block mb-1.5 uppercase">Tên tài sản</label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+
+                <div className="text-left">
+                  <label className="block mb-1.5 uppercase">Hình ảnh (URL)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editImageUrl}
+                      onChange={(e) => setEditImageUrl(e.target.value)}
+                      className="flex-grow px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                      placeholder="Dán link ảnh trọ..."
+                    />
+                    <label className="px-4 py-3 bg-primary-container hover:bg-orange-600 text-white rounded-xl cursor-pointer text-center font-bold whitespace-nowrap active:scale-95 transition-all">
+                      Chọn file
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  </div>
+                  {isUploadingImage && <p className="text-[10px] text-primary-container mt-1 animate-pulse">Đang tải ảnh lên...</p>}
+                </div>
+              </div>
+
+              <div className="text-left">
+                <label className="block mb-1.5 uppercase">Địa chỉ chi tiết</label>
+                <input
+                  type="text"
+                  required
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  placeholder="Số nhà, tên đường..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div>
+                  <label className="block mb-1.5 uppercase">Quận / Huyện</label>
+                  <input
+                    type="text"
+                    value={editDistrict}
+                    onChange={(e) => setEditDistrict(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 uppercase">Phường / Xã</label>
+                  <input
+                    type="text"
+                    value={editWard}
+                    onChange={(e) => setEditWard(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 mt-4 text-left">
+                <h4 className="text-slate-800 text-xs font-black mb-3">Đơn giá dịch vụ mặc định</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block mb-1.5 uppercase text-[10px]">Đơn giá Điện (kWh)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editElectricityPrice}
+                      onChange={(e) => setEditElectricityPrice(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase text-[10px]">Đơn giá Nước</label>
+                    <input
+                      type="number"
+                      required
+                      value={editWaterPrice}
+                      onChange={(e) => setEditWaterPrice(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase text-[10px]">Tính phí Nước theo</label>
+                    <select
+                      value={editWaterBillingType}
+                      onChange={(e) => setEditWaterBillingType(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                    >
+                      <option value="PerCubicMeter">Mét khối (m³)</option>
+                      <option value="PerPerson">Đầu người (Người)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase text-[10px]">Mạng Internet (Phòng)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editInternetPrice}
+                      onChange={(e) => setEditInternetPrice(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase text-[10px]">Rác vệ sinh (Phòng)</label>
+                    <input
+                      type="number"
+                      required
+                      value={editGarbagePrice}
+                      onChange={(e) => setEditGarbagePrice(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-gray-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(false)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl font-bold transition-all cursor-pointer outline-none border-0"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-6 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 outline-none border-0"
+                >
+                  {editLoading ? 'Đang cập nhật...' : 'Lưu chỉnh sửa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Room Modal */}
+      {isAddRoomOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-md w-full p-6 md:p-8 soft-shadow border border-gray-100">
+            <div className="flex justify-between items-center border-b border-gray-105 pb-4 mb-6">
+              <h3 className="text-lg font-black text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary-container">meeting_room</span>
+                Thêm phòng/căn mới
+              </h3>
+              <button onClick={() => setIsAddRoomOpen(false)} className="text-gray-400 hover:text-on-surface cursor-pointer bg-transparent border-0 outline-none">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {addRoomError && (
+              <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2 text-left">
+                <span className="material-symbols-outlined text-[18px]">error</span> {addRoomError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddRoomSubmit} className="space-y-4 text-xs font-bold text-gray-500">
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div>
+                  <label className="block mb-1.5 uppercase">Số phòng/căn</label>
+                  <input
+                    type="text"
+                    required
+                    value={addRoomNumber}
+                    onChange={(e) => setAddRoomNumber(e.target.value)}
+                    placeholder="Ví dụ: 106"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1.5 uppercase">Tầng số</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={addFloorNumber}
+                    onChange={(e) => setAddFloorNumber(Number(e.target.value))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+              </div>
+
+              <div className="text-left">
+                <label className="block mb-1.5 uppercase">Loại phòng</label>
+                <select
+                  value={addRoomType}
+                  onChange={(e) => setAddRoomType(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                >
+                  <option value="BoardingHouse">Phòng trọ thường</option>
+                  <option value="Studio">Phòng Studio</option>
+                  <option value="MiniApartment">Căn hộ mini</option>
+                  <option value="Apartment">Căn hộ dịch vụ</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-left">
+                <div className="col-span-2">
+                  <label className="block mb-1.5 uppercase text-[10px]">Giá thuê (VNĐ/tháng)</label>
+                  <input
+                    type="number"
+                    required
+                    value={addBasePrice}
+                    onChange={(e) => setAddBasePrice(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1.5 uppercase text-[10px]">Diện tích (m²)</label>
+                  <input
+                    type="number"
+                    required
+                    value={addSurfaceArea}
+                    onChange={(e) => setAddSurfaceArea(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+              </div>
+
+              <div className="text-left">
+                <label className="block mb-1.5 uppercase">Số người tối đa</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={addMaxCapacity}
+                  onChange={(e) => setAddMaxCapacity(Number(e.target.value))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-700 focus:outline-none focus:border-primary-container"
+                />
+              </div>
+
+              <div className="pt-6 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRoomOpen(false)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl font-bold transition-all cursor-pointer outline-none border-0"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={addRoomLoading}
+                  className="px-6 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 outline-none border-0"
+                >
+                  {addRoomLoading ? 'Đang lưu...' : 'Thêm phòng'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-md w-full p-6 md:p-8 soft-shadow border border-gray-100 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">warning</span>
+            </div>
+            
+            <h3 className="text-lg font-black text-slate-800 mb-2">Xác nhận xóa tài sản này?</h3>
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              Bạn có chắc muốn xóa tài sản <strong>{property.name}</strong> không? Hành động này sẽ thực hiện xóa mềm (soft delete) tòa nhà và toàn bộ các phòng trọ liên kết.
+            </p>
+
+            {deleteError && (
+              <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-200 flex items-center justify-center gap-1 text-left">
+                <span className="material-symbols-outlined text-[16px]">error</span> {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl font-bold transition-all cursor-pointer outline-none border-0"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSubmit}
+                disabled={deleteLoading}
+                className="flex-1 py-2.5 bg-red-650 hover:bg-red-750 bg-red-600 text-white rounded-xl font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50 outline-none border-0"
+              >
+                {deleteLoading ? 'Đang xóa...' : 'Đồng ý xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

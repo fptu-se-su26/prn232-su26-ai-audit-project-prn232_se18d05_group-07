@@ -92,4 +92,30 @@ namespace Application.Common.DTOs.Properties
         public decimal GarbagePrice { get; set; } = 30000;
         public List<CustomRoomDto>? CustomRooms { get; set; }
     }
+
+    public class UpdatePropertyRequestDto
+    {
+        public string Name { get; set; } = null!;
+        public string? Description { get; set; }
+        public string Address { get; set; } = null!;
+        public string? District { get; set; }
+        public string? Ward { get; set; }
+        public string? ImageUrl { get; set; }
+        public decimal ElectricityPrice { get; set; }
+        public decimal WaterPrice { get; set; }
+        public string WaterBillingType { get; set; } = "PerCubicMeter";
+        public decimal InternetPrice { get; set; }
+        public decimal GarbagePrice { get; set; }
+    }
+
+    public class AddRoomRequestDto
+    {
+        public string RoomNumber { get; set; } = null!;
+        public int FloorNumber { get; set; }
+        public string RoomType { get; set; } = "BoardingHouse"; // BoardingHouse, Studio, MiniApartment, Apartment
+        public decimal BasePrice { get; set; }
+        public decimal SurfaceArea { get; set; }
+        public int MaxCapacity { get; set; }
+    }
 }
+

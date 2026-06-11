@@ -160,5 +160,106 @@ namespace RoomHub.API.Controllers
                 return StatusCode(500, new { message = "Có lỗi xảy ra khi tải ảnh lên.", details = ex.Message });
             }
         }
+
+        // ==========================================
+        // 5. UPDATE PROPERTY DETAILS
+        // ==========================================
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProperty(int id, [FromBody] UpdatePropertyRequestDto request)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest(new { message = "Tên tài sản không được để trống." });
+
+            if (string.IsNullOrWhiteSpace(request.Address))
+                return BadRequest(new { message = "Địa chỉ không được để trống." });
+
+            try
+            {
+                var success = await _propertyService.UpdatePropertyAsync(id, request, ownerId);
+                if (success)
+                {
+                    return Ok(new { success = true, message = "Cập nhật thông tin tài sản thành công." });
+                }
+                return NotFound(new { message = "Không tìm thấy tài sản này hoặc bạn không có quyền cập nhật." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Có lỗi xảy ra khi cập nhật thông tin tài sản.", details = ex.Message });
+            }
+        }
+
+        // ==========================================
+        // 6. DELETE PROPERTY (SMART DELETION)
+        // ==========================================
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProperty(int id)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            try
+            {
+                var success = await _propertyService.DeletePropertyAsync(id, ownerId);
+                if (success)
+                {
+                    return Ok(new { success = true, message = "Xóa tài sản thành công." });
+                }
+                return NotFound(new { message = "Không tìm thấy tài sản này hoặc bạn không có quyền xóa." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Có lỗi xảy ra khi xóa tài sản.", details = ex.Message });
+            }
+        }
+
+        // ==========================================
+        // 7. ADD ROOM TO PROPERTY
+        // ==========================================
+        [HttpPost("{propertyId}/rooms")]
+        public async Task<IActionResult> AddRoom(int propertyId, [FromBody] AddRoomRequestDto request)
+        {
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            if (string.IsNullOrWhiteSpace(request.RoomNumber))
+                return BadRequest(new { message = "Số phòng không được để trống." });
+
+            if (request.FloorNumber <= 0)
+                return BadRequest(new { message = "Tầng phải lớn hơn 0." });
+
+            if (request.BasePrice <= 0)
+                return BadRequest(new { message = "Giá thuê phòng phải lớn hơn 0." });
+
+            if (request.SurfaceArea <= 0)
+                return BadRequest(new { message = "Diện tích phòng phải lớn hơn 0." });
+
+            try
+            {
+                var success = await _propertyService.AddRoomToPropertyAsync(propertyId, request, ownerId);
+                if (success)
+                {
+                    return Ok(new { success = true, message = "Thêm phòng mới thành công." });
+                }
+                return NotFound(new { message = "Không tìm thấy tài sản này hoặc bạn không có quyền thao tác." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Có lỗi xảy ra khi thêm phòng.", details = ex.Message });
+            }
+        }
     }
 }
