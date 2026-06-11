@@ -81,6 +81,7 @@ namespace Infrastructure
             services.AddScoped<IContractRepository, Persistence.Repositories.ContractRepository>();
             services.AddScoped<IUtilityReadingRepository, Persistence.Repositories.UtilityReadingRepository>();
             services.AddScoped<INotificationRepository, Persistence.Repositories.NotificationRepository>();
+            services.AddScoped<ISubscriptionRepository, Persistence.Repositories.SubscriptionRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -91,6 +92,7 @@ namespace Infrastructure
             services.AddScoped<IAdminModerationService, Application.Services.AdminModerationService>();
             services.AddScoped<IDashboardService, Application.Services.DashboardService>();
             services.AddScoped<INotificationService, Application.Services.NotificationService>();
+            services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
 
             return services;
         }

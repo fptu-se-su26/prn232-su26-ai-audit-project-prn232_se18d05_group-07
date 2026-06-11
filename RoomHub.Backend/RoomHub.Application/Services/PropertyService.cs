@@ -6,6 +6,8 @@ using Application.Common.DTOs.Properties;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Common;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -15,17 +17,20 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly IInvoiceRepository _invoiceRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public PropertyService(
             IBuildingRepository buildingRepository,
             IRoomRepository roomRepository,
             IInvoiceRepository invoiceRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            UserManager<ApplicationUser> userManager)
         {
             _buildingRepository = buildingRepository;
             _roomRepository = roomRepository;
             _invoiceRepository = invoiceRepository;
             _unitOfWork = unitOfWork;
+            _userManager = userManager;
         }
 
         public async Task<List<PropertyDto>> GetPropertiesByOwnerAsync(string ownerId)
@@ -208,8 +213,58 @@ namespace Application.Services
             };
         }
 
+        private static string GetPlanName(SubscriptionPlan plan) => plan switch
+        {
+            SubscriptionPlan.Free => "Starter (Miễn phí)",
+            SubscriptionPlan.Monthly => "Pro (Tháng)",
+            SubscriptionPlan.Yearly => "Pro (Năm)",
+            _ => plan.ToString()
+        };
+
         public async Task<bool> CreatePropertyWithOwnerAsync(CreatePropertyRequestDto request, string ownerId)
         {
+            var user = await _userManager.FindByIdAsync(ownerId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy thông tin tài khoản chủ nhà.");
+            }
+
+            // Check building limit
+            var existingBuildings = await _buildingRepository.GetBuildingsByOwnerAsync(ownerId);
+            var maxBuildings = SubscriptionLimits.GetMaxBuildings(user.CurrentPlan);
+            if (existingBuildings.Count >= maxBuildings)
+            {
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxBuildings} tòa nhà/tài sản. Vui lòng nâng cấp gói cước để tiếp tục.");
+            }
+
+            // Check room limit
+            var totalExistingRooms = existingBuildings.Sum(b => b.Floors.SelectMany(f => f.Rooms).Count(r => !r.IsDeleted));
+            int roomsToCreate = 0;
+            if (request.SelectedType == "independent")
+            {
+                roomsToCreate = 1;
+            }
+            else
+            {
+                var numFloors = request.NumFloors > 0 ? request.NumFloors : 1;
+                var roomsCountPerFloor = request.RoomsCountPerFloor;
+                for (int f = 1; f <= numFloors; f++)
+                {
+                    int numRooms = request.NumRoomsPerFloor > 0 ? request.NumRoomsPerFloor : 1;
+                    if (roomsCountPerFloor != null && roomsCountPerFloor.Count >= f)
+                    {
+                        numRooms = roomsCountPerFloor[f - 1] > 0 ? roomsCountPerFloor[f - 1] : 1;
+                    }
+                    roomsToCreate += numRooms;
+                }
+            }
+
+            var maxRooms = SubscriptionLimits.GetMaxRooms(user.CurrentPlan);
+            if (totalExistingRooms + roomsToCreate > maxRooms)
+            {
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxRooms} phòng/căn hộ. Hiện tại bạn đã có {totalExistingRooms} phòng, việc tạo thêm {roomsToCreate} phòng sẽ vượt quá hạn mức gói. Vui lòng nâng cấp gói cước để tiếp tục.");
+            }
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {

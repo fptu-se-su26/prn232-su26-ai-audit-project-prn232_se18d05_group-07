@@ -39,6 +39,7 @@ import TenantMessages from './pages/tenant/Messages';
 import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
 import OwnerNotifications from './pages/owner/Notifications';
+import Profile from './pages/owner/Profile';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
@@ -328,6 +329,8 @@ const AppContent: React.FC = () => {
           <Tenants setCurrentPage={setCurrentPage} setSelectedUnitId={setSelectedUnitId} />
         ) : currentPage === 'owner-notifications' ? (
           <OwnerNotifications setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-profile' ? (
+          <Profile />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

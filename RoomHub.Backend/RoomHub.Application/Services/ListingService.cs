@@ -6,6 +6,8 @@ using Application.Common.DTOs.Listings;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Common;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -15,17 +17,20 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IModerationService _moderationService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public ListingService(
             IBuildingRepository buildingRepository,
             IRoomRepository roomRepository,
             IUnitOfWork unitOfWork,
-            IModerationService moderationService)
+            IModerationService moderationService,
+            UserManager<ApplicationUser> userManager)
         {
             _buildingRepository = buildingRepository;
             _roomRepository = roomRepository;
             _unitOfWork = unitOfWork;
             _moderationService = moderationService;
+            _userManager = userManager;
         }
 
         public async Task<List<ListingDto>> GetOwnerListingsAsync(string ownerId)
@@ -204,6 +209,8 @@ namespace Application.Services
             if (room == null || room.Floor.Building.OwnerId != ownerId)
                 return null;
 
+            await CheckAndIncrementAiAuditLimitAsync(ownerId);
+
             room.Title = request.Title;
             room.Description = request.Description;
             room.BasePrice = request.Price;
@@ -278,6 +285,8 @@ namespace Application.Services
                     Message = "Tin đăng chưa có nội dung. Vui lòng tạo tin trước khi đăng công khai."
                 };
             }
+
+            await CheckAndIncrementAiAuditLimitAsync(ownerId);
 
             room.ModerationStatus = ModerationStatus.Pending;
             var imageUrls = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).ToList();
@@ -384,6 +393,38 @@ namespace Application.Services
                 IsPublished = actualIsPublished,
                 Message = message
             };
+        }
+
+        private async Task CheckAndIncrementAiAuditLimitAsync(string ownerId)
+        {
+            var user = await _userManager.FindByIdAsync(ownerId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy thông tin tài khoản chủ nhà.");
+            }
+
+            var maxAudits = SubscriptionLimits.GetMaxAiAudits(user.CurrentPlan);
+            if (maxAudits == int.MaxValue)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (user.LastAiAuditResetDate == null || 
+                user.LastAiAuditResetDate.Value.Month != now.Month || 
+                user.LastAiAuditResetDate.Value.Year != now.Year)
+            {
+                user.MonthlyAiAuditCount = 0;
+                user.LastAiAuditResetDate = now;
+            }
+
+            if (user.MonthlyAiAuditCount >= maxAudits)
+            {
+                throw new InvalidOperationException($"Tài khoản gói Starter (Miễn phí) của bạn đã sử dụng hết lượt kiểm duyệt tin đăng bằng AI trong tháng này (tối đa {maxAudits} lần/tháng). Vui lòng nâng cấp lên gói Pro để có lượt dùng không giới hạn.");
+            }
+
+            user.MonthlyAiAuditCount++;
+            await _userManager.UpdateAsync(user);
         }
     }
 }
