@@ -39,6 +39,8 @@ import TenantMessages from './pages/tenant/Messages';
 import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
 import OwnerNotifications from './pages/owner/Notifications';
+import Profile from './pages/owner/Profile';
+import OwnerSubscription from './pages/owner/Subscription';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
@@ -68,6 +70,7 @@ export type PageType =
   | 'owner-cost-settings'
   | 'owner-notifications'
   | 'owner-profile'
+  | 'owner-subscription'
   | 'tenant-dashboard'
   | 'tenant-room'
   | 'tenant-invoices'
@@ -197,6 +200,7 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/cost-settings') { setCurrentPage('owner-cost-settings'); return; }
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
+      if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -328,6 +332,10 @@ const AppContent: React.FC = () => {
           <Tenants setCurrentPage={setCurrentPage} setSelectedUnitId={setSelectedUnitId} />
         ) : currentPage === 'owner-notifications' ? (
           <OwnerNotifications setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'owner-profile' ? (
+          <Profile />
+        ) : currentPage === 'owner-subscription' ? (
+          <OwnerSubscription />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

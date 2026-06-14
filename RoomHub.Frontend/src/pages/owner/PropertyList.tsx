@@ -32,6 +32,38 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Delete property states
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteClick = (property: Property) => {
+    setPropertyToDelete(property);
+    setDeleteError(null);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!propertyToDelete) return;
+    setDeleteError(null);
+    setDeleteLoading(true);
+    try {
+      const res = await api.delete(`/owner/properties/${propertyToDelete.id}`);
+      if (res.data.success) {
+        setIsDeleteOpen(false);
+        setPropertyToDelete(null);
+        await fetchProperties();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setDeleteError(err.response?.data?.message || 'Có lỗi xảy ra khi xóa tài sản.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Tất cả');
 
@@ -266,14 +298,39 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
                 {/* Details Section */}
                 <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
                   <div className="space-y-3.5">
-                    <div>
-                      <h4 className="text-base font-extrabold text-slate-800 line-clamp-1 group-hover:text-primary-container transition-colors duration-205">
-                        {property.name}
-                      </h4>
-                      <p className="text-[11px] text-gray-400 font-semibold flex items-center gap-1 mt-1 leading-normal">
-                        <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">location_on</span>
-                        <span className="truncate">{property.address}</span>
-                      </p>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-grow">
+                        <h4 className="text-base font-extrabold text-slate-800 line-clamp-1 group-hover:text-primary-container transition-colors duration-205">
+                          {property.name}
+                        </h4>
+                        <p className="text-[11px] text-gray-400 font-semibold flex items-center gap-1 mt-1 leading-normal">
+                          <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">location_on</span>
+                          <span className="truncate">{property.address}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPropertyId(property.id);
+                            setCurrentPage('owner-property-detail');
+                          }}
+                          className="p-1 text-gray-400 hover:text-primary-container hover:bg-orange-50 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
+                          title="Chỉnh sửa tài sản"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(property);
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
+                          title="Xóa tài sản"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Occupancy Indicator */}
@@ -350,6 +407,49 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteOpen && propertyToDelete && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-md w-full p-6 md:p-8 soft-shadow border border-gray-100 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">warning</span>
+            </div>
+            
+            <h3 className="text-lg font-black text-slate-800 mb-2">Xác nhận xóa tài sản này?</h3>
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              Bạn có chắc muốn xóa tài sản <strong>{propertyToDelete.name}</strong> không? Hành động này sẽ thực hiện xóa mềm (soft delete) tòa nhà và toàn bộ các phòng trọ liên kết.
+            </p>
+
+            {deleteError && (
+              <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-200 flex items-center justify-center gap-1 text-left">
+                <span className="material-symbols-outlined text-[16px]">error</span> {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteOpen(false);
+                  setPropertyToDelete(null);
+                }}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl font-bold transition-all cursor-pointer outline-none border-0"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSubmit}
+                disabled={deleteLoading}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-750 text-white rounded-xl font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50 outline-none border-0"
+              >
+                {deleteLoading ? 'Đang xóa...' : 'Đồng ý xóa'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

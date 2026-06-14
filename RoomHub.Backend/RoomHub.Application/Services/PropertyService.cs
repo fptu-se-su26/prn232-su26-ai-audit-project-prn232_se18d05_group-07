@@ -6,6 +6,8 @@ using Application.Common.DTOs.Properties;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Common;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -15,17 +17,20 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly IInvoiceRepository _invoiceRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public PropertyService(
             IBuildingRepository buildingRepository,
             IRoomRepository roomRepository,
             IInvoiceRepository invoiceRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            UserManager<ApplicationUser> userManager)
         {
             _buildingRepository = buildingRepository;
             _roomRepository = roomRepository;
             _invoiceRepository = invoiceRepository;
             _unitOfWork = unitOfWork;
+            _userManager = userManager;
         }
 
         public async Task<List<PropertyDto>> GetPropertiesByOwnerAsync(string ownerId)
@@ -208,8 +213,58 @@ namespace Application.Services
             };
         }
 
+        private static string GetPlanName(SubscriptionPlan plan) => plan switch
+        {
+            SubscriptionPlan.Free => "Starter (Miễn phí)",
+            SubscriptionPlan.Monthly => "Pro (Tháng)",
+            SubscriptionPlan.Yearly => "Pro (Năm)",
+            _ => plan.ToString()
+        };
+
         public async Task<bool> CreatePropertyWithOwnerAsync(CreatePropertyRequestDto request, string ownerId)
         {
+            var user = await _userManager.FindByIdAsync(ownerId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy thông tin tài khoản chủ nhà.");
+            }
+
+            // Check building limit
+            var existingBuildings = await _buildingRepository.GetBuildingsByOwnerAsync(ownerId);
+            var maxBuildings = SubscriptionLimits.GetMaxBuildings(user.CurrentPlan);
+            if (existingBuildings.Count >= maxBuildings)
+            {
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxBuildings} tòa nhà/tài sản. Vui lòng nâng cấp gói cước để tiếp tục.");
+            }
+
+            // Check room limit
+            var totalExistingRooms = existingBuildings.Sum(b => b.Floors.SelectMany(f => f.Rooms).Count(r => !r.IsDeleted));
+            int roomsToCreate = 0;
+            if (request.SelectedType == "independent")
+            {
+                roomsToCreate = 1;
+            }
+            else
+            {
+                var numFloors = request.NumFloors > 0 ? request.NumFloors : 1;
+                var roomsCountPerFloor = request.RoomsCountPerFloor;
+                for (int f = 1; f <= numFloors; f++)
+                {
+                    int numRooms = request.NumRoomsPerFloor > 0 ? request.NumRoomsPerFloor : 1;
+                    if (roomsCountPerFloor != null && roomsCountPerFloor.Count >= f)
+                    {
+                        numRooms = roomsCountPerFloor[f - 1] > 0 ? roomsCountPerFloor[f - 1] : 1;
+                    }
+                    roomsToCreate += numRooms;
+                }
+            }
+
+            var maxRooms = SubscriptionLimits.GetMaxRooms(user.CurrentPlan);
+            if (totalExistingRooms + roomsToCreate > maxRooms)
+            {
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxRooms} phòng/căn hộ. Hiện tại bạn đã có {totalExistingRooms} phòng, việc tạo thêm {roomsToCreate} phòng sẽ vượt quá hạn mức gói. Vui lòng nâng cấp gói cước để tiếp tục.");
+            }
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -523,6 +578,138 @@ namespace Application.Services
             room.UpdatedAt = DateTime.UtcNow;
 
             await _roomRepository.UpdateAsync(room);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdatePropertyAsync(int propertyId, UpdatePropertyRequestDto request, string ownerId)
+        {
+            var building = await _buildingRepository.GetByIdWithOwnerAsync(propertyId, ownerId);
+            if (building == null)
+                return false;
+
+            building.Name = request.Name;
+            building.Address = request.Address;
+            if (!string.IsNullOrEmpty(request.District)) building.District = request.District;
+            if (!string.IsNullOrEmpty(request.Ward)) building.Ward = request.Ward;
+            if (!string.IsNullOrEmpty(request.ImageUrl)) building.ThumbnailUrl = request.ImageUrl;
+            building.ElectricityPrice = request.ElectricityPrice;
+            building.WaterPrice = request.WaterPrice;
+            building.WaterBillingType = request.WaterBillingType;
+            building.InternetPrice = request.InternetPrice;
+            building.GarbagePrice = request.GarbagePrice;
+            building.UpdatedAt = DateTime.UtcNow;
+
+            await _buildingRepository.UpdateAsync(building);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeletePropertyAsync(int propertyId, string ownerId)
+        {
+            var building = await _buildingRepository.GetByIdWithOwnerAsync(propertyId, ownerId);
+            if (building == null)
+                return false;
+
+            // Check if there are any occupied rooms or rooms with active/pending contracts
+            var hasActiveOccupants = building.Floors.SelectMany(f => f.Rooms)
+                .Any(r => !r.IsDeleted && (r.Status == RoomStatus.Occupied || r.Contracts.Any(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted)));
+
+            if (hasActiveOccupants)
+            {
+                throw new InvalidOperationException("Không thể xóa tòa nhà vì đang có phòng đang được thuê hoặc có hợp đồng còn hiệu lực.");
+            }
+
+            // Soft delete building
+            building.IsDeleted = true;
+            building.UpdatedAt = DateTime.UtcNow;
+
+            // Soft delete rooms
+            foreach (var floor in building.Floors)
+            {
+                foreach (var room in floor.Rooms)
+                {
+                    room.IsDeleted = true;
+                    room.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
+            await _buildingRepository.UpdateAsync(building);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AddRoomToPropertyAsync(int propertyId, AddRoomRequestDto request, string ownerId)
+        {
+            var building = await _buildingRepository.GetByIdWithOwnerAsync(propertyId, ownerId);
+            if (building == null)
+                return false;
+
+            var user = await _userManager.FindByIdAsync(ownerId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy thông tin tài khoản chủ nhà.");
+            }
+
+            // Check room limit under current subscription plan
+            var existingBuildings = await _buildingRepository.GetBuildingsByOwnerAsync(ownerId);
+            var totalExistingRooms = existingBuildings.Sum(b => b.Floors.SelectMany(f => f.Rooms).Count(r => !r.IsDeleted));
+            var maxRooms = SubscriptionLimits.GetMaxRooms(user.CurrentPlan);
+            if (totalExistingRooms + 1 > maxRooms)
+            {
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxRooms} phòng/căn hộ. Vui lòng nâng cấp gói cước để tiếp tục.");
+            }
+
+            // Ensure floor exists or create it
+            var floor = building.Floors.FirstOrDefault(f => f.FloorNumber == request.FloorNumber);
+            if (floor == null)
+            {
+                floor = new Floor
+                {
+                    BuildingId = building.Id,
+                    FloorNumber = request.FloorNumber,
+                    Description = $"Tầng {request.FloorNumber}"
+                };
+                building.Floors.Add(floor);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // Ensure room number is unique in this building
+            var exists = building.Floors.SelectMany(f => f.Rooms)
+                .Any(r => !r.IsDeleted && r.RoomNumber.Equals(request.RoomNumber, StringComparison.OrdinalIgnoreCase));
+            if (exists)
+            {
+                throw new InvalidOperationException($"Số phòng {request.RoomNumber} đã tồn tại trong tòa nhà này.");
+            }
+
+            var rType = request.RoomType.ToLower() switch
+            {
+                "studio" => RoomType.Studio,
+                "miniapartment" => RoomType.MiniApartment,
+                "mini-apartment" => RoomType.MiniApartment,
+                "apartment" => RoomType.Apartment,
+                _ => RoomType.BoardingHouse
+            };
+
+            var room = new Room
+            {
+                FloorId = floor.Id,
+                RoomNumber = request.RoomNumber,
+                RoomType = rType,
+                MaxCapacity = request.MaxCapacity,
+                WaterBillingType = building.WaterBillingType,
+                SurfaceArea = request.SurfaceArea,
+                BasePrice = request.BasePrice,
+                Description = $"Phòng tiện nghi {request.RoomNumber}",
+                IsFurnished = true,
+                Status = RoomStatus.Available,
+                LandlordId = ownerId,
+                Title = $"Phòng {request.RoomNumber} tại {building.Name}",
+                IsPublished = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _roomRepository.AddAsync(room);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

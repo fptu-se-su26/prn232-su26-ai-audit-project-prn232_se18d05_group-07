@@ -29,6 +29,8 @@ namespace Domain.Entities
         // Subscription fields
         public SubscriptionPlan CurrentPlan { get; set; } = SubscriptionPlan.Free;
         public DateTime? SubscriptionExpiry { get; set; }
+        public int MonthlyAiAuditCount { get; set; } = 0;
+        public DateTime? LastAiAuditResetDate { get; set; }
 
         // Navigation properties
         public virtual ICollection<Room> OwnedRooms { get; set; } = new List<Room>();
