@@ -19,9 +19,7 @@ namespace RoomHub.API.Controllers
             _notificationService = notificationService;
         }
 
-        // ==========================================
-        // 1. GET ALL USER NOTIFICATIONS
-        // ==========================================
+
         [HttpGet]
         public async Task<IActionResult> GetNotifications()
         {
@@ -33,9 +31,6 @@ namespace RoomHub.API.Controllers
             return Ok(result);
         }
 
-        // ==========================================
-        // 2. GET UNREAD NOTIFICATIONS COUNT
-        // ==========================================
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {
@@ -47,9 +42,6 @@ namespace RoomHub.API.Controllers
             return Ok(new { unreadCount = count });
         }
 
-        // ==========================================
-        // 3. MARK SINGLE NOTIFICATION AS READ
-        // ==========================================
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(long id)
         {
@@ -64,9 +56,7 @@ namespace RoomHub.API.Controllers
             return Ok(new { success = true });
         }
 
-        // ==========================================
-        // 4. MARK ALL NOTIFICATIONS AS READ
-        // ==========================================
+
         [HttpPut("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
@@ -78,9 +68,7 @@ namespace RoomHub.API.Controllers
             return Ok(new { success = true });
         }
 
-        // ==========================================
-        // 5. DELETE NOTIFICATION
-        // ==========================================
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNotification(long id)
         {
