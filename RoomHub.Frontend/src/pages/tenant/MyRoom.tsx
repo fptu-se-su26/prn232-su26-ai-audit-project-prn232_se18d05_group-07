@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { PageType } from '../../App';
 import { Reveal, ParallaxHero } from '../../components/parallax/Parallax';
 import api from '../../services/api';
+import SignaturePad, { type SignaturePadHandle } from '../../components/SignaturePad';
 
 interface Props {
   setCurrentPage: (page: PageType) => void;
@@ -31,6 +32,7 @@ interface RoomData {
   ownerEmail: string;
   ownerAvatar?: string;
   roomImage?: string;
+  signaturePath?: string | null;
 }
 
 const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
@@ -39,6 +41,8 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const sigRef = useRef<SignaturePadHandle>(null);
+  const [signing, setSigning] = useState(false);
 
   const triggerToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ text, type });
@@ -101,6 +105,25 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
       console.error(err);
       triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi từ chối lời mời.', 'error');
       setLoading(false);
+    }
+  };
+
+  const handleSign = async () => {
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      triggerToast('Vui lòng ký tên trước khi lưu.', 'warning');
+      return;
+    }
+    try {
+      setSigning(true);
+      const dataUrl = sigRef.current.toDataURL();
+      await api.post('/tenant/room/sign', { signatureImage: dataUrl });
+      triggerToast('Đã ký hợp đồng thành công!');
+      fetchRoom();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi ký hợp đồng.', 'error');
+    } finally {
+      setSigning(false);
     }
   };
 
@@ -280,6 +303,48 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
               <button onClick={() => triggerToast('Tải hợp đồng PDF (demo)...')} className="w-full mt-5 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-orange-100">
                 <span className="material-symbols-outlined text-[18px]">download</span> Tải hợp đồng
               </button>
+            </div>
+          </Reveal>
+
+          <Reveal delay={40}>
+            <div className="bg-white rounded-2xl border border-gray-100 soft-shadow p-6">
+              <h3 className="font-bold text-on-surface mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary-container">draw</span> Chữ ký điện tử
+              </h3>
+              {roomData.signaturePath ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 flex items-center justify-center">
+                    <img src={roomData.signaturePath} alt="Chữ ký hợp đồng" className="max-h-28 object-contain" />
+                  </div>
+                  <p className="text-[11px] font-bold text-green-600 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">verified</span> Bạn đã ký hợp đồng này.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-gray-500 font-semibold leading-relaxed">
+                    Dùng chuột (hoặc cảm ứng) để ký xác nhận hợp đồng thuê phòng này.
+                  </p>
+                  <SignaturePad ref={sigRef} />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => sigRef.current?.clear()}
+                      className="flex-1 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold transition-all border border-gray-100 cursor-pointer"
+                    >
+                      Xóa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSign}
+                      disabled={signing}
+                      className="flex-1 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-60"
+                    >
+                      {signing ? 'Đang lưu...' : 'Ký & lưu'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </Reveal>
 

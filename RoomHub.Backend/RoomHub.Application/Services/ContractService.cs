@@ -263,10 +263,27 @@ namespace Application.Services
                 OwnerPhone = owner.PhoneNumber ?? "",
                 OwnerEmail = owner.Email ?? "",
                 OwnerAvatar = owner.AvatarUrl,
-                RoomImage = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).FirstOrDefault() 
-                            ?? building.ThumbnailUrl 
-                            ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80"
+                RoomImage = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).FirstOrDefault()
+                            ?? building.ThumbnailUrl
+                            ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80",
+                SignaturePath = contract.SignaturePath
             };
+        }
+
+        public async Task<bool> SignContractAsync(string tenantId, string signatureUrl)
+        {
+            if (string.IsNullOrWhiteSpace(signatureUrl))
+                throw new Exception("Chữ ký không hợp lệ.");
+
+            var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
+            if (contract == null || (contract.Status != ContractStatus.Pending && contract.Status != ContractStatus.Active))
+                throw new Exception("Không tìm thấy hợp đồng để ký.");
+
+            contract.SignaturePath = signatureUrl;
+            contract.UpdatedAt = DateTime.UtcNow;
+            await _contractRepository.UpdateAsync(contract);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> AcceptContractAsync(string tenantId)
