@@ -105,3 +105,38 @@
     animation: none;
   }
 }
+
+/* ===== Print-to-PDF: print only the .print-root document, hide everything else ===== */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body {
+    background: #ffffff;
+  }
+  /* Hide the whole app, then reveal only the print-root subtree */
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Explicitly excluded from print (toolbars, buttons, overlays) */
+  .print-hide {
+    display: none !important;
+  }
+}

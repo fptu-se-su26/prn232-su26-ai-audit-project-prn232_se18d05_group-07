@@ -770,7 +770,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
             </div>
 
             {/* A4 Paper mockup sheet */}
-            <div className="bg-white border border-gray-300 rounded-2xl shadow-md p-8 md:p-12 relative overflow-hidden font-serif max-w-2xl mx-auto border-t-8 border-t-orange-500">
+            <div className="print-root bg-white border border-gray-300 rounded-2xl shadow-md p-8 md:p-12 relative overflow-hidden font-serif max-w-2xl mx-auto border-t-8 border-t-orange-500">
               
               {/* PAID stamp banner graphic overlay */}
               {invoice.status === 'Đã thanh toán' && (

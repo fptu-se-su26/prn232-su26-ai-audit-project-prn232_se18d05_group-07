@@ -62,6 +62,7 @@ namespace Application.Common.DTOs.Contracts
         public string? OwnerAvatar { get; set; }
         public string? RoomImage { get; set; }
         public string? SignaturePath { get; set; }
+        public string? Terms { get; set; }
     }
 
     public class OwnerTenantDto

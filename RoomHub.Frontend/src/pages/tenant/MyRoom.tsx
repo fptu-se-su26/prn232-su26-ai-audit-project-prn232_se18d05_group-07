@@ -3,6 +3,9 @@ import type { PageType } from '../../App';
 import { Reveal, ParallaxHero } from '../../components/parallax/Parallax';
 import api from '../../services/api';
 import SignaturePad, { type SignaturePadHandle } from '../../components/SignaturePad';
+import PrintModal from '../../components/documents/PrintModal';
+import ContractDocument from '../../components/documents/ContractDocument';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Props {
   setCurrentPage: (page: PageType) => void;
@@ -33,9 +36,11 @@ interface RoomData {
   ownerAvatar?: string;
   roomImage?: string;
   signaturePath?: string | null;
+  terms?: string | null;
 }
 
 const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [roomData, setRoomData] = useState<RoomData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +48,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const sigRef = useRef<SignaturePadHandle>(null);
   const [signing, setSigning] = useState(false);
+  const [showContract, setShowContract] = useState(false);
 
   const triggerToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ text, type });
@@ -300,8 +306,8 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
                 <li className="flex justify-between"><span className="text-gray-500">Kết thúc</span><span className="font-semibold text-on-surface">{formatDate(roomData.endDate)}</span></li>
                 <li className="flex justify-between items-center"><span className="text-gray-500">Trạng thái</span><span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${roomData.isPending ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-green-600 bg-green-50 border-green-200'}`}>{roomData.status}</span></li>
               </ul>
-              <button onClick={() => triggerToast('Tải hợp đồng PDF (demo)...')} className="w-full mt-5 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-orange-100">
-                <span className="material-symbols-outlined text-[18px]">download</span> Tải hợp đồng
+              <button onClick={() => setShowContract(true)} className="w-full mt-5 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-orange-100">
+                <span className="material-symbols-outlined text-[18px]">description</span> Xem & in hợp đồng
               </button>
             </div>
           </Reveal>
@@ -390,7 +396,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={handleConfirmReject}
                 className="px-5 py-2.5 bg-red-600 hover:bg-red-755 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
               >
@@ -400,6 +406,31 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
           </div>
         </div>
       )}
+
+      {/* Electronic contract preview (print-to-PDF) */}
+      <PrintModal open={showContract} onClose={() => setShowContract(false)} title="Hợp đồng thuê phòng">
+        <ContractDocument
+          data={{
+            roomNumber: roomData.roomNumber,
+            buildingName: roomData.buildingName,
+            buildingAddress: roomData.buildingAddress,
+            roomType: roomData.roomType,
+            surfaceArea: roomData.surfaceArea,
+            rentAmount: roomData.rentAmount,
+            depositAmount: roomData.depositAmount,
+            startDate: roomData.startDate,
+            endDate: roomData.endDate,
+            status: roomData.status,
+            ownerName: roomData.ownerName,
+            ownerPhone: roomData.ownerPhone,
+            ownerEmail: roomData.ownerEmail,
+            signaturePath: roomData.signaturePath,
+            terms: roomData.terms,
+          }}
+          tenantName={user?.fullName || ''}
+          tenantEmail={user?.email || ''}
+        />
+      </PrintModal>
     </div>
   );
 };

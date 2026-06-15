@@ -266,7 +266,8 @@ namespace Application.Services
                 RoomImage = room.RoomPhotos.OrderBy(p => p.DisplayOrder).Select(p => p.Url).FirstOrDefault()
                             ?? building.ThumbnailUrl
                             ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80",
-                SignaturePath = contract.SignaturePath
+                SignaturePath = contract.SignaturePath,
+                Terms = contract.Terms
             };
         }
 
