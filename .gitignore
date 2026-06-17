@@ -43,3 +43,6 @@ Desktop.ini
 **/appsettings.Development.json
 **/.vs/
 **/appsettings.*.Local.json
+
+# Runtime upload artifacts (signatures, images saved by local fallback)
+**/wwwroot/uploads/
