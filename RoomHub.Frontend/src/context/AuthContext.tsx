@@ -14,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; message: string }>;
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; message: string }>;
   register: (email: string, password: string, fullName: string, role: string) => Promise<{ success: boolean; message: string }>;
   verifyOtp: (email: string, code: string) => Promise<{ success: boolean; message: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
@@ -61,6 +62,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return {
         success: false,
         message: error.response?.data?.message || 'Email hoặc mật khẩu không chính xác.'
+      };
+    }
+  };
+
+  const loginWithGoogle = async (idToken: string) => {
+    try {
+      const response = await api.post('/auth/google', { idToken });
+      const data = response.data;
+
+      if (data.succeeded) {
+        setToken(data.token);
+        setUser(data.userInfo);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.userInfo));
+        localStorage.setItem('userEmail', data.userInfo.email);
+        return { success: true, message: data.message || 'Đăng nhập Google thành công!' };
+      }
+      return { success: false, message: data.message || 'Đăng nhập Google thất bại.' };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.'
       };
     }
   };
@@ -195,6 +219,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!token,
         isLoading,
         login,
+        loginWithGoogle,
         register,
         verifyOtp,
         forgotPassword,
