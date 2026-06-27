@@ -62,4 +62,10 @@ namespace Application.Common.DTOs.Auth
         public string FullName { get; set; } = null!;
         public string Role { get; set; } = null!;
     }
+
+    public class GoogleLoginRequest
+    {
+        public string IdToken { get; set; } = null!;
+    }
 }
+
