@@ -56,7 +56,8 @@ Nguyên tắc ghi changelog:
 - [x] Service: `IReviewService` + `ReviewService` (validate sao 1–5, chặn đánh giá trùng phòng, lấy OwnerId từ phòng, tính điểm trung bình)
 - [x] Controller: `ReviewsController` với 4 endpoint
 - [x] Đăng ký `IReviewRepository` và `IReviewService` trong `DependencyInjection.cs`
-- [x] Frontend: trang `MyReviews.tsx` (chọn sao, bình luận, danh sách, xóa, badge cảm xúc theo sao)
+- [x] Frontend: trang `MyReviews.tsx` (chọn sao, bình luận, danh sách, sửa, xóa, badge cảm xúc theo sao)
+- [x] Bổ sung chức năng Sửa đánh giá: endpoint `PUT /api/tenant/reviews/{id}` + form sửa inline ở FE
 - [x] Gắn route `tenant-reviews` trong `App.tsx` và mục menu "Đánh giá của tôi" trong `TenantLayout.tsx`
 - [x] Xác nhận KHÔNG cần migration (bảng `Reviews` đã có sẵn từ InitialMigration)
 - [x] Build backend 0 lỗi, typecheck frontend exit 0
@@ -79,6 +80,7 @@ Nguyên tắc ghi changelog:
 |---|---|---|---|
 | POST | `/api/tenant/reviews` | Tenant | Tạo đánh giá cho phòng (rating + comment) |
 | GET | `/api/tenant/reviews/my` | Tenant | Danh sách đánh giá của chính mình |
+| PUT | `/api/tenant/reviews/{id}` | Tenant | Sửa đánh giá của mình (rating + comment) |
 | DELETE | `/api/tenant/reviews/{id}` | Tenant | Xóa đánh giá của mình |
 | GET | `/api/reviews/room/{roomId}` | Công khai | Điểm trung bình + danh sách đánh giá của 1 phòng |
 
@@ -118,7 +120,7 @@ phân tích bình luận ở bước sau.
 | STT | Chức năng | Trạng thái | Minh chứng | Ghi chú |
 |---|---|---|---|---|
 | 1 | Người thuê gửi đánh giá phòng (rating + comment) | Completed | POST /api/tenant/reviews | Chặn đánh giá trùng |
-| 2 | Xem danh sách đánh giá của mình & xóa | Completed | GET/DELETE /api/tenant/reviews | Trang MyReviews |
+| 2 | Xem danh sách đánh giá của mình, sửa & xóa | Completed | GET/PUT/DELETE /api/tenant/reviews | Trang MyReviews |
 | 3 | Xem điểm trung bình + đánh giá theo phòng | Completed | GET /api/reviews/room/{id} | Công khai |
 
 ---

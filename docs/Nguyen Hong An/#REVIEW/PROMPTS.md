@@ -44,6 +44,7 @@ File này ghi lại các prompt quan trọng đã dùng khi thực hiện chức
 | 3 | 12/07/2026 | Claude | Code backend | Làm chức năng Đánh giá cho người thuê | DTO/Repo/Service/Controller + DI | Có | ReviewsController.cs |
 | 4 | 12/07/2026 | Claude | Code frontend | Trang chấm sao + xem/xóa đánh giá | MyReviews.tsx + điều hướng | Có | MyReviews.tsx |
 | 5 | 12/07/2026 | Claude | Git | Mỗi chức năng một nhánh, push code sạch | Commit gọn, loại bin/obj/package-lock | Có | Nhánh feature/de180358-tenant-reviews |
+| 6 | 12/07/2026 | Claude | Hoàn thiện | Thêm chức năng Sửa đánh giá | PUT endpoint + form sửa inline | Có | ReviewsController.cs, MyReviews.tsx |
 
 ---
 
