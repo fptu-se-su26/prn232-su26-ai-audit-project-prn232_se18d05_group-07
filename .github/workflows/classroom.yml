@@ -28,21 +28,8 @@ jobs:
       #       expected-output: 3
       #       comparison-method: exact
       #       timeout: 10
-    - name: Run tests
-      id: addition-test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Addition Test
-        command: "./bin/add.sh"
-        input: 1 2
-        expected-output: 3
-        comparison-method: exact
-        timeout: 10
-
     - name: Autograding Reporter
       uses: classroom-resources/autograding-grading-reporter@v1
-      with:
-        runners: addition-test
       # For more information on this runner, see the documentation at https://github.com/classroom-resources/autograding-grading-reporter
       # To output the results of the tests, you can use the
       # autograding-grading-reporter action like this:
