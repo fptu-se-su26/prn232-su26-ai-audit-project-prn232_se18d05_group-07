@@ -230,6 +230,7 @@ namespace RoomHub.API.Controllers
                 waterPrice = (double)water,
                 internetPrice = (double)internet,
                 garbagePrice = (double)garbage,
+                ownerId = room.Floor.Building.OwnerId,
                 landlordName = landlordName,
                 landlordPhone = landlordPhone,
                 landlordAvatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",

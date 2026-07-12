@@ -62,6 +62,18 @@ namespace Infrastructure
                     ValidAudience = configuration["JwtSettings:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                            context.Token = accessToken;
+
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             // Register Custom Services
@@ -82,6 +94,8 @@ namespace Infrastructure
             services.AddScoped<IUtilityReadingRepository, Persistence.Repositories.UtilityReadingRepository>();
             services.AddScoped<INotificationRepository, Persistence.Repositories.NotificationRepository>();
             services.AddScoped<ISubscriptionRepository, Persistence.Repositories.SubscriptionRepository>();
+            services.AddScoped<IConversationRepository, Persistence.Repositories.ConversationRepository>();
+            services.AddScoped<IChatMessageRepository, Persistence.Repositories.ChatMessageRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -93,6 +107,7 @@ namespace Infrastructure
             services.AddScoped<IDashboardService, Application.Services.DashboardService>();
             services.AddScoped<INotificationService, Application.Services.NotificationService>();
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
+            services.AddScoped<IChatService, Application.Services.ChatService>();
 
             return services;
         }

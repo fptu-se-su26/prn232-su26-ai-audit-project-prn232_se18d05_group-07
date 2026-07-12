@@ -259,6 +259,7 @@ namespace Application.Services
                     _ => contract.Status.ToString()
                 },
                 IsPending = contract.Status == ContractStatus.Pending,
+                OwnerId = owner.Id,
                 OwnerName = owner.FullName,
                 OwnerPhone = owner.PhoneNumber ?? "",
                 OwnerEmail = owner.Email ?? "",
