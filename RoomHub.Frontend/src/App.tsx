@@ -35,7 +35,6 @@ import TenantMyInvoices from './pages/tenant/MyInvoices';
 import TenantInvoiceDetail from './pages/tenant/InvoiceDetail';
 import TenantFavorites from './pages/tenant/Favorites';
 import TenantMaintenance from './pages/tenant/Maintenance';
-import TenantMessages from './pages/tenant/Messages';
 import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
 import TenantMyReviews from './pages/tenant/MyReviews';
@@ -49,6 +48,7 @@ import AdminBuildings from './pages/admin/Buildings';
 import AdminRooms from './pages/admin/Rooms';
 import AdminModeration from './pages/admin/Moderation';
 import AdminSubscriptions from './pages/admin/Subscriptions';
+import Chat from './pages/Chat';
 
 export type PageType = 
   | 'home' 
@@ -72,6 +72,7 @@ export type PageType =
   | 'owner-notifications'
   | 'owner-profile'
   | 'owner-subscription'
+  | 'owner-messages'
   | 'tenant-dashboard'
   | 'tenant-room'
   | 'tenant-invoices'
@@ -204,6 +205,7 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
       if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
+      if (hash === '#/owner/messages') { setCurrentPage('owner-messages'); return; }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -294,7 +296,7 @@ const AppContent: React.FC = () => {
         ) : currentPage === 'tenant-maintenance' ? (
           <TenantMaintenance />
         ) : currentPage === 'tenant-messages' ? (
-          <TenantMessages />
+          <Chat />
         ) : currentPage === 'tenant-profile' ? (
           <TenantProfile />
         ) : currentPage === 'tenant-notifications' ? (
@@ -341,6 +343,8 @@ const AppContent: React.FC = () => {
           <Profile />
         ) : currentPage === 'owner-subscription' ? (
           <OwnerSubscription />
+        ) : currentPage === 'owner-messages' ? (
+          <Chat />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

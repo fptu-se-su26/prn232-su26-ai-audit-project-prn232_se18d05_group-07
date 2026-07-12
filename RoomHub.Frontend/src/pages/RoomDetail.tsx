@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { MOCK_ROOMS } from './Browse';
 
 interface RoomDetailProps {
@@ -20,6 +21,8 @@ const INTERIOR_IMAGES = [
 
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
 
@@ -159,6 +162,27 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       </main>
     );
   }
+
+  const isTenant = user?.role === 'Tenant';
+
+  const handleStartChat = async () => {
+    if (!room?.ownerId || !user) return;
+    try {
+      setChatLoading(true);
+      await api.post('/chats/conversations', { ownerId: room.ownerId });
+      // Dashboard routes are hash-based. This also works when the detail page
+      // is opened directly at /room/:id (where setCurrentPage is not supplied).
+      if (setCurrentPage) {
+        (setCurrentPage as any)('tenant-messages');
+      } else {
+        window.location.hash = '#/tenant/messages';
+      }
+    } catch (err) {
+      console.error('Lỗi tạo cuộc trò chuyện:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const host = {
     name: room.landlordName || "Chủ nhà RoomHub",
@@ -437,12 +461,40 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               </div>
 
               {/* Contact / Action CTA Button */}
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98"
-              >
-                Đăng nhập để liên hệ chủ nhà
-              </button>
+              {isTenant ? (
+                <>
+                  <button
+                    onClick={handleStartChat}
+                    disabled={chatLoading}
+                    className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {chatLoading ? (
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[18px]">chat</span>
+                    )}
+                    {chatLoading ? 'Đang kết nối...' : 'Nhắn tin với chủ nhà'}
+                  </button>
+                  <div className="flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                    <span className="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>
+                    <span className="text-xs text-gray-600 font-semibold">Đã đăng nhập · Bảo mật 100%</span>
+                  </div>
+                </>
+              ) : user ? (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="w-full py-4 bg-gray-200 text-gray-500 text-sm font-bold rounded-xl cursor-not-allowed"
+                >
+                  Chỉ khách thuê mới nhắn được
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98"
+                >
+                  Đăng nhập để liên hệ chủ nhà
+                </button>
+              )}
 
               <p className="text-[11px] text-center text-gray-400 px-2 leading-relaxed">
                 Bằng việc nhấn đăng nhập liên hệ, bạn hoàn toàn đồng ý tuân thủ với Điều khoản sử dụng và Chính sách bảo mật của RoomHub Da Nang.

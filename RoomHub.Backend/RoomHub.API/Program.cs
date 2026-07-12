@@ -1,4 +1,7 @@
 using Infrastructure;
+using Application.Common.Interfaces;
+using RoomHub.API.Hubs;
+using RoomHub.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IChatNotifier, SignalRChatNotifier>();
 
 // Add CORS Policy for React Frontend
 builder.Services.AddCors(options =>
@@ -68,6 +73,7 @@ app.UseAuthorization();
 
 // Map endpoints
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 var summaries = new[]
 {

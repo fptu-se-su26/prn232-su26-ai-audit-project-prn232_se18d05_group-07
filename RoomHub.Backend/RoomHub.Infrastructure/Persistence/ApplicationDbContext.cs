@@ -68,6 +68,10 @@ namespace Infrastructure.Persistence
         public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
         public DbSet<FavoriteRoom> FavoriteRooms { get; set; }
+
+        // Chat
+        public DbSet<Conversation> Conversations => Set<Conversation>();
+        public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
