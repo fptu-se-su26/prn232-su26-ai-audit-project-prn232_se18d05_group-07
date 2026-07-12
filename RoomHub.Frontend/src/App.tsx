@@ -37,6 +37,7 @@ import TenantFavorites from './pages/tenant/Favorites';
 import TenantMaintenance from './pages/tenant/Maintenance';
 import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
+import TenantMyReviews from './pages/tenant/MyReviews';
 import OwnerNotifications from './pages/owner/Notifications';
 import Profile from './pages/owner/Profile';
 import OwnerSubscription from './pages/owner/Subscription';
@@ -81,6 +82,7 @@ export type PageType =
   | 'tenant-messages'
   | 'tenant-profile'
   | 'tenant-notifications'
+  | 'tenant-reviews'
   | 'admin-dashboard'
   | 'admin-users'
   | 'admin-buildings'
@@ -133,6 +135,7 @@ const AppContent: React.FC = () => {
           'messages': 'tenant-messages',
           'profile': 'tenant-profile',
           'notifications': 'tenant-notifications',
+          'reviews': 'tenant-reviews',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
       }
@@ -298,6 +301,8 @@ const AppContent: React.FC = () => {
           <TenantProfile />
         ) : currentPage === 'tenant-notifications' ? (
           <TenantNotifications setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-reviews' ? (
+          <TenantMyReviews />
         ) : (
           <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}
