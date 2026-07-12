@@ -72,6 +72,31 @@ namespace RoomHub.API.Controllers
         }
 
         // ==========================================
+        // TENANT: sửa đánh giá của chính mình
+        // ==========================================
+        [HttpPut("tenant/reviews/{id:int}")]
+        [Authorize(Roles = "Tenant")]
+        public async Task<IActionResult> UpdateReview(int id, [FromBody] UpdateReviewRequest request)
+        {
+            var tenantId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(tenantId))
+                return Unauthorized(new { message = "Không xác định danh tính người thuê." });
+
+            try
+            {
+                var result = await _reviewService.UpdateReviewAsync(id, tenantId, request);
+                if (result == null)
+                    return NotFound(new { message = "Không tìm thấy đánh giá hoặc bạn không có quyền sửa." });
+
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // ==========================================
         // TENANT: xóa đánh giá của chính mình
         // ==========================================
         [HttpDelete("tenant/reviews/{id:int}")]

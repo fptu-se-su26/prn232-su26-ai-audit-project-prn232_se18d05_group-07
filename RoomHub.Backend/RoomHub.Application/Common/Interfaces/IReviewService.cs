@@ -15,6 +15,9 @@ namespace Application.Common.Interfaces
         // Danh sách đánh giá do người thuê hiện tại đã viết.
         Task<List<ReviewDto>> GetMyReviewsAsync(string tenantId);
 
+        // Người thuê sửa đánh giá của chính mình. null nếu không tồn tại/không sở hữu.
+        Task<ReviewDto?> UpdateReviewAsync(int id, string tenantId, UpdateReviewRequest request);
+
         // Người thuê xóa đánh giá của chính mình. false nếu không tồn tại/không sở hữu.
         Task<bool> DeleteReviewAsync(int id, string tenantId);
     }

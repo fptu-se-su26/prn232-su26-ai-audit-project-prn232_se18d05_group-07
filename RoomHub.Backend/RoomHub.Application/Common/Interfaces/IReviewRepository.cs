@@ -12,6 +12,7 @@ namespace Application.Common.Interfaces
         Task<bool> HasTenantReviewedRoomAsync(string tenantId, int roomId);
         Task<Room?> GetRoomAsync(int roomId);
         Task AddAsync(Review review);
+        Task UpdateAsync(Review review);
         Task DeleteAsync(Review review);
     }
 }

@@ -11,6 +11,13 @@ namespace Application.Common.DTOs.Reviews
         public string? Comment { get; set; }
     }
 
+    // Request gửi lên khi người thuê sửa lại đánh giá của chính mình.
+    public class UpdateReviewRequest
+    {
+        public int Rating { get; set; }        // 1..5 sao
+        public string? Comment { get; set; }
+    }
+
     // Một dòng đánh giá trả về cho client.
     public class ReviewDto
     {

@@ -72,6 +72,24 @@ namespace Application.Services
             return reviews.Select(MapToDto).ToList();
         }
 
+        public async Task<ReviewDto?> UpdateReviewAsync(int id, string tenantId, UpdateReviewRequest request)
+        {
+            if (request.Rating < 1 || request.Rating > 5)
+                throw new ArgumentException("Số sao đánh giá phải nằm trong khoảng 1 đến 5.");
+
+            var review = await _reviewRepository.GetByIdAsync(id);
+            if (review == null || review.TenantId != tenantId)
+                return null;
+
+            review.Rating = (byte)request.Rating;
+            review.Comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+
+            await _reviewRepository.UpdateAsync(review);
+            await _unitOfWork.SaveChangesAsync();
+
+            return MapToDto(review);
+        }
+
         public async Task<bool> DeleteReviewAsync(int id, string tenantId)
         {
             var review = await _reviewRepository.GetByIdAsync(id);

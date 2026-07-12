@@ -39,6 +39,13 @@ const TenantMyReviews: React.FC = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
+  // Trạng thái sửa một đánh giá đã có
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editRating, setEditRating] = useState(5);
+  const [editHover, setEditHover] = useState(0);
+  const [editComment, setEditComment] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const triggerToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => setToast({ text, type });
 
   useEffect(() => {
@@ -95,6 +102,35 @@ const TenantMyReviews: React.FC = () => {
       triggerToast(err.response?.data?.message || 'Không thể gửi đánh giá.', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startEdit = (r: ReviewItem) => {
+    setEditingId(r.id);
+    setEditRating(r.rating || 5);
+    setEditComment(r.comment || '');
+    setEditHover(0);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditHover(0);
+  };
+
+  const handleUpdate = async (id: number) => {
+    setSavingEdit(true);
+    try {
+      const res = await api.put(`/tenant/reviews/${id}`, {
+        rating: editRating,
+        comment: editComment.trim() || null,
+      });
+      setReviews(prev => prev.map(r => (r.id === id ? res.data : r)));
+      triggerToast('Đã cập nhật đánh giá.');
+      setEditingId(null);
+    } catch (err: any) {
+      triggerToast(err.response?.data?.message || 'Không thể cập nhật đánh giá.', 'error');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -250,27 +286,93 @@ const TenantMyReviews: React.FC = () => {
                             <h4 className="font-bold text-sm text-on-surface truncate">
                               {r.roomTitle || (r.roomId ? `Phòng #${r.roomId}` : 'Phòng đã xóa')}
                             </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <StarRow value={r.rating || 0} />
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${s.cls}`}>
-                                <span className="material-symbols-outlined text-[13px]">{s.icon}</span>
-                                {s.label}
-                              </span>
-                            </div>
+                            {editingId !== r.id && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <StarRow value={r.rating || 0} />
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${s.cls}`}>
+                                  <span className="material-symbols-outlined text-[13px]">{s.icon}</span>
+                                  {s.label}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-[10px] text-gray-400 font-semibold">{formatDate(r.createdAt)}</span>
-                            <button
-                              onClick={() => setDeleteTargetId(r.id)}
-                              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 cursor-pointer"
-                              title="Xóa đánh giá"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">delete</span>
-                            </button>
+                            {editingId !== r.id && (
+                              <>
+                                <button
+                                  onClick={() => startEdit(r)}
+                                  className="text-gray-400 hover:text-primary-container transition-colors p-1 rounded-full hover:bg-orange-50 cursor-pointer"
+                                  title="Sửa đánh giá"
+                                >
+                                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTargetId(r.id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 cursor-pointer"
+                                  title="Xóa đánh giá"
+                                >
+                                  <span className="material-symbols-outlined text-[15px]">delete</span>
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
-                        {r.comment && (
-                          <p className="text-xs text-gray-600 mt-2 leading-relaxed font-semibold">{r.comment}</p>
+
+                        {editingId === r.id ? (
+                          <div className="mt-3 space-y-3">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map(i => (
+                                <button
+                                  type="button"
+                                  key={i}
+                                  onClick={() => setEditRating(i)}
+                                  onMouseEnter={() => setEditHover(i)}
+                                  onMouseLeave={() => setEditHover(0)}
+                                  className="cursor-pointer"
+                                >
+                                  <span
+                                    className={`material-symbols-outlined text-[26px] transition-colors ${
+                                      i <= (editHover || editRating) ? 'text-amber-400 icon-fill' : 'text-gray-300'
+                                    }`}
+                                  >
+                                    star
+                                  </span>
+                                </button>
+                              ))}
+                              <span className="text-xs font-bold text-gray-500 ml-2">{editRating}/5</span>
+                            </div>
+                            <textarea
+                              value={editComment}
+                              onChange={e => setEditComment(e.target.value)}
+                              rows={3}
+                              maxLength={1000}
+                              placeholder="Cập nhật nhận xét của bạn..."
+                              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-on-surface rounded-xl text-xs font-bold transition-all cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                              <button
+                                type="button"
+                                disabled={savingEdit}
+                                onClick={() => handleUpdate(r.id)}
+                                className="px-4 py-2 bg-primary-container hover:bg-orange-650 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
+                              >
+                                {savingEdit && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
+                                Lưu thay đổi
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          r.comment && (
+                            <p className="text-xs text-gray-600 mt-2 leading-relaxed font-semibold">{r.comment}</p>
+                          )
                         )}
                       </div>
                     </Reveal>
