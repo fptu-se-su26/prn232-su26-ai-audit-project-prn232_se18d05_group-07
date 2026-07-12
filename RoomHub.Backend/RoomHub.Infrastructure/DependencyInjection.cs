@@ -97,6 +97,7 @@ namespace Infrastructure
             services.AddScoped<IConversationRepository, Persistence.Repositories.ConversationRepository>();
             services.AddScoped<IChatMessageRepository, Persistence.Repositories.ChatMessageRepository>();
             services.AddScoped<IReviewRepository, Persistence.Repositories.ReviewRepository>();
+            services.AddScoped<ISearchHistoryRepository, Persistence.Repositories.SearchHistoryRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -110,6 +111,7 @@ namespace Infrastructure
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
             services.AddScoped<IChatService, Application.Services.ChatService>();
             services.AddScoped<IReviewService, Application.Services.ReviewService>();
+            services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
 
             return services;
         }
