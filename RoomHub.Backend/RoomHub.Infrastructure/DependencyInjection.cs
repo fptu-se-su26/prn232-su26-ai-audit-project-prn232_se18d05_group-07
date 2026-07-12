@@ -83,6 +83,7 @@ namespace Infrastructure
             services.AddScoped<INotificationRepository, Persistence.Repositories.NotificationRepository>();
             services.AddScoped<ISubscriptionRepository, Persistence.Repositories.SubscriptionRepository>();
             services.AddScoped<IReviewRepository, Persistence.Repositories.ReviewRepository>();
+            services.AddScoped<ISearchHistoryRepository, Persistence.Repositories.SearchHistoryRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -95,6 +96,7 @@ namespace Infrastructure
             services.AddScoped<INotificationService, Application.Services.NotificationService>();
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
             services.AddScoped<IReviewService, Application.Services.ReviewService>();
+            services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
 
             return services;
         }

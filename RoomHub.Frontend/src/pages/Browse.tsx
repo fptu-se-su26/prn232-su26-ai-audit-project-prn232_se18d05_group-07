@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -338,9 +339,24 @@ const Browse: React.FC<BrowseProps> = () => {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  // Ghi lại lượt tìm kiếm vào lịch sử (chỉ khi người dùng đã đăng nhập).
+  // Lỗi (ví dụ không phải vai trò Tenant) được bỏ qua để không ảnh hưởng trải nghiệm tìm phòng.
+  const logSearchHistory = () => {
+    if (!localStorage.getItem('token')) return;
+    const searchQuery = JSON.stringify({
+      keyword: inputKeyword.trim(),
+      type: selectedType,
+      location: selectedLocation,
+      priceRange,
+      amenities: selectedAmenities,
+    });
+    api.post('/tenant/search-history', { searchQuery }).catch(() => { /* bỏ qua */ });
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchKeyword(inputKeyword);
+    logSearchHistory();
   };
 
   const handleQuickTabSelect = (tab: string) => {
