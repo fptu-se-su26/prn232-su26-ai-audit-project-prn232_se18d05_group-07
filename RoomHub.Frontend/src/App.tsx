@@ -305,7 +305,7 @@ const AppContent: React.FC = () => {
         ) : currentPage === 'tenant-reviews' ? (
           <TenantMyReviews />
         ) : currentPage === 'tenant-search-history' ? (
-          <TenantSearchHistory />
+          <TenantSearchHistory setCurrentPage={setCurrentPage} />
         ) : (
           <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}

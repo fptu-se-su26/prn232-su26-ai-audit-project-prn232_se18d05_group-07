@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { PageType } from '../../App';
 import { Reveal } from '../../components/parallax/Parallax';
 import api from '../../services/api';
+
+interface Props {
+  setCurrentPage?: (page: PageType) => void;
+}
 
 interface SearchHistoryItem {
   id: number;
@@ -28,8 +33,21 @@ const describeQuery = (raw: string | null): { keyword?: string; chips: string[] 
   }
 };
 
-const TenantSearchHistory: React.FC = () => {
+const TenantSearchHistory: React.FC<Props> = ({ setCurrentPage }) => {
   const navigate = useNavigate();
+
+  // Chuyển sang trang tìm phòng công khai. Phải đổi cả currentPage (thoát khu tenant)
+  // lẫn path của router thì trang Browse mới hiển thị.
+  const goToBrowse = () => {
+    setCurrentPage?.('browse');
+    navigate('/browse');
+  };
+
+  // Xem lại chi tiết một phòng đã xem.
+  const goToRoom = (roomId: number) => {
+    setCurrentPage?.('detail');
+    navigate(`/room/${roomId}`);
+  };
   const [items, setItems] = useState<SearchHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearConfirm, setClearConfirm] = useState(false);
@@ -131,7 +149,7 @@ const TenantSearchHistory: React.FC = () => {
             Khi bạn tìm phòng ở trang tìm kiếm, các lượt tìm sẽ được lưu tại đây để xem lại nhanh.
           </p>
           <button
-            onClick={() => navigate('/browse')}
+            onClick={goToBrowse}
             className="px-5 py-2.5 bg-primary-container hover:bg-orange-650 text-white rounded-xl text-sm font-bold transition-all cursor-pointer active:scale-95"
           >
             Tìm phòng ngay
@@ -173,7 +191,7 @@ const TenantSearchHistory: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => navigate(item.viewedRoomId ? `/rooms/${item.viewedRoomId}` : '/browse')}
+                        onClick={() => (item.viewedRoomId ? goToRoom(item.viewedRoomId) : goToBrowse())}
                         className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95"
                       >
                         {item.viewedRoomId ? 'Xem lại' : 'Tìm lại'}
