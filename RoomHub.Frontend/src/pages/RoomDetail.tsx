@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { MOCK_ROOMS } from './Browse';
+import { viewingApi } from '../services/viewings';
 
 interface RoomDetailProps {
   selectedRoomId?: number | null;
@@ -22,6 +23,11 @@ const INTERIOR_IMAGES = [
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingStart, setBookingStart] = useState('');
+  const [bookingEnd, setBookingEnd] = useState('');
+  const [bookingNote, setBookingNote] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
@@ -164,6 +170,17 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
   }
 
   const isTenant = user?.role === 'Tenant';
+
+  const submitViewing = async () => {
+    if (!activeRoomId || !bookingStart || !bookingEnd) return;
+    try {
+      setBookingLoading(true);
+      await viewingApi.create({ roomId: activeRoomId, requestedStartAt: new Date(bookingStart).toISOString(), requestedEndAt: new Date(bookingEnd).toISOString(), note: bookingNote });
+      setBookingOpen(false);
+      alert('Đã gửi yêu cầu xem phòng. Bạn có thể theo dõi trong mục Lịch xem & đặt cọc.');
+    } catch (error:unknown) { const message = typeof error === 'object' && error !== null && 'response' in error ? (error as {response?:{data?:{message?:string}}}).response?.data?.message : undefined; alert(message || 'Không thể đặt lịch xem phòng.'); }
+    finally { setBookingLoading(false); }
+  };
 
   const handleStartChat = async () => {
     if (!room?.ownerId || !user) return;
@@ -463,6 +480,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               {/* Contact / Action CTA Button */}
               {isTenant ? (
                 <>
+                  <button onClick={() => setBookingOpen(true)} className="w-full py-4 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">event_available</span>Đặt lịch xem phòng
+                  </button>
                   <button
                     onClick={handleStartChat}
                     disabled={chatLoading}
@@ -553,6 +573,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       </div>
 
       {/* Login requirement Modal */}
+      {bookingOpen && <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4"><div className="flex justify-between"><h3 className="font-bold text-lg">Đặt lịch xem phòng</h3><button onClick={()=>setBookingOpen(false)}>✕</button></div><label className="block text-sm font-semibold">Bắt đầu<input type="datetime-local" value={bookingStart} onChange={e=>setBookingStart(e.target.value)} className="mt-1 w-full border rounded-xl p-3" /></label><label className="block text-sm font-semibold">Kết thúc<input type="datetime-local" value={bookingEnd} onChange={e=>setBookingEnd(e.target.value)} className="mt-1 w-full border rounded-xl p-3" /></label><label className="block text-sm font-semibold">Ghi chú<textarea value={bookingNote} onChange={e=>setBookingNote(e.target.value)} className="mt-1 w-full border rounded-xl p-3" rows={3}/></label><button disabled={bookingLoading||!bookingStart||!bookingEnd} onClick={submitViewing} className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold disabled:opacity-50">{bookingLoading?'Đang gửi...':'Gửi yêu cầu'}</button></div></div>}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md soft-shadow p-6 relative border border-gray-100 animate-scale-up">
