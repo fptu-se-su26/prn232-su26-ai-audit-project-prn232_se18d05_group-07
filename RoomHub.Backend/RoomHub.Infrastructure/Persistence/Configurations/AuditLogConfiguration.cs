@@ -19,6 +19,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(a => a.Action).HasMaxLength(100);
             builder.Property(a => a.EntityType).HasMaxLength(50);
             builder.Property(a => a.IpAddress).HasMaxLength(45);
+            builder.Property(a => a.TargetUserId).HasMaxLength(450);
             builder.Property(a => a.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasOne(a => a.User)
@@ -28,6 +29,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.HasIndex(a => a.UserId)
                 .HasDatabaseName("IX_AuditLogs_UserId");
+            builder.HasIndex(a => new { a.TargetUserId, a.CreatedAt });
         }
     }
 }
