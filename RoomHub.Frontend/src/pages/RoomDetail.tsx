@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { MOCK_ROOMS } from './Browse';
 import { viewingApi } from '../services/viewings';
+import { favoritesApi } from '../services/favorites';
 
 interface RoomDetailProps {
   selectedRoomId?: number | null;
@@ -28,6 +29,8 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
   const [bookingEnd, setBookingEnd] = useState('');
   const [bookingNote, setBookingNote] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
@@ -96,6 +99,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       isMounted = false;
     };
   }, [activeRoomId]);
+
+  useEffect(() => {
+    if (!activeRoomId || user?.role !== 'Tenant') { setIsFavorite(false); return; }
+    favoritesApi.status(activeRoomId).then(result => setIsFavorite(result.isFavorite)).catch(() => setIsFavorite(false));
+  }, [activeRoomId, user]);
 
   // Scroll to top when activeRoomId changes
   useEffect(() => {
@@ -182,6 +190,16 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     finally { setBookingLoading(false); }
   };
 
+  const toggleFavorite = async () => {
+    if (!activeRoomId) return;
+    if (user?.role !== 'Tenant') { setIsLoginModalOpen(true); return; }
+    const previous = isFavorite;
+    setIsFavorite(!previous); setFavoriteLoading(true);
+    try { if (previous) await favoritesApi.remove(activeRoomId); else await favoritesApi.add(activeRoomId); }
+    catch { setIsFavorite(previous); alert('Không thể cập nhật yêu thích. Vui lòng thử lại.'); }
+    finally { setFavoriteLoading(false); }
+  };
+
   const handleStartChat = async () => {
     if (!room?.ownerId || !user) return;
     try {
@@ -264,6 +282,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 Còn trống
               </span>
             </div>
+            <button onClick={() => void toggleFavorite()} disabled={favoriteLoading} aria-label={isFavorite ? 'Bỏ lưu yêu thích' : 'Lưu yêu thích'} className={`absolute top-4 right-4 w-11 h-11 rounded-full bg-white/90 shadow flex items-center justify-center transition-colors disabled:opacity-50 ${isFavorite ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}><span className={`material-symbols-outlined ${isFavorite ? 'icon-fill' : ''}`}>favorite</span></button>
           </div>
 
           {/* 4 detail views (Desktop only) */}
