@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import { favoritesApi } from '../services/favorites';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -191,6 +193,7 @@ export const MOCK_ROOMS: Room[] = [
 
 const Browse: React.FC<BrowseProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // ── Search / Filter state ──────────────────────────────────────────────────
   const [inputKeyword, setInputKeyword] = useState('');
@@ -210,6 +213,13 @@ const Browse: React.FC<BrowseProps> = () => {
 
   // ── Modal state ───────────────────────────────────────────────────────────
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [favoriteBusy, setFavoriteBusy] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (user?.role !== 'Tenant') { setFavoriteIds(new Set()); return; }
+    favoritesApi.ids().then(ids => setFavoriteIds(new Set(ids))).catch(() => setFavoriteIds(new Set()));
+  }, [user]);
 
   // ── Fetch listings from real API ──────────────────────────────────────────
   const fetchListings = useCallback(async () => {
@@ -385,6 +395,17 @@ const Browse: React.FC<BrowseProps> = () => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleFavorite = async (roomId: number) => {
+    if (user?.role !== 'Tenant') { setIsLoginModalOpen(true); return; }
+    if (roomId >= 100000 || favoriteBusy.has(roomId)) return;
+    const wasFavorite = favoriteIds.has(roomId);
+    setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.delete(roomId); else next.add(roomId); return next; });
+    setFavoriteBusy(current => new Set(current).add(roomId));
+    try { if (wasFavorite) await favoritesApi.remove(roomId); else await favoritesApi.add(roomId); }
+    catch { setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.add(roomId); else next.delete(roomId); return next; }); }
+    finally { setFavoriteBusy(current => { const next = new Set(current); next.delete(roomId); return next; }); }
   };
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -759,14 +780,15 @@ const Browse: React.FC<BrowseProps> = () => {
 
                       {/* Favorite Button */}
                       <button
-                        aria-label="Lưu yêu thích"
+                        aria-label={favoriteIds.has(room.id) ? 'Bỏ lưu yêu thích' : 'Lưu yêu thích'}
+                        disabled={favoriteBusy.has(room.id) || room.id >= 100000}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsLoginModalOpen(true);
+                          void toggleFavorite(room.id);
                         }}
-                        className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm active:scale-90 transition-all"
+                        className={`absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-all disabled:opacity-50 ${favoriteIds.has(room.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">favorite</span>
+                        <span className={`material-symbols-outlined text-[18px] ${favoriteIds.has(room.id) ? 'icon-fill' : ''}`}>favorite</span>
                       </button>
                     </div>
 
