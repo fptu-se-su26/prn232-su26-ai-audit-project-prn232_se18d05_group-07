@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Application.Common.DTOs.AdminUsers;
 using Application.Common.Interfaces;
+using Domain.Common;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -106,7 +107,7 @@ public sealed class AdminUserService(ApplicationDbContext db) : IAdminUserServic
         user.BanReason = reason; user.BannedByAdminId = context.AdminId; user.UpdatedAt = now;
         user.SecurityStamp = Guid.NewGuid().ToString();
         db.RefreshTokens.RemoveRange(db.RefreshTokens.Where(t => t.UserId == user.Id));
-        AddAuditAndNotification(user, context, "UserBanned", reason, before, Snapshot(user, now));
+        AddAuditAndNotification(user, context, AdminUserEvents.UserBanned, reason, before, Snapshot(user, now));
         await db.SaveChangesAsync(cancellationToken); await tx.CommitAsync(cancellationToken);
     }
 
@@ -119,7 +120,7 @@ public sealed class AdminUserService(ApplicationDbContext db) : IAdminUserServic
         var before = Snapshot(user, now);
         user.IsBanned = false; user.BannedAt = null; user.BannedUntil = null; user.BanReason = null;
         user.BannedByAdminId = null; user.UpdatedAt = now; user.SecurityStamp = Guid.NewGuid().ToString();
-        AddAuditAndNotification(user, context, "UserUnbanned", reason, before, Snapshot(user, now));
+        AddAuditAndNotification(user, context, AdminUserEvents.UserUnbanned, reason, before, Snapshot(user, now));
         await db.SaveChangesAsync(cancellationToken); await tx.CommitAsync(cancellationToken);
     }
 
@@ -133,8 +134,8 @@ public sealed class AdminUserService(ApplicationDbContext db) : IAdminUserServic
     }
     private void AddAuditAndNotification(ApplicationUser user, AdminUserActionContext context, string action, string reason, object before, object after)
     {
-        db.AuditLogs.Add(new AuditLog { UserId = context.AdminId, TargetUserId = user.Id, Action = action, EntityType = "ApplicationUser", Details = JsonSerializer.Serialize(new { before, after, reason }), IpAddress = context.IpAddress });
-        db.Notifications.Add(new Notification { UserId = user.Id, Type = action, Title = action == "UserBanned" ? "Account suspended" : "Account restored", Content = action == "UserBanned" ? $"Your account was suspended. Reason: {reason}" : $"Your account was restored. Reason: {reason}" });
+        db.AuditLogs.Add(new AuditLog { UserId = context.AdminId, TargetUserId = user.Id, Action = action, EntityType = AdminUserEvents.TargetEntityType, Details = JsonSerializer.Serialize(new { before, after, reason }), IpAddress = context.IpAddress });
+        db.Notifications.Add(new Notification { UserId = user.Id, Type = action, Title = action == AdminUserEvents.UserBanned ? "Account suspended" : "Account restored", Content = action == AdminUserEvents.UserBanned ? $"Your account was suspended. Reason: {reason}" : $"Your account was restored. Reason: {reason}" });
     }
     private static object Snapshot(ApplicationUser u, DateTime now) => new { isBanned = IsBanActive(u, now), u.BannedAt, u.BannedUntil, u.BanReason, u.BannedByAdminId };
     private static string Status(bool deleted, bool confirmed, bool banned) => deleted ? "Deleted" : banned ? "Banned" : !confirmed ? "EmailUnverified" : "Active";
