@@ -50,6 +50,7 @@ import AdminRooms from './pages/admin/Rooms';
 import AdminModeration from './pages/admin/Moderation';
 import AdminSubscriptions from './pages/admin/Subscriptions';
 import Chat from './pages/Chat';
+import ViewingBookings from './pages/ViewingBookings';
 
 export type PageType = 
   | 'home' 
@@ -74,6 +75,7 @@ export type PageType =
   | 'owner-profile'
   | 'owner-subscription'
   | 'owner-messages'
+  | 'owner-viewing-bookings'
   | 'tenant-dashboard'
   | 'tenant-room'
   | 'tenant-invoices'
@@ -85,6 +87,7 @@ export type PageType =
   | 'tenant-notifications'
   | 'tenant-reviews'
   | 'tenant-search-history'
+  | 'tenant-viewing-bookings'
   | 'admin-dashboard'
   | 'admin-users'
   | 'admin-buildings'
@@ -139,6 +142,7 @@ const AppContent: React.FC = () => {
           'notifications': 'tenant-notifications',
           'reviews': 'tenant-reviews',
           'search-history': 'tenant-search-history',
+          'viewing-bookings': 'tenant-viewing-bookings',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
       }
@@ -209,6 +213,7 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
       if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
       if (hash === '#/owner/messages') { setCurrentPage('owner-messages'); return; }
+      if (hash === '#/owner/viewing-bookings') { setCurrentPage('owner-viewing-bookings'); return; }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -308,6 +313,8 @@ const AppContent: React.FC = () => {
           <TenantMyReviews />
         ) : currentPage === 'tenant-search-history' ? (
           <TenantSearchHistory setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-viewing-bookings' ? (
+          <ViewingBookings actor="tenant" />
         ) : (
           <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}
@@ -350,6 +357,8 @@ const AppContent: React.FC = () => {
           <OwnerSubscription />
         ) : currentPage === 'owner-messages' ? (
           <Chat />
+        ) : currentPage === 'owner-viewing-bookings' ? (
+          <ViewingBookings actor="owner" />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

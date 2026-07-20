@@ -18,9 +18,20 @@ namespace Domain.Entities
         public DateTime ExpiresAt { get; set; }
         public DepositStatus Status { get; set; }
         public decimal? RefundAmount { get; set; }
+        public long? ViewingBookingId { get; set; }
+        public string? TransactionId { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? PaymentProofUrl { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
+        public DateTime? ReleasedAt { get; set; }
+        public DateTime? RefundedAt { get; set; }
+        public string? RefundReason { get; set; }
+        public string? ForfeitReason { get; set; }
+        public byte[] RowVersion { get; set; } = [];
 
         // Navigation
         public virtual Room Room { get; set; } = null!;
         public virtual ApplicationUser Tenant { get; set; } = null!;
+        public virtual RoomViewingBooking? ViewingBooking { get; set; }
     }
 }
