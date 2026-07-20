@@ -11,6 +11,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IChatNotifier, SignalRChatNotifier>();
+builder.Services.AddHostedService<DepositExpiryHostedService>();
 
 // Add CORS Policy for React Frontend
 builder.Services.AddCors(options =>
