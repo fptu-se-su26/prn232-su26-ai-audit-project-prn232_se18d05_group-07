@@ -112,6 +112,7 @@ namespace Infrastructure
             services.AddScoped<IChatService, Application.Services.ChatService>();
             services.AddScoped<IReviewService, Application.Services.ReviewService>();
             services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
+            services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
 
             return services;
         }
