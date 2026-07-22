@@ -127,6 +127,7 @@ namespace Infrastructure
             services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
             services.AddScoped<IAdminUserService, AdminUserService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+            services.AddScoped<IReviewModerationService, ReviewModerationService>();
 
             return services;
         }
