@@ -126,6 +126,7 @@ namespace Infrastructure
             services.AddScoped<IFavoriteRoomService, Application.Services.FavoriteRoomService>();
             services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
             services.AddScoped<IAdminUserService, AdminUserService>();
+            services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 
             return services;
         }
