@@ -31,6 +31,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
   const [bookingLoading, setBookingLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState<any>({ averageRating: 0, totalReviews: 0, reviews: [] });
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
@@ -45,6 +46,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
 
   const [roomData, setRoomData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeRoomId || activeRoomId >= 100000) return;
+    api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
+  }, [activeRoomId]);
 
   // Fetch listing detail from API
   useEffect(() => {
@@ -544,6 +550,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
         </div>
 
         {/* Similar Listings Section */}
+        <section className="mt-16 bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+          <div className="flex items-end justify-between"><div><h2 className="text-xl font-black">Đánh giá từ người thuê đã xác minh</h2><p className="text-sm text-gray-500">Chỉ hiển thị đánh giá hợp lệ đã qua kiểm duyệt.</p></div><div className="text-right"><span className="text-3xl font-black text-amber-500">{reviewSummary.averageRating}</span><span className="text-gray-500">/5 ({reviewSummary.totalReviews})</span></div></div>
+          {!reviewSummary.reviews.length ? <p className="py-8 text-center text-gray-500">Phòng này chưa có đánh giá.</p> : <div className="space-y-3">{reviewSummary.reviews.map((r:any)=><article key={r.id} className="border-t pt-4"><div className="flex justify-between"><b>{r.tenantName}</b><span className="text-amber-500">{'★'.repeat(r.rating||0)}{'☆'.repeat(5-(r.rating||0))}</span></div><p className="mt-2 text-sm text-gray-700">{r.comment||'Không có nhận xét.'}</p>{user&&<button onClick={async()=>{const reasonCode=prompt('Lý do báo cáo (Spam, Abuse, FalseInformation...)');if(!reasonCode)return;try{await api.post(`/reviews/${r.id}/reports`,{reasonCode,description:null});alert('Đã gửi báo cáo.')}catch(e:any){alert(e.response?.data?.message||'Không thể gửi báo cáo.')}}} className="mt-2 text-xs text-red-500">Báo cáo</button>}</article>)}</div>}
+        </section>
+
         <div className="mt-20 space-y-6">
           <h2 className="text-2xl font-black text-on-surface flex items-center gap-2 border-l-4 border-primary-container pl-3">
             Gợi ý chỗ ở tương tự lân cận
