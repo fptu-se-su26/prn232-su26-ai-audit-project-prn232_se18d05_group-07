@@ -21,6 +21,8 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(u => u.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             builder.Property(u => u.IsDeleted).HasDefaultValue(false);
             builder.Property(u => u.IsBanned).HasDefaultValue(false);
+            builder.Property(u => u.BanReason).HasMaxLength(500);
+            builder.Property(u => u.BannedByAdminId).HasMaxLength(450);
             builder.Property(u => u.IsVerified).HasDefaultValue(false);
             builder.Property(u => u.EmailConfirmed).HasDefaultValue(false);
             builder.Property(u => u.PhoneNumberConfirmed).HasDefaultValue(false);

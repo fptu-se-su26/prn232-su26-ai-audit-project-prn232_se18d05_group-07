@@ -169,7 +169,7 @@ namespace RoomHub.API.Controllers
             if (!user.EmailConfirmed)
                 return BadRequest(new AuthResponse { Succeeded = false, Message = "Tài khoản của bạn chưa được kích hoạt. Vui lòng xác thực email." });
 
-            if (user.IsBanned)
+            if (user.IsBanned && (!user.BannedUntil.HasValue || user.BannedUntil > DateTime.UtcNow))
                 return StatusCode(403, new AuthResponse { Succeeded = false, Message = "Tài khoản của bạn đã bị khóa." });
 
             var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
@@ -445,7 +445,7 @@ namespace RoomHub.API.Controllers
                 else
                 {
                     // Check if banned
-                    if (user.IsBanned)
+                    if (user.IsBanned && (!user.BannedUntil.HasValue || user.BannedUntil > DateTime.UtcNow))
                     {
                         return StatusCode(403, new AuthResponse { Succeeded = false, Message = "Tài khoản của bạn đã bị khóa." });
                     }

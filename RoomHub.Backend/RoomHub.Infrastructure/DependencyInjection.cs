@@ -72,6 +72,16 @@ namespace Infrastructure
                             context.Token = accessToken;
 
                         return Task.CompletedTask;
+                    },
+                    OnTokenValidated = async context =>
+                    {
+                        var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        if (string.IsNullOrEmpty(userId)) { context.Fail("Invalid user token."); return; }
+                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                        var now = DateTime.UtcNow;
+                        var allowed = await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId && !u.IsDeleted &&
+                            (!u.IsBanned || (u.BannedUntil != null && u.BannedUntil <= now)));
+                        if (!allowed) context.Fail("This account is suspended or deleted.");
                     }
                 };
             });
@@ -115,6 +125,7 @@ namespace Infrastructure
             services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
             services.AddScoped<IFavoriteRoomService, Application.Services.FavoriteRoomService>();
             services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
+            services.AddScoped<IAdminUserService, AdminUserService>();
 
             return services;
         }
