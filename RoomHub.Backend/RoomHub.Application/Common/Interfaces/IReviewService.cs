@@ -20,5 +20,7 @@ namespace Application.Common.Interfaces
 
         // Người thuê xóa đánh giá của chính mình. false nếu không tồn tại/không sở hữu.
         Task<bool> DeleteReviewAsync(int id, string tenantId);
+        Task<ReviewEligibilityDto> GetEligibilityAsync(string tenantId, int roomId);
+        Task ReportAsync(int reviewId, string reporterId, CreateReviewReportRequest request);
     }
 }

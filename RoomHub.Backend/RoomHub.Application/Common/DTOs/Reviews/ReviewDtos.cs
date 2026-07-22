@@ -30,7 +30,13 @@ namespace Application.Common.DTOs.Reviews
         public byte? Rating { get; set; }
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string ModerationStatus { get; set; } = "Visible";
+        public string? ModerationReason { get; set; }
+        public int? ContractId { get; set; }
     }
+
+    public record ReviewEligibilityDto(bool Eligible, string Reason, int? ContractId);
+    public class CreateReviewReportRequest { public string ReasonCode { get; set; } = null!; public string? Description { get; set; } }
 
     // Tổng hợp đánh giá của một phòng: điểm trung bình, số lượng và danh sách.
     public class RoomReviewSummaryDto
