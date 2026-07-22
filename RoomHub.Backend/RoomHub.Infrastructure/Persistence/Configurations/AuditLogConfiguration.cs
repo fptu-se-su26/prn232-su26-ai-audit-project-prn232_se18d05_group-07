@@ -30,6 +30,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasIndex(a => a.UserId)
                 .HasDatabaseName("IX_AuditLogs_UserId");
             builder.HasIndex(a => new { a.TargetUserId, a.CreatedAt });
+            builder.HasIndex(a => a.CreatedAt);
         }
     }
 }

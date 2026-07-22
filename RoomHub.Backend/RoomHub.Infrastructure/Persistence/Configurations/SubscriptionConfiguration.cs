@@ -15,6 +15,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(s => s.Amount)
                 .HasColumnType("decimal(18,2)")
                 .IsRequired();
+            builder.HasIndex(s => new { s.Status, s.CreatedAt });
         }
     }
 }
