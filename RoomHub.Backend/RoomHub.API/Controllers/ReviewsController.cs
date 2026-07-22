@@ -56,6 +56,24 @@ namespace RoomHub.API.Controllers
             }
         }
 
+        [HttpGet("tenant/reviews/eligibility/{roomId:int}")]
+        [Authorize(Roles = "Tenant")]
+        public async Task<IActionResult> Eligibility(int roomId)
+        {
+            var id = User.FindFirstValue(ClaimTypes.NameIdentifier); if (id == null) return Unauthorized();
+            return Ok(await _reviewService.GetEligibilityAsync(id, roomId));
+        }
+
+        [HttpPost("reviews/{id:int}/reports")]
+        [Authorize]
+        public async Task<IActionResult> Report(int id, CreateReviewReportRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); if (userId == null) return Unauthorized();
+            try { await _reviewService.ReportAsync(id, userId, request); return StatusCode(201, new { success = true, message = "Đã gửi báo cáo." }); }
+            catch (ArgumentException ex) { return BadRequest(new { success = false, message = ex.Message, errors = new { } }); }
+            catch (InvalidOperationException ex) { return Conflict(new { success = false, message = ex.Message, errors = new { } }); }
+        }
+
         // ==========================================
         // TENANT: danh sách đánh giá của chính mình
         // ==========================================

@@ -48,6 +48,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminBuildings from './pages/admin/Buildings';
 import AdminRooms from './pages/admin/Rooms';
 import AdminModeration from './pages/admin/Moderation';
+import AdminReviewModeration from './pages/admin/ReviewModeration';
 import AdminSubscriptions from './pages/admin/Subscriptions';
 import Chat from './pages/Chat';
 import ViewingBookings from './pages/ViewingBookings';
@@ -93,6 +94,7 @@ export type PageType =
   | 'admin-buildings'
   | 'admin-rooms'
   | 'admin-moderation'
+  | 'admin-review-moderation'
   | 'admin-subscriptions';
 
 const AppContent: React.FC = () => {
@@ -281,6 +283,8 @@ const AppContent: React.FC = () => {
           <AdminRooms />
         ) : currentPage === 'admin-moderation' ? (
           <AdminModeration />
+        ) : currentPage === 'admin-review-moderation' ? (
+          <AdminReviewModeration />
         ) : currentPage === 'admin-subscriptions' ? (
           <AdminSubscriptions />
         ) : (

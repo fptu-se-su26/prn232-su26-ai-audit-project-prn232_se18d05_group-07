@@ -12,6 +12,8 @@ interface ReviewItem {
   rating: number | null;
   comment: string | null;
   createdAt: string;
+  moderationStatus: string;
+  moderationReason?: string | null;
 }
 
 interface ActiveRoom {
@@ -281,6 +283,7 @@ const TenantMyReviews: React.FC = () => {
                   return (
                     <Reveal key={r.id} delay={index * 50}>
                       <div className="bg-white rounded-2xl border border-gray-100 soft-shadow p-5">
+                        <div className="mb-3 flex gap-2"><span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-gray-100">{r.moderationStatus}</span>{r.moderationReason && <span className="text-xs text-red-600">{r.moderationReason}</span>}</div>
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
                             <h4 className="font-bold text-sm text-on-surface truncate">

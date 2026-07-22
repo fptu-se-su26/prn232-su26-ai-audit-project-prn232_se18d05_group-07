@@ -17,6 +17,8 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(r => r.Id);
 
             builder.Property(r => r.IsModerated).HasDefaultValue(false);
+            builder.Property(r => r.ModerationStatus).HasConversion<string>().HasMaxLength(20).HasDefaultValue(Domain.Enums.ReviewModerationStatus.Visible);
+            builder.Property(r => r.ModerationReason).HasMaxLength(1000);
             builder.Property(r => r.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             builder.HasOne(r => r.Tenant)
@@ -49,6 +51,8 @@ namespace Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasIndex(r => r.ParentReviewId).HasDatabaseName("IX_Reviews_ParentReviewId");
+            builder.HasIndex(r => new { r.TenantId, r.RoomId }).IsUnique().HasFilter("[ParentReviewId] IS NULL AND [IsDeleted] = 0").HasDatabaseName("UX_Reviews_Tenant_Room_Original");
+            builder.HasOne(r => r.Contract).WithMany().HasForeignKey(r => r.ContractId).OnDelete(DeleteBehavior.NoAction);
         }
     }
 }
