@@ -229,12 +229,19 @@ namespace Application.Services
                 throw new InvalidOperationException("Không tìm thấy thông tin tài khoản chủ nhà.");
             }
 
+            // Check plan expiration
+            var currentPlan = user.CurrentPlan;
+            if (currentPlan != SubscriptionPlan.Free && user.SubscriptionExpiry.HasValue && user.SubscriptionExpiry.Value < DateTime.UtcNow)
+            {
+                currentPlan = SubscriptionPlan.Free;
+            }
+
             // Check building limit
             var existingBuildings = await _buildingRepository.GetBuildingsByOwnerAsync(ownerId);
-            var maxBuildings = SubscriptionLimits.GetMaxBuildings(user.CurrentPlan);
+            var maxBuildings = SubscriptionLimits.GetMaxBuildings(currentPlan);
             if (existingBuildings.Count >= maxBuildings)
             {
-                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxBuildings} tòa nhà/tài sản. Vui lòng nâng cấp gói cước để tiếp tục.");
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(currentPlan)}, chỉ được phép quản lý tối đa {maxBuildings} tòa nhà/tài sản. Vui lòng nâng cấp gói cước để tiếp tục.");
             }
 
             // Check room limit
@@ -259,10 +266,10 @@ namespace Application.Services
                 }
             }
 
-            var maxRooms = SubscriptionLimits.GetMaxRooms(user.CurrentPlan);
+            var maxRooms = SubscriptionLimits.GetMaxRooms(currentPlan);
             if (totalExistingRooms + roomsToCreate > maxRooms)
             {
-                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(user.CurrentPlan)}, chỉ được phép quản lý tối đa {maxRooms} phòng/căn hộ. Hiện tại bạn đã có {totalExistingRooms} phòng, việc tạo thêm {roomsToCreate} phòng sẽ vượt quá hạn mức gói. Vui lòng nâng cấp gói cước để tiếp tục.");
+                throw new InvalidOperationException($"Tài khoản của bạn đang sử dụng gói {GetPlanName(currentPlan)}, chỉ được phép quản lý tối đa {maxRooms} phòng/căn hộ. Hiện tại bạn đã có {totalExistingRooms} phòng, việc tạo thêm {roomsToCreate} phòng sẽ vượt quá hạn mức gói. Vui lòng nâng cấp gói cước để tiếp tục.");
             }
 
             await _unitOfWork.BeginTransactionAsync();
@@ -311,6 +318,9 @@ namespace Application.Services
                     building.Floors.Add(floor);
                     await _unitOfWork.SaveChangesAsync();
 
+                    var titleStr = $"Căn hộ độc lập {request.Name}";
+                    if (titleStr.Length > 200) titleStr = titleStr.Substring(0, 200);
+
                     var room = new Room
                     {
                         FloorId = floor.Id,
@@ -324,7 +334,7 @@ namespace Application.Services
                         IsFurnished = true,
                         Status = RoomStatus.Available,
                         LandlordId = ownerId,
-                        Title = $"Căn hộ độc lập {request.Name}",
+                        Title = titleStr,
                         IsPublished = false,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -368,6 +378,9 @@ namespace Application.Services
                                 cr.RoomNumber.Equals(roomNumber, StringComparison.OrdinalIgnoreCase) && 
                                 cr.FloorNumber == f);
 
+                            var titleStr = $"Phòng {roomNumber} tại {request.Name}";
+                            if (titleStr.Length > 200) titleStr = titleStr.Substring(0, 200);
+
                             var room = new Room
                             {
                                 FloorId = floor.Id,
@@ -381,7 +394,7 @@ namespace Application.Services
                                 IsFurnished = true,
                                 Status = RoomStatus.Available,
                                 LandlordId = ownerId,
-                                Title = $"Phòng {roomNumber} tại {request.Name}",
+                                Title = titleStr,
                                 IsPublished = false,
                                 CreatedAt = DateTime.UtcNow
                             };
