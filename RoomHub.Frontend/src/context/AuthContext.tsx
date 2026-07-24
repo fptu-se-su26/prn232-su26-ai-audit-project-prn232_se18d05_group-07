@@ -13,7 +13,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; message: string }>;
+  login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; message: string; role?: string }>;
   register: (email: string, password: string, fullName: string, role: string) => Promise<{ success: boolean; message: string }>;
   verifyOtp: (email: string, code: string) => Promise<{ success: boolean; message: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.userInfo));
         localStorage.setItem('userEmail', email);
-        return { success: true, message: data.message };
+        return { success: true, message: data.message, role: data.userInfo?.role };
       }
       return { success: false, message: data.message || 'Đăng nhập thất bại.' };
     } catch (error: any) {
@@ -178,6 +178,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      // Best-effort: revoke server-side so the refresh token can't be replayed after logout.
+      api.post('/auth/logout', { refreshToken }).catch(() => {});
+    }
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PageType } from '../../App';
 import { useAuth } from '../../hooks/useAuth';
-import api from '../../services/api';
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 
 interface TenantLayoutProps {
   currentPage: PageType;
@@ -18,33 +18,8 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const { unreadCount: unreadNotifCount } = useUnreadNotifications();
   const avatarRef = useRef<HTMLDivElement>(null);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await api.get('/notifications/unread-count');
-      setUnreadNotifCount(res.data.unreadCount);
-    } catch (err) {
-      console.error('Lỗi khi fetch unread count:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-
-    const handleNotificationChange = () => {
-      fetchUnreadCount();
-    };
-    window.addEventListener('notification_changed', handleNotificationChange);
-
-    const interval = setInterval(fetchUnreadCount, 15000); // 15 seconds
-
-    return () => {
-      window.removeEventListener('notification_changed', handleNotificationChange);
-      clearInterval(interval);
-    };
-  }, []);
 
   const fullName = user?.fullName || 'Khách thuê RoomHub';
   const email = user?.email || 'tenant@roomhub.vn';

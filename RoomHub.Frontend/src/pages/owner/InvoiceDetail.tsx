@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { PageType } from '../../App';
+import type { InvoiceStatus } from '../../types/invoice';
 import api from '../../services/api';
 
 interface InvoiceDetailProps {
@@ -22,7 +23,7 @@ interface InvoiceState {
   billingMonth: string;
   createdDate: string;
   dueDate: string;
-  status: 'Nháp' | 'Chưa thanh toán' | 'Thanh toán một phần' | 'Đã thanh toán' | 'Quá hạn' | 'Đã hủy';
+  status: InvoiceStatus;
   paidAmount: number;
   rentPrice: number;
   oldElectric: number;
@@ -193,7 +194,15 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
       const discount = reduceItems.reduce((sum: number, item: any) => sum + Math.abs(item.amount), 0);
       
       const paidAmount = data.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
-      
+
+      // Backend's Invoice.Status enum has no "partially paid" value, so it can only ever report
+      // Unpaid even after a partial payment - derive the richer display status locally from the
+      // actual payment total instead.
+      const effectiveStatus: InvoiceState['status'] =
+        data.status === 'Chưa thanh toán' && paidAmount > 0 && paidAmount < data.totalAmount
+          ? 'Thanh toán một phần'
+          : data.status;
+
       const paymentHistory = data.payments.map((p: any) => {
         let methodMapped: 'Tiền mặt' | 'Chuyển khoản' | 'Ví điện tử' | 'Khác' = 'Chuyển khoản';
         if (p.paymentMethod === 'Tiền mặt' || p.paymentMethod === 'Cash') {
@@ -220,7 +229,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
         billingMonth: data.month,
         createdDate: data.invoiceDate,
         dueDate: data.dueDate,
-        status: data.status,
+        status: effectiveStatus,
         paidAmount: paidAmount,
         rentPrice: rentPrice,
         oldElectric: oldElectric,
@@ -452,6 +461,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoiceId, setCurr
         return { bg: 'bg-red-50 border-red-200 text-red-700', text: 'Đã quá hạn', labelBg: 'bg-red-500' };
       case 'Đã hủy':
         return { bg: 'bg-gray-200 border-gray-300 text-gray-500 line-through', text: 'Đã hủy bỏ', labelBg: 'bg-gray-400' };
+      case 'Chờ xử lý':
+        return { bg: 'bg-yellow-50 border-yellow-200 text-yellow-700', text: 'Chờ xử lý', labelBg: 'bg-yellow-500' };
     }
   };
 

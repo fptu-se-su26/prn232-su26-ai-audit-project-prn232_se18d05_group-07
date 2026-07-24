@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,6 @@ interface BrowseProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:5143/api/public/listings';
 const PAGE_SIZE = 12;
 
 const PRICE_RANGES: Record<string, { min?: number; max?: number }> = {
@@ -203,6 +203,8 @@ const Browse: React.FC<BrowseProps> = () => {
 
   // ── API / Loading state ───────────────────────────────────────────────────
   const [dbRooms, setDbRooms] = useState<Room[]>([]);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -210,7 +212,9 @@ const Browse: React.FC<BrowseProps> = () => {
   // ── Modal state ───────────────────────────────────────────────────────────
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // ── Fetch listings from real API ──────────────────────────────────────────
+  // ── Fetch listings from real API - one page at a time, respecting the
+  // server's own total/totalPages instead of pulling everything up-front and
+  // re-paginating on the client (which silently capped real listings at 50).
   const fetchListings = useCallback(async () => {
     setIsLoading(true);
     setHasError(false);
@@ -231,30 +235,24 @@ const Browse: React.FC<BrowseProps> = () => {
         params.set('amenities', selectedAmenities.join(','));
       }
 
-      // Fetch larger set from server for client-side merged pagination
-      params.set('page', '1');
-      params.set('pageSize', '50');
+      params.set('page', String(currentPage));
+      params.set('pageSize', String(PAGE_SIZE));
 
-      const response = await fetch(`${API_BASE}?${params.toString()}`);
+      const response = await api.get(`/public/listings?${params.toString()}`);
+      const data = response.data;
 
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
-        setDbRooms(data as Room[]);
-      } else if (data.items) {
-        setDbRooms(data.items as Room[]);
-      } else {
-        setDbRooms([]);
-      }
+      setDbRooms(Array.isArray(data) ? (data as Room[]) : (data.items ?? []));
+      setServerTotal(data.total ?? 0);
+      setServerTotalPages(Math.max(1, data.totalPages ?? 1));
     } catch {
       setHasError(true);
       setDbRooms([]);
+      setServerTotal(0);
+      setServerTotalPages(1);
     } finally {
       setIsLoading(false);
     }
-  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy, currentPage]);
 
   // Filter & Sort Logic for Mock Rooms
   const filteredMockRooms = useMemo(() => {
@@ -298,7 +296,11 @@ const Browse: React.FC<BrowseProps> = () => {
     return result;
   }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities]);
 
+  // Demo filler rooms are only shown alongside page 1 of real results - they don't
+  // exist on the server, so they must never affect the server-driven pagination.
   const combinedRooms = useMemo(() => {
+    if (currentPage !== 1) return dbRooms;
+
     const mappedMock = filteredMockRooms.map((r: Room) => ({
       ...r,
       id: r.id + 100000 // avoid conflicts with database IDs
@@ -306,13 +308,11 @@ const Browse: React.FC<BrowseProps> = () => {
 
     const merged = [...dbRooms, ...mappedMock];
 
-    // Sort combined
     if (sortBy === 'priceAsc') {
       merged.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'priceDesc') {
       merged.sort((a, b) => b.price - a.price);
     } else {
-      // newest
       merged.sort((a, b) => {
         if (a.isNew && !b.isNew) return -1;
         if (!a.isNew && b.isNew) return 1;
@@ -321,18 +321,19 @@ const Browse: React.FC<BrowseProps> = () => {
     }
 
     return merged;
-  }, [dbRooms, filteredMockRooms, sortBy]);
+  }, [dbRooms, filteredMockRooms, sortBy, currentPage]);
 
-  // Derived values for component
-  const rooms = useMemo(() => {
-    return combinedRooms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  }, [combinedRooms, currentPage]);
+  const rooms = combinedRooms;
+  const totalPages = serverTotalPages;
+  const totalCount = serverTotal + (currentPage === 1 ? filteredMockRooms.length : 0);
 
-  const totalPages = Math.max(1, Math.ceil(combinedRooms.length / PAGE_SIZE));
-
-  // Re-fetch whenever filters or sort change (reset to page 1)
+  // Reset to page 1 whenever a filter changes (not on page navigation itself)
   useEffect(() => {
     setCurrentPage(1);
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+
+  // Fetch whenever filters, sort, or the current page change
+  useEffect(() => {
     fetchListings();
   }, [fetchListings]);
 
@@ -634,7 +635,7 @@ const Browse: React.FC<BrowseProps> = () => {
               ) : (
                 <>
                   Tìm thấy{' '}
-                  <span className="text-primary-container">{combinedRooms.length}</span>{' '}
+                  <span className="text-primary-container">{totalCount}</span>{' '}
                   chỗ ở phù hợp
                 </>
               )}

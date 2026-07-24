@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import api from '../services/api';
 
 const Navbar: React.FC = () => {
@@ -9,20 +10,10 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount } = useUnreadNotifications(isAuthenticated);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
-
-  const fetchUnreadCount = async () => {
-    if (!isAuthenticated) return;
-    try {
-      const res = await api.get('/notifications/unread-count');
-      setUnreadCount(res.data.unreadCount);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const fetchRecentNotifications = async () => {
     if (!isAuthenticated) return;
@@ -35,23 +26,10 @@ const Navbar: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 15000);
-      
-      const handleNotificationChange = () => {
-        fetchUnreadCount();
-        if (isNotifDropdownOpen) {
-          fetchRecentNotifications();
-        }
-      };
-      window.addEventListener('notification_changed', handleNotificationChange);
-
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('notification_changed', handleNotificationChange);
-      };
-    }
+    if (!isAuthenticated || !isNotifDropdownOpen) return;
+    const handleNotificationChange = () => fetchRecentNotifications();
+    window.addEventListener('notification_changed', handleNotificationChange);
+    return () => window.removeEventListener('notification_changed', handleNotificationChange);
   }, [isAuthenticated, isNotifDropdownOpen]);
 
   useEffect(() => {

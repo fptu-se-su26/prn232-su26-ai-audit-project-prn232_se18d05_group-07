@@ -48,6 +48,7 @@ import AdminBuildings from './pages/admin/Buildings';
 import AdminRooms from './pages/admin/Rooms';
 import AdminModeration from './pages/admin/Moderation';
 import AdminSubscriptions from './pages/admin/Subscriptions';
+import { useAuth } from './hooks/useAuth';
 
 export type PageType = 
   | 'home' 
@@ -87,8 +88,15 @@ export type PageType =
   | 'admin-moderation'
   | 'admin-subscriptions';
 
+const ROLE_BY_SECTION: Record<'admin' | 'owner' | 'tenant', string> = {
+  admin: 'Administrator',
+  owner: 'PropertyOwner',
+  tenant: 'Tenant',
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -256,6 +264,34 @@ const AppContent: React.FC = () => {
 
   const isTenantRoute = currentPage.startsWith('tenant-');
   const isAdminRoute = currentPage.startsWith('admin-');
+  const isOwnerRouteForGuard = currentPage.startsWith('owner-');
+
+  const requiredRole = isAdminRoute
+    ? ROLE_BY_SECTION.admin
+    : isOwnerRouteForGuard
+    ? ROLE_BY_SECTION.owner
+    : isTenantRoute
+    ? ROLE_BY_SECTION.tenant
+    : null;
+  const isGuardedSection = requiredRole !== null;
+  const hasRequiredAccess = isAuthenticated && user?.role === requiredRole;
+
+  // No client-side route guard previously existed for admin/owner/tenant sections - typing the hash
+  // directly rendered the full layout for anyone, logged in or not. Kick unauthorized visitors back
+  // to Home as soon as auth state resolves, instead of rendering the protected layout underneath them.
+  useEffect(() => {
+    if (!isGuardedSection || isAuthLoading || hasRequiredAccess) return;
+    window.location.hash = '';
+    setCurrentPage('home');
+  }, [isGuardedSection, isAuthLoading, hasRequiredAccess]);
+
+  if (isGuardedSection && (isAuthLoading || !hasRequiredAccess)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-primary-container animate-spin"></div>
+      </div>
+    );
+  }
 
   if (isAdminRoute) {
     return (

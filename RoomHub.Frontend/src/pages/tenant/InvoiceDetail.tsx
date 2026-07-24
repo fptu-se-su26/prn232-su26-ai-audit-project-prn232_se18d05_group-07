@@ -25,6 +25,7 @@ interface InvoiceDetail {
   invoiceDate: string;
   dueDate: string;
   totalAmount: number;
+  paidAmount: number;
   status: string;
   isLinkedAccount: boolean;
   items: InvoiceItem[];
@@ -73,6 +74,7 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
         invoiceDate: data.invoiceDate,
         dueDate: data.dueDate,
         totalAmount: data.totalAmount,
+        paidAmount: data.paidAmount ?? 0,
         status: data.status,
         isLinkedAccount: data.isLinkedAccount,
         items: mappedItems
@@ -90,12 +92,14 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
 
   const handlePay = async () => {
     if (!invoice) return;
+    const remainingAmount = Math.max(0, invoice.totalAmount - invoice.paidAmount);
+    if (remainingAmount <= 0) return;
     try {
       setPaying(true);
       const paymentMethod = method === 'bank' ? 'BankTransfer' : 'EWallet';
       const transactionId = `MOCK-${method.toUpperCase()}-${Date.now()}`;
       await api.post(`/tenant/invoices/${invoice.id}/pay`, {
-        amount: invoice.totalAmount,
+        amount: remainingAmount,
         paymentMethod,
         transactionId
       });
@@ -188,9 +192,15 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
                 </div>
               ))}
             </div>
+            {invoice.paidAmount > 0 && (
+              <div className="flex items-center justify-between px-6 py-2.5 text-xs text-gray-500 border-t border-gray-100">
+                <span>Đã thanh toán</span>
+                <span className="font-semibold text-green-600">{fmt(invoice.paidAmount)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between px-6 py-4 bg-orange-50/50 border-t border-gray-100">
-              <span className="font-bold text-on-surface">Tổng cộng cần thanh toán</span>
-              <span className="text-xl font-bold text-primary-container">{fmt(invoice.totalAmount)}</span>
+              <span className="font-bold text-on-surface">{invoice.paidAmount > 0 ? 'Số dư còn lại' : 'Tổng cộng cần thanh toán'}</span>
+              <span className="text-xl font-bold text-primary-container">{fmt(Math.max(0, invoice.totalAmount - invoice.paidAmount))}</span>
             </div>
           </div>
         </Reveal>
@@ -226,7 +236,7 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
                 disabled={paying}
                 className="w-full py-3 bg-primary-container text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[18px]">lock</span> {paying ? 'Đang xử lý...' : `Thanh toán ${fmt(invoice.totalAmount)}`}
+                <span className="material-symbols-outlined text-[18px]">lock</span> {paying ? 'Đang xử lý...' : `Thanh toán ${fmt(Math.max(0, invoice.totalAmount - invoice.paidAmount))}`}
               </button>
             )}
             <p className="text-[11px] text-gray-400 text-center mt-3">Giao dịch được mã hóa & bảo mật bởi RoomHub.</p>

@@ -47,7 +47,17 @@ const Login: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate('/browse');
+      // Admin/owner/tenant sections are driven by window.location.hash (see App.tsx), not react-router
+      // paths - matching the same redirect Navbar's goDashboard() uses after login.
+      if (result.role === 'Administrator') {
+        window.location.hash = '#/admin/dashboard';
+      } else if (result.role === 'PropertyOwner') {
+        window.location.hash = '#/owner/dashboard';
+      } else if (result.role === 'Tenant') {
+        window.location.hash = '#/tenant/dashboard';
+      } else {
+        navigate('/browse');
+      }
     } else {
       setError(result.message);
     }

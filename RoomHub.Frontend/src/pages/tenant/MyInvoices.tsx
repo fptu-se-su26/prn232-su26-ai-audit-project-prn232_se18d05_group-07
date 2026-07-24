@@ -13,7 +13,7 @@ interface Invoice {
   month: string;
   total: number;
   due: string;
-  status: 'unpaid' | 'paid' | 'overdue';
+  status: 'unpaid' | 'paid' | 'overdue' | 'cancelled' | 'pending';
   statusLabel: string;
   buildingName: string;
   roomNumber: string;
@@ -23,6 +23,8 @@ const statusMeta = {
   unpaid: { label: 'Chưa thanh toán', cls: 'text-amber-600 bg-amber-50 border border-amber-200' },
   paid: { label: 'Đã thanh toán', cls: 'text-green-600 bg-green-50 border border-green-200' },
   overdue: { label: 'Quá hạn', cls: 'text-red-600 bg-red-50 border border-red-200' },
+  cancelled: { label: 'Đã hủy', cls: 'text-gray-500 bg-gray-100 border border-gray-200' },
+  pending: { label: 'Chờ xử lý', cls: 'text-blue-600 bg-blue-50 border border-blue-200' },
 };
 
 const tabs = [
@@ -44,11 +46,15 @@ const TenantMyInvoices: React.FC<Props> = ({ setCurrentPage, setSelectedInvoiceI
         setLoading(true);
         const res = await api.get('/tenant/invoices');
         const mapped = res.data.map((item: any) => {
-          let statusKey: 'unpaid' | 'paid' | 'overdue' = 'unpaid';
+          let statusKey: 'unpaid' | 'paid' | 'overdue' | 'cancelled' | 'pending' = 'unpaid';
           if (item.status === 'Đã thanh toán') {
             statusKey = 'paid';
           } else if (item.status === 'Quá hạn') {
             statusKey = 'overdue';
+          } else if (item.status === 'Đã hủy') {
+            statusKey = 'cancelled';
+          } else if (item.status === 'Chờ xử lý') {
+            statusKey = 'pending';
           }
           return {
             id: item.id.toString(),
@@ -153,9 +159,9 @@ const TenantMyInvoices: React.FC<Props> = ({ setCurrentPage, setSelectedInvoiceI
                         setSelectedInvoiceId(inv.id);
                         setCurrentPage('tenant-invoice-detail');
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0 ${inv.status === 'paid' ? 'text-primary-container hover:bg-orange-50' : 'text-white bg-primary-container hover:bg-orange-600'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0 ${inv.status === 'unpaid' || inv.status === 'overdue' ? 'text-white bg-primary-container hover:bg-orange-600' : 'text-primary-container hover:bg-orange-50'}`}
                     >
-                      {inv.status === 'paid' ? 'Xem chi tiết' : 'Thanh toán ngay'}
+                      {inv.status === 'unpaid' || inv.status === 'overdue' ? 'Thanh toán ngay' : 'Xem chi tiết'}
                     </button>
                   </div>
                 );
