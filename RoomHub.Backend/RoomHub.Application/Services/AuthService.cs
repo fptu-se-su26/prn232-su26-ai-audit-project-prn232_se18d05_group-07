@@ -160,7 +160,7 @@ namespace Application.Services
             if (!user.EmailConfirmed)
                 throw new ArgumentException("Tài khoản của bạn chưa được kích hoạt. Vui lòng xác thực email.");
 
-            if (user.IsBanned)
+            if (user.IsBanned && (!user.BannedUntil.HasValue || user.BannedUntil > DateTime.UtcNow))
                 throw new ForbiddenException("Tài khoản của bạn đã bị khóa.");
 
             if (await _userManager.IsLockedOutAsync(user))
