@@ -67,7 +67,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
   // Modals & Drawer States
   const [detailDrawerUnit, setDetailDrawerUnit] = useState<UnitBilling | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
-  const [isSaveDraftModalOpen, setIsSaveDraftModalOpen] = useState<boolean>(false);
   const [isBulkSurchargeModalOpen, setIsBulkSurchargeModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
@@ -141,7 +140,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               unitType: room.type,
               tenantName: room.tenantName || 'Khách trọ',
               tenantPhone: room.tenantPhone || 'N/A',
-              tenantEmail: room.tenantPhone ? `${room.tenantPhone}@roomhub.vn` : 'N/A',
+              tenantEmail: room.tenantEmail || 'N/A',
               isLinked: room.tenantPhone ? true : false,
               rentPrice: room.price,
               oldElectric: room.oldElectricity,
@@ -322,30 +321,29 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
     triggerToast('Đã áp dụng phí dịch vụ cố định mặc định cho tất cả phòng!');
   };
 
-  // Action Copy last month values
+  // Reset new readings back to the last recorded index (zero usage) so the owner can type in
+  // this month's actual numbers - there is no real "last month" reading to copy here, so this
+  // must not invent numbers or claim data was copied.
   const copyLastMonthData = () => {
     setUnits(prev => {
       return prev.map(unit => {
         if (unit.hasInvoiceThisMonth) return unit;
         const oElec = Number(unit.oldElectric) || 0;
         const oWat = Number(unit.oldWater) || 0;
-        const simulatedNewElec = oElec + 100;
-        const simulatedNewWat = oWat + 5;
-        const simulatedFixedWat = unit.isWaterFixed ? 50000 : '';
 
         const updated = {
           ...unit,
-          newElectric: simulatedNewElec,
-          newWater: unit.isWaterFixed ? '' : simulatedNewWat,
-          waterFixedAmount: unit.isWaterFixed ? simulatedFixedWat : '',
+          newElectric: oElec,
+          newWater: unit.isWaterFixed ? '' : oWat,
+          waterFixedAmount: unit.isWaterFixed ? unit.waterFixedAmount : '',
         };
 
         const validation = validateUnit(
           updated,
           oElec,
-          simulatedNewElec,
+          oElec,
           unit.isWaterFixed ? '' : oWat,
-          unit.isWaterFixed ? '' : simulatedNewWat,
+          unit.isWaterFixed ? '' : oWat,
           unit.rentPrice,
           Number(unit.surcharge) || 0,
           Number(unit.discount) || 0
@@ -356,7 +354,7 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
         return updated;
       });
     });
-    triggerToast('Đã sao chép và cập nhật chỉ số điện nước từ tháng trước!');
+    triggerToast('Đã đặt lại chỉ số mới bằng chỉ số cũ. Vui lòng nhập số liệu điện nước thực tế của kỳ này.');
   };
 
   // Bulk Apply Surcharge Action
@@ -1234,15 +1232,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
               </button>
               
               <button
-                onClick={() => setIsSaveDraftModalOpen(true)}
-                disabled={validSelectedUnits.length === 0}
-                className="w-full py-2.5 bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-100 hover:text-primary-container text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[16px]">draft</span>
-                <span>Lưu nháp</span>
-              </button>
-
-              <button
                 onClick={() => {
                   if (validSelectedUnits.length === 0) {
                     triggerToast('Không có dữ liệu hợp lệ để xem trước!', 'error');
@@ -1719,40 +1708,6 @@ export const InvoiceCreate: React.FC<InvoiceCreateProps> = ({ setCurrentPage }) 
                 className="px-5 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm active:scale-95"
               >
                 {isAddLoading ? 'Đang tạo...' : 'Xác nhận tạo hóa đơn'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PART L: Save Draft Modal */}
-      {isSaveDraftModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsSaveDraftModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="bg-white rounded-3xl border border-gray-150 shadow-2xl w-full max-w-sm p-6 relative z-10 animate-scaleUp space-y-4 text-center">
-            <span className="material-symbols-outlined text-[48px] text-gray-400 mx-auto">draft</span>
-            <div className="space-y-1">
-              <h3 className="text-sm font-extrabold text-on-surface">Lưu nháp hóa đơn?</h3>
-              <p className="text-[10px] text-gray-500 px-2 leading-relaxed">
-                Tất cả chỉ số điện nước, phụ thu và giảm trừ đã nhập của {validSelectedUnits.length} phòng hợp lệ sẽ được lưu lại dưới dạng bản nháp để chỉnh sửa sau.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                onClick={() => setIsSaveDraftModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 border border-gray-200 rounded-lg cursor-pointer flex-1"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => {
-                  setIsSaveDraftModalOpen(false);
-                  triggerToast(`Đã lưu nháp hóa đơn dịch vụ tháng ${billingMonth.split('-')[1]}/${billingMonth.split('-')[0]} thành công!`);
-                }}
-                className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors flex-1"
-              >
-                Lưu nháp
               </button>
             </div>
           </div>

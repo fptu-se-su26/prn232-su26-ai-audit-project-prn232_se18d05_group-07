@@ -13,6 +13,7 @@ namespace Domain.Entities
         public string? Action { get; set; }
         public string? EntityType { get; set; }
         public int? EntityId { get; set; } // Polymorphic
+        public string? TargetUserId { get; set; }
         public string? Details { get; set; }
         public string? IpAddress { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

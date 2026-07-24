@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
+import type { InvoiceStatus } from '../../types/invoice';
 import api from '../../services/api';
 
 interface InvoiceListProps {
   setCurrentPage: (page: PageType) => void;
 }
 
-type InvoiceStatus = 'Nháp' | 'Chưa thanh toán' | 'Đã thanh toán' | 'Thanh toán một phần' | 'Quá hạn' | 'Đã hủy';
-
 interface InvoiceItem {
   id: string;
+  roomId: number;
   code: string;
   month: string;
   createdDate: string;
@@ -27,6 +27,14 @@ interface InvoiceItem {
   dueDate: string;
   notes?: string;
 }
+
+// Backend sends dates as localized 'dd/MM/yyyy' strings - the native Date constructor misreads
+// them as MM/dd/yyyy, so parse the parts explicitly instead of `new Date(vnDateString)`.
+const parseVnDate = (value: string): number => {
+  const [day, month, year] = value.split('/').map(Number);
+  if (!day || !month || !year) return 0;
+  return new Date(year, month - 1, day).getTime();
+};
 
 const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
@@ -91,6 +99,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
       const res = await api.get('/owner/invoices');
       const mapped = res.data.map((item: any) => ({
         id: item.id.toString(),
+        roomId: item.roomId,
         code: `INV-${item.month.replace('/', '')}-${item.id}`,
         month: item.month,
         createdDate: item.dueDate,
@@ -103,7 +112,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
         utilitiesPrice: item.totalAmount - 800000 > 0 ? 800000 : 0,
         otherPrice: 0,
         total: item.totalAmount,
-        collectedAmount: item.status === 'Đã thanh toán' ? item.totalAmount : 0,
+        collectedAmount: item.paidAmount || 0,
         status: item.status as InvoiceStatus,
         dueDate: item.dueDate,
         notes: ''
@@ -226,15 +235,15 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
     }
 
     result.sort((a, b) => {
-      if (sortOrder === 'Mới nhất') return new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime();
-      if (sortOrder === 'Cũ nhất') return new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime();
+      if (sortOrder === 'Mới nhất') return parseVnDate(b.createdDate) - parseVnDate(a.createdDate);
+      if (sortOrder === 'Cũ nhất') return parseVnDate(a.createdDate) - parseVnDate(b.createdDate);
       if (sortOrder === 'Tổng tiền cao nhất') return b.total - a.total;
       if (sortOrder === 'Tổng tiền thấp nhất') return a.total - b.total;
-      if (sortOrder === 'Gần đến hạn') return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      if (sortOrder === 'Gần đến hạn') return parseVnDate(a.dueDate) - parseVnDate(b.dueDate);
       if (sortOrder === 'Quá hạn trước') {
         if (a.status === 'Quá hạn' && b.status !== 'Quá hạn') return -1;
         if (a.status !== 'Quá hạn' && b.status === 'Quá hạn') return 1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        return parseVnDate(a.dueDate) - parseVnDate(b.dueDate);
       }
       return 0;
     });
@@ -319,15 +328,42 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
     }
   };
 
-  const handleBulkNotification = () => {
+  const handleBulkNotification = async () => {
     if (selectedIds.length === 0) return;
     const onlineInvoices = invoices.filter(l => selectedIds.includes(l.id) && l.isLinked);
     if (onlineInvoices.length === 0) {
       alert('Không thể gửi thông báo hàng loạt: Tất cả người thuê đã chọn đều là tài khoản Offline.');
       return;
     }
-    triggerToast(`Đã gửi thông báo đòi nợ thành công tới ${onlineInvoices.length} người thuê trọ online`);
-    setSelectedIds([]);
+
+    // notify-batch takes one month/year per call, so group selected invoices by billing period
+    const groups = new Map<string, { month: number; year: number; roomIds: number[] }>();
+    onlineInvoices.forEach(inv => {
+      const [month, year] = inv.month.split('/').map(Number);
+      const key = `${month}/${year}`;
+      const group = groups.get(key) ?? { month, year, roomIds: [] };
+      group.roomIds.push(inv.roomId);
+      groups.set(key, group);
+    });
+
+    try {
+      setIsAddLoading(true);
+      for (const { month, year, roomIds } of groups.values()) {
+        await api.post('/owner/invoices/notify-batch', {
+          roomIds,
+          month,
+          year,
+          message: `Bạn có hóa đơn thuê nhà kỳ ${month}/${year} cần thanh toán. Vui lòng kiểm tra chi tiết trên RoomHub.`,
+        });
+      }
+      triggerToast(`Đã gửi thông báo đòi nợ thành công tới ${onlineInvoices.length} người thuê trọ online`);
+      setSelectedIds([]);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi gửi thông báo hàng loạt.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
   const handleBulkExportExcel = () => {
@@ -432,15 +468,30 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
 
   const openSendNotificationModal = (listing: InvoiceItem) => {
     setActiveInvoice(listing);
-    setNotifMessage(`Bạn có hóa đơn thuê nhà kỳ ${listing.month} trị giá ${listing.total.toLocaleString('vi-VN')}đ cần thanh toán trước ngày ${new Date(listing.dueDate).toLocaleDateString('vi-VN')}. Vui lòng kiểm tra chi tiết trên RoomHub.`);
+    setNotifMessage(`Bạn có hóa đơn thuê nhà kỳ ${listing.month} trị giá ${listing.total.toLocaleString('vi-VN')}đ cần thanh toán trước ngày ${listing.dueDate}. Vui lòng kiểm tra chi tiết trên RoomHub.`);
     setIsSendNotificationModalOpen(true);
   };
 
-  const confirmSendNotification = () => {
+  const confirmSendNotification = async () => {
     if (!activeInvoice) return;
-    triggerToast(`Đã gửi thông báo đòi tiền trọ tới khách thuê ${activeInvoice.tenantName} thành công!`);
-    setIsSendNotificationModalOpen(false);
-    setActiveInvoice(null);
+    const [month, year] = activeInvoice.month.split('/').map(Number);
+    try {
+      setIsAddLoading(true);
+      await api.post('/owner/invoices/notify-batch', {
+        roomIds: [activeInvoice.roomId],
+        month,
+        year,
+        message: notifMessage,
+      });
+      triggerToast(`Đã gửi thông báo đòi tiền trọ tới khách thuê ${activeInvoice.tenantName} thành công!`);
+      setIsSendNotificationModalOpen(false);
+      setActiveInvoice(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Không thể gửi thông báo nhắc thanh toán.');
+    } finally {
+      setIsAddLoading(false);
+    }
   };
 
   const handleExportSingleExcel = async (invoiceId: string, invoiceCode: string) => {
@@ -488,8 +539,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
 
   // Status Badge Render Helper
   const renderStatusBadge = (status: InvoiceStatus, dueDate: string) => {
-    const today = new Date();
-    const isOverdueReal = status === 'Quá hạn' || (status === 'Chưa thanh toán' && new Date(dueDate) < today);
+    const isOverdueReal = status === 'Quá hạn' || (status === 'Chưa thanh toán' && parseVnDate(dueDate) < new Date().getTime());
     
     if (status === 'Đã thanh toán') {
       return (
@@ -536,6 +586,14 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
         <span className="px-2.5 py-1 bg-gray-100 text-gray-400 border border-gray-300 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
           Đã hủy bỏ
+        </span>
+      );
+    }
+    if (status === 'Chờ xử lý') {
+      return (
+        <span className="px-2.5 py-1 bg-orange-50 text-orange-600 border border-orange-200 text-[10px] font-black uppercase rounded-lg flex items-center gap-1 w-max">
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+          Chờ xử lý
         </span>
       );
     }
@@ -926,7 +984,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
               <tbody className="divide-y divide-gray-50">
                 {filteredInvoices.slice((currentPageNum - 1) * pageSize, currentPageNum * pageSize).map((list) => {
                   const isSelected = selectedIds.includes(list.id);
-                  const isOverdueReal = list.status === 'Quá hạn' || (list.status === 'Chưa thanh toán' && new Date(list.dueDate) < new Date());
+                  const isOverdueReal = list.status === 'Quá hạn' || (list.status === 'Chưa thanh toán' && parseVnDate(list.dueDate) < new Date().getTime());
                   
                   return (
                     <tr 
@@ -1162,7 +1220,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ setCurrentPage }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-scaleUp">
           {filteredInvoices.slice((currentPageNum - 1) * pageSize, currentPageNum * pageSize).map((list) => {
             const isSelected = selectedIds.includes(list.id);
-            const isOverdueReal = list.status === 'Quá hạn' || (list.status === 'Chưa thanh toán' && new Date(list.dueDate) < new Date());
+            const isOverdueReal = list.status === 'Quá hạn' || (list.status === 'Chưa thanh toán' && parseVnDate(list.dueDate) < new Date().getTime());
             
             return (
               <div 

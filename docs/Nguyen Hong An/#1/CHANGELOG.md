@@ -22,7 +22,7 @@ Nguyên tắc ghi changelog:
 | Học kỳ | SU26 |
 | Tên bài tập / Project | RoomHub - Quản lý phòng/nhà trọ (Tách biệt FE-BE) |
 | Tên sinh viên / Nhóm | Nguyễn Hồng An / Nhóm 07 |
-| MSSV / Danh sách MSSV | DE180999 |
+| MSSV / Danh sách MSSV | DE180358 |
 | Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
 | Repository URL | https://github.com/fptu-se-su26/prn232-su26-ai-audit-project-prn232_se18d05_group-07 |
 | Ngày bắt đầu | 01/06/2026 |

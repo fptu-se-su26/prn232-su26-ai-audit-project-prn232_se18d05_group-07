@@ -36,9 +36,10 @@ import TenantMyInvoices from './pages/tenant/MyInvoices';
 import TenantInvoiceDetail from './pages/tenant/InvoiceDetail';
 import TenantFavorites from './pages/tenant/Favorites';
 import TenantMaintenance from './pages/tenant/Maintenance';
-import TenantMessages from './pages/tenant/Messages';
 import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
+import TenantMyReviews from './pages/tenant/MyReviews';
+import TenantSearchHistory from './pages/tenant/SearchHistory';
 import OwnerNotifications from './pages/owner/Notifications';
 import Profile from './pages/owner/Profile';
 import OwnerSubscription from './pages/owner/Subscription';
@@ -48,7 +49,11 @@ import AdminUsers from './pages/admin/Users';
 import AdminBuildings from './pages/admin/Buildings';
 import AdminRooms from './pages/admin/Rooms';
 import AdminModeration from './pages/admin/Moderation';
+import AdminReviewModeration from './pages/admin/ReviewModeration';
 import AdminSubscriptions from './pages/admin/Subscriptions';
+import { useAuth } from './hooks/useAuth';
+import Chat from './pages/Chat';
+import ViewingBookings from './pages/ViewingBookings';
 
 export type PageType = 
   | 'home' 
@@ -72,6 +77,8 @@ export type PageType =
   | 'owner-notifications'
   | 'owner-profile'
   | 'owner-subscription'
+  | 'owner-messages'
+  | 'owner-viewing-bookings'
   | 'tenant-dashboard'
   | 'tenant-room'
   | 'tenant-invoices'
@@ -81,15 +88,26 @@ export type PageType =
   | 'tenant-messages'
   | 'tenant-profile'
   | 'tenant-notifications'
+  | 'tenant-reviews'
+  | 'tenant-search-history'
+  | 'tenant-viewing-bookings'
   | 'admin-dashboard'
   | 'admin-users'
   | 'admin-buildings'
   | 'admin-rooms'
   | 'admin-moderation'
+  | 'admin-review-moderation'
   | 'admin-subscriptions';
+
+const ROLE_BY_SECTION: Record<'admin' | 'owner' | 'tenant', string> = {
+  admin: 'Administrator',
+  owner: 'PropertyOwner',
+  tenant: 'Tenant',
+};
 
 const AppContent: React.FC = () => {
   const location = useLocation();
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -133,6 +151,9 @@ const AppContent: React.FC = () => {
           'messages': 'tenant-messages',
           'profile': 'tenant-profile',
           'notifications': 'tenant-notifications',
+          'reviews': 'tenant-reviews',
+          'search-history': 'tenant-search-history',
+          'viewing-bookings': 'tenant-viewing-bookings',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
       }
@@ -202,6 +223,8 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
       if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
+      if (hash === '#/owner/messages') { setCurrentPage('owner-messages'); return; }
+      if (hash === '#/owner/viewing-bookings') { setCurrentPage('owner-viewing-bookings'); return; }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -257,6 +280,34 @@ const AppContent: React.FC = () => {
 
   const isTenantRoute = currentPage.startsWith('tenant-');
   const isAdminRoute = currentPage.startsWith('admin-');
+  const isOwnerRouteForGuard = currentPage.startsWith('owner-');
+
+  const requiredRole = isAdminRoute
+    ? ROLE_BY_SECTION.admin
+    : isOwnerRouteForGuard
+    ? ROLE_BY_SECTION.owner
+    : isTenantRoute
+    ? ROLE_BY_SECTION.tenant
+    : null;
+  const isGuardedSection = requiredRole !== null;
+  const hasRequiredAccess = isAuthenticated && user?.role === requiredRole;
+
+  // No client-side route guard previously existed for admin/owner/tenant sections - typing the hash
+  // directly rendered the full layout for anyone, logged in or not. Kick unauthorized visitors back
+  // to Home as soon as auth state resolves, instead of rendering the protected layout underneath them.
+  useEffect(() => {
+    if (!isGuardedSection || isAuthLoading || hasRequiredAccess) return;
+    window.location.hash = '';
+    setCurrentPage('home');
+  }, [isGuardedSection, isAuthLoading, hasRequiredAccess]);
+
+  if (isGuardedSection && (isAuthLoading || !hasRequiredAccess)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-primary-container animate-spin"></div>
+      </div>
+    );
+  }
 
   if (isAdminRoute) {
     return (
@@ -269,6 +320,8 @@ const AppContent: React.FC = () => {
           <AdminRooms />
         ) : currentPage === 'admin-moderation' ? (
           <AdminModeration />
+        ) : currentPage === 'admin-review-moderation' ? (
+          <AdminReviewModeration />
         ) : currentPage === 'admin-subscriptions' ? (
           <AdminSubscriptions />
         ) : (
@@ -292,11 +345,17 @@ const AppContent: React.FC = () => {
         ) : currentPage === 'tenant-maintenance' ? (
           <TenantMaintenance />
         ) : currentPage === 'tenant-messages' ? (
-          <TenantMessages />
+          <Chat />
         ) : currentPage === 'tenant-profile' ? (
           <TenantProfile />
         ) : currentPage === 'tenant-notifications' ? (
           <TenantNotifications setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-reviews' ? (
+          <TenantMyReviews />
+        ) : currentPage === 'tenant-search-history' ? (
+          <TenantSearchHistory setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-viewing-bookings' ? (
+          <ViewingBookings actor="tenant" />
         ) : (
           <TenantDashboard setCurrentPage={setCurrentPage} setSelectedInvoiceId={setSelectedInvoiceId} />
         )}
@@ -337,6 +396,10 @@ const AppContent: React.FC = () => {
           <Profile />
         ) : currentPage === 'owner-subscription' ? (
           <OwnerSubscription />
+        ) : currentPage === 'owner-messages' ? (
+          <Chat />
+        ) : currentPage === 'owner-viewing-bookings' ? (
+          <ViewingBookings actor="owner" />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

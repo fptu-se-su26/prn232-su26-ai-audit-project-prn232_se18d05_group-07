@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="RoomHub.API/RoomHub.API.csproj" />
   <Project Path="RoomHub.Application/RoomHub.Application.csproj" />
+  <Project Path="RoomHub.Application.Tests/RoomHub.Application.Tests.csproj" />
   <Project Path="RoomHub.Domain/RoomHub.Domain.csproj" />
   <Project Path="RoomHub.Infrastructure/RoomHub.Infrastructure.csproj" />
 </Solution>

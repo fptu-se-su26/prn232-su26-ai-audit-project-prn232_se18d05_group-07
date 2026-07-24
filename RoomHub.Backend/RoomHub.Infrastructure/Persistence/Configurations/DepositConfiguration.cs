@@ -23,10 +23,23 @@ namespace Infrastructure.Persistence.Configurations
                 .HasColumnType("varchar(20)")
                 .IsRequired();
             builder.Property(d => d.RefundAmount).HasColumnType("decimal(18,2)");
+            builder.Property(d => d.TransactionId).HasMaxLength(200);
+            builder.Property(d => d.PaymentMethod).HasMaxLength(100);
+            builder.Property(d => d.PaymentProofUrl).HasMaxLength(2048);
+            builder.Property(d => d.RefundReason).HasMaxLength(1000);
+            builder.Property(d => d.ForfeitReason).HasMaxLength(1000);
+            builder.Property(d => d.RowVersion).IsRowVersion();
+            builder.ToTable(t => t.HasCheckConstraint("CK_Deposits_ValidValues", "[Amount] > 0 AND [HoldDurationDays] > 0 AND [ExpiresAt] > [PlacedAt]"));
+            builder.HasIndex(d => d.TransactionId).IsUnique().HasFilter("[TransactionId] IS NOT NULL");
 
             builder.HasOne(d => d.Room)
                 .WithMany(r => r.Deposits)
                 .HasForeignKey(d => d.RoomId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasOne(d => d.ViewingBooking)
+                .WithMany(b => b.Deposits)
+                .HasForeignKey(d => d.ViewingBookingId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             builder.HasOne(d => d.Tenant)

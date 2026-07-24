@@ -325,8 +325,21 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
     })
     .catch((err) => {
       setIsSubmitting(false);
-      const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài sản trọ.';
-      showAlert('Lỗi tạo tài sản', errMsg, 'error');
+      const errMsg = err.response?.data?.message || err.response?.data?.details || 'Có lỗi xảy ra khi tạo tài sản trọ.';
+      const isQuotaLimit = errMsg.includes('gói') || errMsg.includes('hạn mức') || errMsg.includes('nâng cấp');
+      
+      if (isQuotaLimit) {
+        showAlert(
+          'Vượt Hạn Mức Gói Cước',
+          errMsg,
+          'warning',
+          () => {
+            setCurrentPage('owner-subscription');
+          }
+        );
+      } else {
+        showAlert('Lỗi Tạo Tài Sản', errMsg, 'error');
+      }
     });
   };
 

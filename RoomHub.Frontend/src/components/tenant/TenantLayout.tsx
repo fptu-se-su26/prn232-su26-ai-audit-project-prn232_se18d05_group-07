@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PageType } from '../../App';
 import { useAuth } from '../../hooks/useAuth';
-import api from '../../services/api';
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 
 interface TenantLayoutProps {
   currentPage: PageType;
@@ -18,33 +18,8 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const { unreadCount: unreadNotifCount } = useUnreadNotifications();
   const avatarRef = useRef<HTMLDivElement>(null);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await api.get('/notifications/unread-count');
-      setUnreadNotifCount(res.data.unreadCount);
-    } catch (err) {
-      console.error('Lỗi khi fetch unread count:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-
-    const handleNotificationChange = () => {
-      fetchUnreadCount();
-    };
-    window.addEventListener('notification_changed', handleNotificationChange);
-
-    const interval = setInterval(fetchUnreadCount, 15000); // 15 seconds
-
-    return () => {
-      window.removeEventListener('notification_changed', handleNotificationChange);
-      clearInterval(interval);
-    };
-  }, []);
 
   const fullName = user?.fullName || 'Khách thuê RoomHub';
   const email = user?.email || 'tenant@roomhub.vn';
@@ -70,6 +45,9 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     'tenant-messages': { title: 'Tin nhắn', subtitle: 'Trao đổi trực tiếp với chủ trọ.' },
     'tenant-profile': { title: 'Hồ sơ cá nhân', subtitle: 'Thông tin tài khoản và xác minh danh tính.' },
     'tenant-notifications': { title: 'Thông báo', subtitle: 'Xem các cập nhật và lời mời nhận phòng mới nhất.' },
+    'tenant-reviews': { title: 'Đánh giá của tôi', subtitle: 'Chấm sao và nhận xét về phòng bạn đang thuê.' },
+    'tenant-search-history': { title: 'Lịch sử tìm kiếm', subtitle: 'Các lượt tìm phòng gần đây của bạn.' },
+    'tenant-viewing-bookings': { title: 'Lịch xem & đặt cọc', subtitle: 'Theo dõi lịch hẹn, phản hồi của chủ nhà và thời gian giữ phòng.' },
   };
   const pageInfo = pageInfoMap[currentPage] || { title: 'Khách thuê', subtitle: 'RoomHub Platform' };
 
@@ -93,6 +71,9 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     { label: 'Hóa đơn', icon: 'receipt_long', route: 'tenant-invoices', activeMatches: ['tenant-invoices', 'tenant-invoice-detail'] },
     { label: 'Phòng yêu thích', icon: 'favorite', route: 'tenant-favorites' },
     { label: 'Yêu cầu bảo trì', icon: 'build', route: 'tenant-maintenance' },
+    { label: 'Đánh giá của tôi', icon: 'reviews', route: 'tenant-reviews' },
+    { label: 'Lịch sử tìm kiếm', icon: 'manage_search', route: 'tenant-search-history' },
+    { label: 'Lịch xem & đặt cọc', icon: 'event_available', route: 'tenant-viewing-bookings' },
     { label: 'Thông báo', icon: 'notifications', route: 'tenant-notifications', badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
     { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: 2 },
     { label: 'Hồ sơ', icon: 'person', route: 'tenant-profile' },

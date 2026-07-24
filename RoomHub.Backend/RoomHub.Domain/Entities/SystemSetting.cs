@@ -13,6 +13,7 @@ namespace Domain.Entities
         public decimal DefaultDepositPercent { get; set; } = 50.00m;
         public decimal PlatformCommissionRate { get; set; } = 10.00m;
         public int MaxRoomsPerBuilding { get; set; } = 500;
+        public int ReviewEligibilityDaysAfterContract { get; set; } = 90;
         public DateTime? UpdatedAt { get; set; }
     }
 }

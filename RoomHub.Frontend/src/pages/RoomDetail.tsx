@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { MOCK_ROOMS } from './Browse';
+import { viewingApi } from '../services/viewings';
+import { favoritesApi } from '../services/favorites';
 
 interface RoomDetailProps {
   selectedRoomId?: number | null;
@@ -20,6 +23,16 @@ const INTERIOR_IMAGES = [
 
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingStart, setBookingStart] = useState('');
+  const [bookingEnd, setBookingEnd] = useState('');
+  const [bookingNote, setBookingNote] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState<any>({ averageRating: 0, totalReviews: 0, reviews: [] });
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
 
@@ -33,6 +46,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
 
   const [roomData, setRoomData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeRoomId || activeRoomId >= 100000) return;
+    api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
+  }, [activeRoomId]);
 
   // Fetch listing detail from API
   useEffect(() => {
@@ -87,6 +105,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       isMounted = false;
     };
   }, [activeRoomId]);
+
+  useEffect(() => {
+    if (!activeRoomId || user?.role !== 'Tenant') { setIsFavorite(false); return; }
+    favoritesApi.status(activeRoomId).then(result => setIsFavorite(result.isFavorite)).catch(() => setIsFavorite(false));
+  }, [activeRoomId, user]);
 
   // Scroll to top when activeRoomId changes
   useEffect(() => {
@@ -160,6 +183,48 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     );
   }
 
+  const isTenant = user?.role === 'Tenant';
+
+  const submitViewing = async () => {
+    if (!activeRoomId || !bookingStart || !bookingEnd) return;
+    try {
+      setBookingLoading(true);
+      await viewingApi.create({ roomId: activeRoomId, requestedStartAt: new Date(bookingStart).toISOString(), requestedEndAt: new Date(bookingEnd).toISOString(), note: bookingNote });
+      setBookingOpen(false);
+      alert('Đã gửi yêu cầu xem phòng. Bạn có thể theo dõi trong mục Lịch xem & đặt cọc.');
+    } catch (error:unknown) { const message = typeof error === 'object' && error !== null && 'response' in error ? (error as {response?:{data?:{message?:string}}}).response?.data?.message : undefined; alert(message || 'Không thể đặt lịch xem phòng.'); }
+    finally { setBookingLoading(false); }
+  };
+
+  const toggleFavorite = async () => {
+    if (!activeRoomId) return;
+    if (user?.role !== 'Tenant') { setIsLoginModalOpen(true); return; }
+    const previous = isFavorite;
+    setIsFavorite(!previous); setFavoriteLoading(true);
+    try { if (previous) await favoritesApi.remove(activeRoomId); else await favoritesApi.add(activeRoomId); }
+    catch { setIsFavorite(previous); alert('Không thể cập nhật yêu thích. Vui lòng thử lại.'); }
+    finally { setFavoriteLoading(false); }
+  };
+
+  const handleStartChat = async () => {
+    if (!room?.ownerId || !user) return;
+    try {
+      setChatLoading(true);
+      await api.post('/chats/conversations', { ownerId: room.ownerId });
+      // Dashboard routes are hash-based. This also works when the detail page
+      // is opened directly at /room/:id (where setCurrentPage is not supplied).
+      if (setCurrentPage) {
+        (setCurrentPage as any)('tenant-messages');
+      } else {
+        window.location.hash = '#/tenant/messages';
+      }
+    } catch (err) {
+      console.error('Lỗi tạo cuộc trò chuyện:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const host = {
     name: room.landlordName || "Chủ nhà RoomHub",
     phone: room.landlordPhone || "0905 *** ***",
@@ -223,6 +288,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 Còn trống
               </span>
             </div>
+            <button onClick={() => void toggleFavorite()} disabled={favoriteLoading} aria-label={isFavorite ? 'Bỏ lưu yêu thích' : 'Lưu yêu thích'} className={`absolute top-4 right-4 w-11 h-11 rounded-full bg-white/90 shadow flex items-center justify-center transition-colors disabled:opacity-50 ${isFavorite ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}><span className={`material-symbols-outlined ${isFavorite ? 'icon-fill' : ''}`}>favorite</span></button>
           </div>
 
           {/* 4 detail views (Desktop only) */}
@@ -437,12 +503,43 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
               </div>
 
               {/* Contact / Action CTA Button */}
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98"
-              >
-                Đăng nhập để liên hệ chủ nhà
-              </button>
+              {isTenant ? (
+                <>
+                  <button onClick={() => setBookingOpen(true)} className="w-full py-4 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">event_available</span>Đặt lịch xem phòng
+                  </button>
+                  <button
+                    onClick={handleStartChat}
+                    disabled={chatLoading}
+                    className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {chatLoading ? (
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[18px]">chat</span>
+                    )}
+                    {chatLoading ? 'Đang kết nối...' : 'Nhắn tin với chủ nhà'}
+                  </button>
+                  <div className="flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                    <span className="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>
+                    <span className="text-xs text-gray-600 font-semibold">Đã đăng nhập · Bảo mật 100%</span>
+                  </div>
+                </>
+              ) : user ? (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="w-full py-4 bg-gray-200 text-gray-500 text-sm font-bold rounded-xl cursor-not-allowed"
+                >
+                  Chỉ khách thuê mới nhắn được
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="w-full py-4 bg-primary-container hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-98"
+                >
+                  Đăng nhập để liên hệ chủ nhà
+                </button>
+              )}
 
               <p className="text-[11px] text-center text-gray-400 px-2 leading-relaxed">
                 Bằng việc nhấn đăng nhập liên hệ, bạn hoàn toàn đồng ý tuân thủ với Điều khoản sử dụng và Chính sách bảo mật của RoomHub Da Nang.
@@ -453,6 +550,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
         </div>
 
         {/* Similar Listings Section */}
+        <section className="mt-16 bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+          <div className="flex items-end justify-between"><div><h2 className="text-xl font-black">Đánh giá từ người thuê đã xác minh</h2><p className="text-sm text-gray-500">Chỉ hiển thị đánh giá hợp lệ đã qua kiểm duyệt.</p></div><div className="text-right"><span className="text-3xl font-black text-amber-500">{reviewSummary.averageRating}</span><span className="text-gray-500">/5 ({reviewSummary.totalReviews})</span></div></div>
+          {!reviewSummary.reviews.length ? <p className="py-8 text-center text-gray-500">Phòng này chưa có đánh giá.</p> : <div className="space-y-3">{reviewSummary.reviews.map((r:any)=><article key={r.id} className="border-t pt-4"><div className="flex justify-between"><b>{r.tenantName}</b><span className="text-amber-500">{'★'.repeat(r.rating||0)}{'☆'.repeat(5-(r.rating||0))}</span></div><p className="mt-2 text-sm text-gray-700">{r.comment||'Không có nhận xét.'}</p>{user&&<button onClick={async()=>{const reasonCode=prompt('Lý do báo cáo (Spam, Abuse, FalseInformation...)');if(!reasonCode)return;try{await api.post(`/reviews/${r.id}/reports`,{reasonCode,description:null});alert('Đã gửi báo cáo.')}catch(e:any){alert(e.response?.data?.message||'Không thể gửi báo cáo.')}}} className="mt-2 text-xs text-red-500">Báo cáo</button>}</article>)}</div>}
+        </section>
+
         <div className="mt-20 space-y-6">
           <h2 className="text-2xl font-black text-on-surface flex items-center gap-2 border-l-4 border-primary-container pl-3">
             Gợi ý chỗ ở tương tự lân cận
@@ -501,6 +603,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       </div>
 
       {/* Login requirement Modal */}
+      {bookingOpen && <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4"><div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4"><div className="flex justify-between"><h3 className="font-bold text-lg">Đặt lịch xem phòng</h3><button onClick={()=>setBookingOpen(false)}>✕</button></div><label className="block text-sm font-semibold">Bắt đầu<input type="datetime-local" value={bookingStart} onChange={e=>setBookingStart(e.target.value)} className="mt-1 w-full border rounded-xl p-3" /></label><label className="block text-sm font-semibold">Kết thúc<input type="datetime-local" value={bookingEnd} onChange={e=>setBookingEnd(e.target.value)} className="mt-1 w-full border rounded-xl p-3" /></label><label className="block text-sm font-semibold">Ghi chú<textarea value={bookingNote} onChange={e=>setBookingNote(e.target.value)} className="mt-1 w-full border rounded-xl p-3" rows={3}/></label><button disabled={bookingLoading||!bookingStart||!bookingEnd} onClick={submitViewing} className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold disabled:opacity-50">{bookingLoading?'Đang gửi...':'Gửi yêu cầu'}</button></div></div>}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md soft-shadow p-6 relative border border-gray-100 animate-scale-up">

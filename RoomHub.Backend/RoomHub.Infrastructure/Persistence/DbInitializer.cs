@@ -54,9 +54,24 @@ namespace Infrastructure.Persistence
                     await userManager.AddToRoleAsync(admin, "Administrator");
                 }
             }
-            else if (!await userManager.IsInRoleAsync(existingAdmin, "Administrator"))
+            else
             {
-                await userManager.AddToRoleAsync(existingAdmin, "Administrator");
+                existingAdmin.EmailConfirmed = true;
+                existingAdmin.IsVerified = true;
+                existingAdmin.IsBanned = false;
+                existingAdmin.BannedUntil = null;
+                await userManager.UpdateAsync(existingAdmin);
+
+                if (!await userManager.CheckPasswordAsync(existingAdmin, "Admin@123"))
+                {
+                    var token = await userManager.GeneratePasswordResetTokenAsync(existingAdmin);
+                    await userManager.ResetPasswordAsync(existingAdmin, token, "Admin@123");
+                }
+
+                if (!await userManager.IsInRoleAsync(existingAdmin, "Administrator"))
+                {
+                    await userManager.AddToRoleAsync(existingAdmin, "Administrator");
+                }
             }
 
             // 2. Seed Users
@@ -78,6 +93,8 @@ namespace Infrastructure.Persistence
                     PhoneNumber = "0905123456",
                     IsVerified = true,
                     VerificationDate = DateTime.UtcNow,
+                    CurrentPlan = SubscriptionPlan.Yearly,
+                    SubscriptionExpiry = DateTime.UtcNow.AddYears(1),
                     CreatedAt = DateTime.UtcNow
                 };
                 var result = await userManager.CreateAsync(owner, "Password123!");
@@ -89,6 +106,24 @@ namespace Infrastructure.Persistence
             else
             {
                 owner = existingOwner;
+                owner.EmailConfirmed = true;
+                owner.IsVerified = true;
+                owner.IsBanned = false;
+                owner.BannedUntil = null;
+                owner.CurrentPlan = SubscriptionPlan.Yearly;
+                owner.SubscriptionExpiry = DateTime.UtcNow.AddYears(1);
+                await userManager.UpdateAsync(owner);
+
+                if (!await userManager.CheckPasswordAsync(owner, "Password123!"))
+                {
+                    var token = await userManager.GeneratePasswordResetTokenAsync(owner);
+                    await userManager.ResetPasswordAsync(owner, token, "Password123!");
+                }
+
+                if (!await userManager.IsInRoleAsync(owner, "PropertyOwner"))
+                {
+                    await userManager.AddToRoleAsync(owner, "PropertyOwner");
+                }
             }
 
             // Seed Tenants
@@ -123,6 +158,20 @@ namespace Infrastructure.Persistence
                 }
                 else
                 {
+                    existingTenant.EmailConfirmed = true;
+                    await userManager.UpdateAsync(existingTenant);
+
+                    if (!await userManager.CheckPasswordAsync(existingTenant, "Password123!"))
+                    {
+                        var token = await userManager.GeneratePasswordResetTokenAsync(existingTenant);
+                        await userManager.ResetPasswordAsync(existingTenant, token, "Password123!");
+                    }
+
+                    if (!await userManager.IsInRoleAsync(existingTenant, "Tenant"))
+                    {
+                        await userManager.AddToRoleAsync(existingTenant, "Tenant");
+                    }
+
                     seededTenants.Add(existingTenant);
                 }
             }

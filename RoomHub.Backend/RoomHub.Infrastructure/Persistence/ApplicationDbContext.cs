@@ -37,6 +37,7 @@ namespace Infrastructure.Persistence
 
         // Deposit & Contract
         public DbSet<Deposit> Deposits => Set<Deposit>();
+        public DbSet<RoomViewingBooking> RoomViewingBookings => Set<RoomViewingBooking>();
         public DbSet<Contract> Contracts => Set<Contract>();
 
         // Billing
@@ -68,6 +69,10 @@ namespace Infrastructure.Persistence
         public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
         public DbSet<FavoriteRoom> FavoriteRooms { get; set; }
+
+        // Chat
+        public DbSet<Conversation> Conversations => Set<Conversation>();
+        public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

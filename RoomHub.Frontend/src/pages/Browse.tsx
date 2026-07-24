@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import { favoritesApi } from '../services/favorites';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +28,6 @@ interface BrowseProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:5143/api/public/listings';
 const PAGE_SIZE = 12;
 
 const PRICE_RANGES: Record<string, { min?: number; max?: number }> = {
@@ -190,6 +192,7 @@ export const MOCK_ROOMS: Room[] = [
 
 const Browse: React.FC<BrowseProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // ── Search / Filter state ──────────────────────────────────────────────────
   const [inputKeyword, setInputKeyword] = useState('');
@@ -203,14 +206,25 @@ const Browse: React.FC<BrowseProps> = () => {
 
   // ── API / Loading state ───────────────────────────────────────────────────
   const [dbRooms, setDbRooms] = useState<Room[]>([]);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   // ── Modal state ───────────────────────────────────────────────────────────
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [favoriteBusy, setFavoriteBusy] = useState<Set<number>>(new Set());
 
-  // ── Fetch listings from real API ──────────────────────────────────────────
+  useEffect(() => {
+    if (user?.role !== 'Tenant') { setFavoriteIds(new Set()); return; }
+    favoritesApi.ids().then(ids => setFavoriteIds(new Set(ids))).catch(() => setFavoriteIds(new Set()));
+  }, [user]);
+
+  // ── Fetch listings from real API - one page at a time, respecting the
+  // server's own total/totalPages instead of pulling everything up-front and
+  // re-paginating on the client (which silently capped real listings at 50).
   const fetchListings = useCallback(async () => {
     setIsLoading(true);
     setHasError(false);
@@ -231,30 +245,24 @@ const Browse: React.FC<BrowseProps> = () => {
         params.set('amenities', selectedAmenities.join(','));
       }
 
-      // Fetch larger set from server for client-side merged pagination
-      params.set('page', '1');
-      params.set('pageSize', '50');
+      params.set('page', String(currentPage));
+      params.set('pageSize', String(PAGE_SIZE));
 
-      const response = await fetch(`${API_BASE}?${params.toString()}`);
+      const response = await api.get(`/public/listings?${params.toString()}`);
+      const data = response.data;
 
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-      const data = await response.json();
-
-      if (Array.isArray(data)) {
-        setDbRooms(data as Room[]);
-      } else if (data.items) {
-        setDbRooms(data.items as Room[]);
-      } else {
-        setDbRooms([]);
-      }
+      setDbRooms(Array.isArray(data) ? (data as Room[]) : (data.items ?? []));
+      setServerTotal(data.total ?? 0);
+      setServerTotalPages(Math.max(1, data.totalPages ?? 1));
     } catch {
       setHasError(true);
       setDbRooms([]);
+      setServerTotal(0);
+      setServerTotalPages(1);
     } finally {
       setIsLoading(false);
     }
-  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy, currentPage]);
 
   // Filter & Sort Logic for Mock Rooms
   const filteredMockRooms = useMemo(() => {
@@ -298,7 +306,11 @@ const Browse: React.FC<BrowseProps> = () => {
     return result;
   }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities]);
 
+  // Demo filler rooms are only shown alongside page 1 of real results - they don't
+  // exist on the server, so they must never affect the server-driven pagination.
   const combinedRooms = useMemo(() => {
+    if (currentPage !== 1) return dbRooms;
+
     const mappedMock = filteredMockRooms.map((r: Room) => ({
       ...r,
       id: r.id + 100000 // avoid conflicts with database IDs
@@ -306,13 +318,11 @@ const Browse: React.FC<BrowseProps> = () => {
 
     const merged = [...dbRooms, ...mappedMock];
 
-    // Sort combined
     if (sortBy === 'priceAsc') {
       merged.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'priceDesc') {
       merged.sort((a, b) => b.price - a.price);
     } else {
-      // newest
       merged.sort((a, b) => {
         if (a.isNew && !b.isNew) return -1;
         if (!a.isNew && b.isNew) return 1;
@@ -321,26 +331,42 @@ const Browse: React.FC<BrowseProps> = () => {
     }
 
     return merged;
-  }, [dbRooms, filteredMockRooms, sortBy]);
+  }, [dbRooms, filteredMockRooms, sortBy, currentPage]);
 
-  // Derived values for component
-  const rooms = useMemo(() => {
-    return combinedRooms.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  }, [combinedRooms, currentPage]);
+  const rooms = combinedRooms;
+  const totalPages = serverTotalPages;
+  const totalCount = serverTotal + (currentPage === 1 ? filteredMockRooms.length : 0);
 
-  const totalPages = Math.max(1, Math.ceil(combinedRooms.length / PAGE_SIZE));
-
-  // Re-fetch whenever filters or sort change (reset to page 1)
+  // Reset to page 1 whenever a filter changes (not on page navigation itself)
   useEffect(() => {
     setCurrentPage(1);
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+
+  // Fetch whenever filters, sort, or the current page change
+  useEffect(() => {
     fetchListings();
   }, [fetchListings]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  // Ghi lại lượt tìm kiếm vào lịch sử (chỉ khi người dùng đã đăng nhập).
+  // Lỗi (ví dụ không phải vai trò Tenant) được bỏ qua để không ảnh hưởng trải nghiệm tìm phòng.
+  const logSearchHistory = () => {
+    if (!localStorage.getItem('token')) return;
+    const searchQuery = JSON.stringify({
+      keyword: inputKeyword.trim(),
+      type: selectedType,
+      location: selectedLocation,
+      priceRange,
+      amenities: selectedAmenities,
+    });
+    api.post('/tenant/search-history', { searchQuery }).catch(() => { /* bỏ qua */ });
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchKeyword(inputKeyword);
+    logSearchHistory();
   };
 
   const handleQuickTabSelect = (tab: string) => {
@@ -369,6 +395,17 @@ const Browse: React.FC<BrowseProps> = () => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleFavorite = async (roomId: number) => {
+    if (user?.role !== 'Tenant') { setIsLoginModalOpen(true); return; }
+    if (roomId >= 100000 || favoriteBusy.has(roomId)) return;
+    const wasFavorite = favoriteIds.has(roomId);
+    setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.delete(roomId); else next.add(roomId); return next; });
+    setFavoriteBusy(current => new Set(current).add(roomId));
+    try { if (wasFavorite) await favoritesApi.remove(roomId); else await favoritesApi.add(roomId); }
+    catch { setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.add(roomId); else next.delete(roomId); return next; }); }
+    finally { setFavoriteBusy(current => { const next = new Set(current); next.delete(roomId); return next; }); }
   };
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -634,7 +671,7 @@ const Browse: React.FC<BrowseProps> = () => {
               ) : (
                 <>
                   Tìm thấy{' '}
-                  <span className="text-primary-container">{combinedRooms.length}</span>{' '}
+                  <span className="text-primary-container">{totalCount}</span>{' '}
                   chỗ ở phù hợp
                 </>
               )}
@@ -743,14 +780,15 @@ const Browse: React.FC<BrowseProps> = () => {
 
                       {/* Favorite Button */}
                       <button
-                        aria-label="Lưu yêu thích"
+                        aria-label={favoriteIds.has(room.id) ? 'Bỏ lưu yêu thích' : 'Lưu yêu thích'}
+                        disabled={favoriteBusy.has(room.id) || room.id >= 100000}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsLoginModalOpen(true);
+                          void toggleFavorite(room.id);
                         }}
-                        className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm active:scale-90 transition-all"
+                        className={`absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-all disabled:opacity-50 ${favoriteIds.has(room.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">favorite</span>
+                        <span className={`material-symbols-outlined text-[18px] ${favoriteIds.has(room.id) ? 'icon-fill' : ''}`}>favorite</span>
                       </button>
                     </div>
 

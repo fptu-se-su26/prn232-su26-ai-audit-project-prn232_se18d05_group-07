@@ -55,5 +55,6 @@ namespace Domain.Entities
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
         public virtual ICollection<SearchHistory> SearchHistories { get; set; } = new List<SearchHistory>();
         public virtual ICollection<BookingHistory> BookingHistories { get; set; } = new List<BookingHistory>();
+        public virtual ICollection<RoomViewingBooking> ViewingBookings { get; set; } = new List<RoomViewingBooking>();
     }
 }

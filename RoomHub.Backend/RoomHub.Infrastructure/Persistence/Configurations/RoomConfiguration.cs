@@ -70,6 +70,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.HasIndex(r => r.RoomType)
                 .HasDatabaseName("IX_Rooms_RoomType");
+            builder.HasIndex(r => new { r.IsDeleted, r.HasListing, r.CreatedAt, r.ModerationStatus });
         }
     }
 }

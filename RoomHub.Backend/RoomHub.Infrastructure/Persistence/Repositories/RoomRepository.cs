@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Application.Common.DTOs.Listings;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
@@ -109,6 +110,101 @@ namespace Infrastructure.Persistence.Repositories
                 r.HasListing &&
                 r.ModerationStatus == status &&
                 r.ModeratedAt >= since);
+        }
+
+        public async Task<(List<Room> Rooms, int TotalCount)> SearchPublicListingsAsync(PublicListingFilterRequest filter)
+        {
+            var page = Math.Max(1, filter.Page);
+            var pageSize = Math.Clamp(filter.PageSize, 1, 50);
+
+            var query = _context.Rooms
+                .Include(r => r.Floor)
+                    .ThenInclude(f => f.Building)
+                        .ThenInclude(b => b.Owner)
+                .Include(r => r.RoomPhotos)
+                .Include(r => r.RoomAmenities)
+                    .ThenInclude(ra => ra.Amenity)
+                .Where(r => !r.IsDeleted && r.HasListing && r.IsPublished && r.ModerationStatus == ModerationStatus.Approved);
+
+            if (!string.IsNullOrEmpty(filter.District) && filter.District != "Tất cả")
+            {
+                var normDistrict = filter.District.ToLower().Trim();
+                query = query.Where(r => r.Floor.Building.District.ToLower().Contains(normDistrict));
+            }
+
+            if (filter.MinPrice.HasValue)
+                query = query.Where(r => r.BasePrice >= filter.MinPrice.Value);
+            if (filter.MaxPrice.HasValue)
+                query = query.Where(r => r.BasePrice <= filter.MaxPrice.Value);
+
+            if (filter.MinArea.HasValue)
+                query = query.Where(r => r.SurfaceArea >= filter.MinArea.Value);
+            if (filter.MaxArea.HasValue)
+                query = query.Where(r => r.SurfaceArea <= filter.MaxArea.Value);
+
+            if (!string.IsNullOrEmpty(filter.RoomType) && filter.RoomType != "Tất cả")
+            {
+                var parsedType = filter.RoomType switch
+                {
+                    "Phòng trọ" => RoomType.BoardingHouse,
+                    "Studio" => RoomType.Studio,
+                    "Căn hộ mini" => RoomType.MiniApartment,
+                    "Căn hộ" => RoomType.Apartment,
+                    _ => (RoomType?)null
+                };
+
+                if (parsedType.HasValue)
+                    query = query.Where(r => r.RoomType == parsedType.Value);
+            }
+
+            if (!string.IsNullOrEmpty(filter.SearchQuery))
+            {
+                var search = filter.SearchQuery.ToLower().Trim();
+                query = query.Where(r =>
+                    r.Title.ToLower().Contains(search) ||
+                    (r.Description != null && r.Description.ToLower().Contains(search)) ||
+                    r.Floor.Building.Name.ToLower().Contains(search) ||
+                    r.Floor.Building.Address.ToLower().Contains(search)
+                );
+            }
+
+            if (!string.IsNullOrEmpty(filter.Amenities))
+            {
+                var amenityList = filter.Amenities.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                           .Select(a => a.Trim().ToLower())
+                                           .ToList();
+                foreach (var amName in amenityList)
+                {
+                    query = query.Where(r => r.RoomAmenities.Any(ra => ra.Amenity.Name.ToLower().Contains(amName)));
+                }
+            }
+
+            IOrderedQueryable<Room> orderedQuery = filter.SortBy switch
+            {
+                "priceAsc" => query.OrderBy(r => r.BasePrice).ThenByDescending(r => r.ListingScore),
+                "priceDesc" => query.OrderByDescending(r => r.BasePrice).ThenByDescending(r => r.ListingScore),
+                _ => query.OrderByDescending(r => r.ListingScore).ThenByDescending(r => r.CreatedAt)
+            };
+
+            var totalCount = await orderedQuery.CountAsync();
+            var rooms = await orderedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (rooms, totalCount);
+        }
+
+        public async Task<Room?> GetPublicListingDetailAsync(int id)
+        {
+            return await _context.Rooms
+                .Include(r => r.Floor)
+                    .ThenInclude(f => f.Building)
+                        .ThenInclude(b => b.Owner)
+                .Include(r => r.RoomPhotos)
+                .Include(r => r.RoomAmenities)
+                    .ThenInclude(ra => ra.Amenity)
+                .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
         }
     }
 }

@@ -6,7 +6,6 @@ using Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace RoomHub.API.Controllers
 {
@@ -16,16 +15,16 @@ namespace RoomHub.API.Controllers
     public class TenantRoomController : ControllerBase
     {
         private readonly IContractService _contractService;
-        private readonly IConfiguration _configuration;
+        private readonly IFileUploadService _fileUploadService;
         private readonly IWebHostEnvironment _env;
 
         public TenantRoomController(
             IContractService contractService,
-            IConfiguration configuration,
+            IFileUploadService fileUploadService,
             IWebHostEnvironment env)
         {
             _contractService = contractService;
-            _configuration = configuration;
+            _fileUploadService = fileUploadService;
             _env = env;
         }
 
@@ -79,7 +78,9 @@ namespace RoomHub.API.Controllers
                 {
                     Console.WriteLine($"[AcceptRoom Error] InnerException: {ex.InnerException.Message}");
                 }
-                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
+                // Stack traces should never reach API clients outside local debugging.
+                string? detail = _env.IsDevelopment() ? ex.ToString() : null;
+                return BadRequest(new { message = ex.Message, detail });
             }
         }
 
@@ -109,7 +110,9 @@ namespace RoomHub.API.Controllers
                 {
                     Console.WriteLine($"[RejectRoom Error] InnerException: {ex.InnerException.Message}");
                 }
-                return BadRequest(new { message = ex.Message, detail = ex.ToString() });
+                // Stack traces should never reach API clients outside local debugging.
+                string? detail = _env.IsDevelopment() ? ex.ToString() : null;
+                return BadRequest(new { message = ex.Message, detail });
             }
         }
 
@@ -140,7 +143,9 @@ namespace RoomHub.API.Controllers
 
             try
             {
-                var url = await SaveSignatureImageAsync(bytes);
+                using var stream = new MemoryStream(bytes);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var url = await _fileUploadService.UploadImageAsync(stream, "signature.png", "roomhub_signatures", baseUrl);
                 var ok = await _contractService.SignContractAsync(tenantId, url);
                 if (!ok)
                     return BadRequest(new { message = "Không thể lưu chữ ký." });
@@ -153,43 +158,6 @@ namespace RoomHub.API.Controllers
             }
         }
 
-        // Uploads the signature PNG to Cloudinary when configured; otherwise falls
-        // back to a local file under wwwroot/uploads/signatures. Returns an absolute URL.
-        private async Task<string> SaveSignatureImageAsync(byte[] bytes)
-        {
-            var cloudName = _configuration["CloudinarySettings:CloudName"];
-            var apiKey = _configuration["CloudinarySettings:ApiKey"];
-            var apiSecret = _configuration["CloudinarySettings:ApiSecret"];
-
-            bool cloudinaryConfigured =
-                !string.IsNullOrWhiteSpace(cloudName) && !cloudName.Contains("YOUR_CLOUDINARY") &&
-                !string.IsNullOrWhiteSpace(apiKey) && !apiKey.Contains("YOUR_CLOUDINARY") &&
-                !string.IsNullOrWhiteSpace(apiSecret) && !apiSecret.Contains("YOUR_CLOUDINARY");
-
-            if (cloudinaryConfigured)
-            {
-                var account = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
-                var cloudinary = new CloudinaryDotNet.Cloudinary(account);
-                using var stream = new MemoryStream(bytes);
-                var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams
-                {
-                    File = new CloudinaryDotNet.FileDescription($"signature_{Guid.NewGuid():N}.png", stream),
-                    Folder = "roomhub_signatures"
-                };
-                var result = await cloudinary.UploadAsync(uploadParams);
-                if (result.StatusCode == System.Net.HttpStatusCode.OK)
-                    return result.SecureUrl.ToString();
-                throw new Exception("Tải chữ ký lên Cloudinary thất bại.");
-            }
-
-            // Local fallback (served by Program.cs at /uploads)
-            var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            var folder = Path.Combine(webRoot, "uploads", "signatures");
-            Directory.CreateDirectory(folder);
-            var fileName = $"signature_{Guid.NewGuid():N}.png";
-            await System.IO.File.WriteAllBytesAsync(Path.Combine(folder, fileName), bytes);
-            return $"{Request.Scheme}://{Request.Host}/uploads/signatures/{fileName}";
-        }
     }
 
     public class SignContractRequest

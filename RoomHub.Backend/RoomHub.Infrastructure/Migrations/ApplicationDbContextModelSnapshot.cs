@@ -97,6 +97,20 @@ namespace RoomHub.Infrastructure.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
+                    b.Property<string>("BanReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("BannedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BannedByAdminId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("BannedUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -250,13 +264,21 @@ namespace RoomHub.Infrastructure.Migrations
                         .HasMaxLength(45)
                         .HasColumnType("nvarchar(45)");
 
+                    b.Property<string>("TargetUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_AuditLogs_UserId");
+
+                    b.HasIndex("TargetUserId", "CreatedAt");
 
                     b.ToTable("AuditLogs", (string)null);
                 });
@@ -381,6 +403,46 @@ namespace RoomHub.Infrastructure.Migrations
                     b.ToTable("Buildings", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.ChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ConversationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReceiverId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("ChatMessages", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Contract", b =>
                 {
                     b.Property<int>("Id")
@@ -467,6 +529,38 @@ namespace RoomHub.Infrastructure.Migrations
                     b.ToTable("Contracts", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Conversation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("LastMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Conversations", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Deposit", b =>
                 {
                     b.Property<int>("Id")
@@ -478,11 +572,26 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ForfeitReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<int>("HoldDurationDays")
                         .HasColumnType("int");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PaymentProofUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<DateTime>("PlacedAt")
                         .ValueGeneratedOnAdd()
@@ -492,8 +601,24 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Property<decimal?>("RefundAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -503,13 +628,29 @@ namespace RoomHub.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("ViewingBookingId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RoomId");
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Deposits", (string)null);
+                    b.HasIndex("TransactionId")
+                        .IsUnique()
+                        .HasFilter("[TransactionId] IS NOT NULL");
+
+                    b.HasIndex("ViewingBookingId");
+
+                    b.ToTable("Deposits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Deposits_ValidValues", "[Amount] > 0 AND [HoldDurationDays] > 0 AND [ExpiresAt] > [PlacedAt]");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.Floor", b =>
@@ -865,15 +1006,38 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Property<string>("Comment")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ContractId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsModerated")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("ModeratedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModeratedByAdminId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ModerationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ModerationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Visible");
 
                     b.Property<string>("OwnerId")
                         .HasColumnType("nvarchar(450)");
@@ -894,7 +1058,12 @@ namespace RoomHub.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ContractId");
 
                     b.HasIndex("OwnerId")
                         .HasDatabaseName("IX_Reviews_OwnerId");
@@ -908,7 +1077,10 @@ namespace RoomHub.Infrastructure.Migrations
                     b.HasIndex("ServiceId")
                         .HasDatabaseName("IX_Reviews_ServiceId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId", "RoomId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Reviews_Tenant_Room_Original")
+                        .HasFilter("[ParentReviewId] IS NULL AND [IsDeleted] = 0");
 
                     b.ToTable("Reviews", (string)null);
                 });
@@ -921,6 +1093,10 @@ namespace RoomHub.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -931,6 +1107,33 @@ namespace RoomHub.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReporterId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("ReviewId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByAdminId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -938,6 +1141,8 @@ namespace RoomHub.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("ReviewId", "ReporterId", "Status");
 
                     b.ToTable("ReviewViolations");
                 });
@@ -1066,6 +1271,8 @@ namespace RoomHub.Infrastructure.Migrations
                     b.HasIndex("Status", "BasePrice")
                         .HasDatabaseName("IX_Rooms_Status_Price");
 
+                    b.HasIndex("IsDeleted", "HasListing", "CreatedAt", "ModerationStatus");
+
                     b.ToTable("Rooms", (string)null);
                 });
 
@@ -1119,6 +1326,77 @@ namespace RoomHub.Infrastructure.Migrations
                     b.HasIndex("RoomId");
 
                     b.ToTable("RoomPhotos", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.RoomViewingBooking", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OwnerNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("RequestedEndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestedStartAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("ScheduledEndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ScheduledStartAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TenantNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.HasIndex("RoomId", "ScheduledStartAt", "ScheduledEndAt", "Status");
+
+                    b.ToTable("RoomViewingBookings", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.SearchHistory", b =>
@@ -1261,6 +1539,8 @@ namespace RoomHub.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("Status", "CreatedAt");
+
                     b.ToTable("Subscriptions", (string)null);
                 });
 
@@ -1289,6 +1569,9 @@ namespace RoomHub.Infrastructure.Migrations
                         .HasColumnType("decimal(5,2)")
                         .HasDefaultValue(10.00m);
 
+                    b.Property<int>("ReviewEligibilityDaysAfterContract")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1303,7 +1586,8 @@ namespace RoomHub.Infrastructure.Migrations
                             DefaultDepositPercent = 50.00m,
                             DefaultHoldDurationDays = 3,
                             MaxRoomsPerBuilding = 500,
-                            PlatformCommissionRate = 10.00m
+                            PlatformCommissionRate = 10.00m,
+                            ReviewEligibilityDaysAfterContract = 90
                         });
                 });
 
@@ -1579,6 +1863,33 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Domain.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("Domain.Entities.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.ApplicationUser", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.ApplicationUser", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Receiver");
+
+                    b.Navigation("Sender");
+                });
+
             modelBuilder.Entity("Domain.Entities.Contract", b =>
                 {
                     b.HasOne("Domain.Entities.ApplicationUser", "Owner")
@@ -1605,6 +1916,25 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Conversation", b =>
+                {
+                    b.HasOne("Domain.Entities.ApplicationUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.ApplicationUser", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Domain.Entities.Deposit", b =>
                 {
                     b.HasOne("Domain.Entities.Room", "Room")
@@ -1619,9 +1949,16 @@ namespace RoomHub.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.RoomViewingBooking", "ViewingBooking")
+                        .WithMany("Deposits")
+                        .HasForeignKey("ViewingBookingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Room");
 
                     b.Navigation("Tenant");
+
+                    b.Navigation("ViewingBooking");
                 });
 
             modelBuilder.Entity("Domain.Entities.Floor", b =>
@@ -1751,6 +2088,11 @@ namespace RoomHub.Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Review", b =>
                 {
+                    b.HasOne("Domain.Entities.Contract", "Contract")
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Domain.Entities.ApplicationUser", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
@@ -1777,6 +2119,8 @@ namespace RoomHub.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.Navigation("Contract");
+
                     b.Navigation("Owner");
 
                     b.Navigation("ParentReview");
@@ -1790,11 +2134,18 @@ namespace RoomHub.Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.ReviewViolation", b =>
                 {
+                    b.HasOne("Domain.Entities.Review", "Review")
+                        .WithMany("Reports")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Domain.Entities.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Review");
 
                     b.Navigation("User");
                 });
@@ -1846,6 +2197,25 @@ namespace RoomHub.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("Domain.Entities.RoomViewingBooking", b =>
+                {
+                    b.HasOne("Domain.Entities.Room", "Room")
+                        .WithMany("ViewingBookings")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.ApplicationUser", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Domain.Entities.SearchHistory", b =>
@@ -2044,6 +2414,11 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Navigation("UtilityReadings");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Conversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("Domain.Entities.Floor", b =>
                 {
                     b.Navigation("Rooms");
@@ -2059,6 +2434,8 @@ namespace RoomHub.Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Review", b =>
                 {
                     b.Navigation("Replies");
+
+                    b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("Domain.Entities.Room", b =>
@@ -2080,6 +2457,13 @@ namespace RoomHub.Infrastructure.Migrations
                     b.Navigation("RoomPhotos");
 
                     b.Navigation("SearchHistories");
+
+                    b.Navigation("ViewingBookings");
+                });
+
+            modelBuilder.Entity("Domain.Entities.RoomViewingBooking", b =>
+                {
+                    b.Navigation("Deposits");
                 });
 
             modelBuilder.Entity("Domain.Entities.Service", b =>

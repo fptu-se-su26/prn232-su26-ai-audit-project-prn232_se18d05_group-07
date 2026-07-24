@@ -17,6 +17,13 @@ namespace Domain.Entities
         public string? Comment { get; set; }
         public int? ParentReviewId { get; set; }
         public bool IsModerated { get; set; }
+        public Domain.Enums.ReviewModerationStatus ModerationStatus { get; set; } = Domain.Enums.ReviewModerationStatus.Visible;
+        public string? ModeratedByAdminId { get; set; }
+        public DateTime? ModeratedAt { get; set; }
+        public string? ModerationReason { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public bool IsDeleted { get; set; }
+        public int? ContractId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
@@ -26,5 +33,7 @@ namespace Domain.Entities
         public virtual Service? Service { get; set; }
         public virtual Review? ParentReview { get; set; }
         public virtual ICollection<Review> Replies { get; set; } = new List<Review>();
+        public virtual Contract? Contract { get; set; }
+        public virtual ICollection<ReviewViolation> Reports { get; set; } = new List<ReviewViolation>();
     }
 }

@@ -14,6 +14,7 @@ const menuItems: { label: string; icon: string; route: PageType }[] = [
   { label: 'Tòa nhà', icon: 'apartment', route: 'admin-buildings' },
   { label: 'Phòng & Tin đăng', icon: 'meeting_room', route: 'admin-rooms' },
   { label: 'Kiểm duyệt', icon: 'gavel', route: 'admin-moderation' },
+  { label: 'Kiểm duyệt đánh giá', icon: 'rate_review', route: 'admin-review-moderation' },
   { label: 'Gói dịch vụ', icon: 'workspace_premium', route: 'admin-subscriptions' },
 ];
 
@@ -23,6 +24,7 @@ const pageInfoMap: Record<string, { title: string; subtitle: string }> = {
   'admin-buildings': { title: 'Quản lý tòa nhà', subtitle: 'Danh sách bất động sản trên nền tảng.' },
   'admin-rooms': { title: 'Phòng & Tin đăng', subtitle: 'Giám sát và duyệt tin cho thuê.' },
   'admin-moderation': { title: 'Kiểm duyệt nội dung', subtitle: 'Đánh giá, tin nhắn và báo cáo vi phạm.' },
+  'admin-review-moderation': { title: 'Kiểm duyệt đánh giá', subtitle: 'Xử lý báo cáo và xem bằng chứng hợp đồng thuê.' },
   'admin-subscriptions': { title: 'Gói dịch vụ', subtitle: 'Duyệt thanh toán và quản lý gói đăng ký.' },
 };
 

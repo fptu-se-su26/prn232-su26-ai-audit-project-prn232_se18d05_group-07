@@ -45,6 +45,11 @@ namespace Application.Common.DTOs.Auth
         public string Email { get; set; } = null!;
     }
 
+    public class RefreshTokenRequest
+    {
+        public string RefreshToken { get; set; } = null!;
+    }
+
     public class AuthResponse
     {
         public bool Succeeded { get; set; }

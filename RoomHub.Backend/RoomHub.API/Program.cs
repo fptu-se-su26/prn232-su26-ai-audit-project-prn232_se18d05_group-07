@@ -1,4 +1,10 @@
+using System.Threading.RateLimiting;
 using Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
+using RoomHub.API.Middlewares;
+using Application.Common.Interfaces;
+using RoomHub.API.Hubs;
+using RoomHub.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +12,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IChatNotifier, SignalRChatNotifier>();
+builder.Services.AddHostedService<DepositExpiryHostedService>();
+
+// Auth endpoints (login/register/OTP) have no other brute-force protection at the HTTP layer,
+// so cap how many attempts an IP can make per minute.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("AuthPolicy", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10;
+        opt.QueueLimit = 0;
+    });
+});
 
 // Add CORS Policy for React Frontend
 builder.Services.AddCors(options =>
@@ -45,6 +67,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 app.UseHttpsRedirection();
 
 var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -62,12 +86,15 @@ app.UseStaticFiles(new StaticFileOptions
 // Enable CORS
 app.UseCors("AllowFrontend");
 
+app.UseRateLimiter();
+
 // Enable Authentication and Authorization middlewares
 app.UseAuthentication();
 app.UseAuthorization();
 
 // Map endpoints
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 var summaries = new[]
 {

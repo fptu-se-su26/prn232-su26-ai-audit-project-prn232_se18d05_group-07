@@ -12,6 +12,7 @@ namespace Application.Common.Interfaces
         Task<List<Contract>> GetContractsByOwnerAsync(string ownerId);
         Task<ApplicationUser?> GetTenantByContactAsync(string contact);
         Task<Contract?> GetActiveContractByTenantIdAsync(string tenantId);
+        Task<bool> HasActiveOrPendingContractAsync(int roomId);
         Task AddAsync(Contract contract);
         Task UpdateAsync(Contract contract);
     }
