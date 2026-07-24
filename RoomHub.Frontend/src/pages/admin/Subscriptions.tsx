@@ -48,6 +48,21 @@ const AdminSubscriptions: React.FC = () => {
   
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
   
+  // Pagination states for Subscriptions list
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const triggerToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  // Approve confirmation modal state
+  const [approveId, setApproveId] = useState<number | null>(null);
+
   // Rejection modal state
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -79,22 +94,27 @@ const AdminSubscriptions: React.FC = () => {
     loadSubscriptions();
   }, [loadSubscriptions]);
 
-  const handleApprove = async (id: number) => {
-    if (!window.confirm('Xác nhận phê duyệt giao dịch này và kích hoạt gói cước cho chủ nhà?')) return;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, itemsPerPage]);
+
+  const handleApproveConfirm = async () => {
+    if (!approveId) return;
     
-    setActionId(id);
+    setActionId(approveId);
     try {
-      const res = await api.post(`/admin/subscriptions/${id}/approve`);
+      const res = await api.post(`/admin/subscriptions/${approveId}/approve`);
       if (res.data.success) {
-        alert('Phê duyệt giao dịch thành công!');
-        if (previewSub?.id === id) {
+        triggerToast('Phê duyệt giao dịch thành công! Gói cước đã được kích hoạt.', 'success');
+        if (previewSub?.id === approveId) {
           setPreviewSub(null);
         }
+        setApproveId(null);
         await loadSubscriptions();
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt giao dịch.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt giao dịch.', 'error');
     } finally {
       setActionId(null);
     }
@@ -104,7 +124,7 @@ const AdminSubscriptions: React.FC = () => {
     e.preventDefault();
     if (!rejectId) return;
     if (!rejectReason.trim()) {
-      alert('Vui lòng nhập lý do từ chối.');
+      triggerToast('Vui lòng nhập lý do từ chối.', 'error');
       return;
     }
 
@@ -114,7 +134,7 @@ const AdminSubscriptions: React.FC = () => {
         reason: rejectReason
       });
       if (res.data.success) {
-        alert('Đã từ chối giao dịch thành công.');
+        triggerToast('Đã từ chối giao dịch thành công.', 'success');
         setRejectId(null);
         setRejectReason('');
         if (previewSub?.id === rejectId) {
@@ -124,7 +144,7 @@ const AdminSubscriptions: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi từ chối giao dịch.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi từ chối giao dịch.', 'error');
     } finally {
       setRejecting(false);
     }
@@ -140,14 +160,14 @@ const AdminSubscriptions: React.FC = () => {
         reason: revokeReason || 'Thu hồi bởi Ban quản trị'
       });
       if (res.data.success) {
-        alert('Đã thu hồi gói cước thành công.');
+        triggerToast('Đã thu hồi gói cước thành công. Tài khoản đã hạ về gói Free.', 'success');
         setRevokeId(null);
         setRevokeReason('');
         await loadSubscriptions();
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi thu hồi gói.');
+      triggerToast(err.response?.data?.message || 'Có lỗi xảy ra khi thu hồi gói.', 'error');
     } finally {
       setRevoking(false);
     }
@@ -156,8 +176,8 @@ const AdminSubscriptions: React.FC = () => {
   // Compute stats dynamically
   const pendingCount = subs.filter(s => s.status === 'pending').length;
   const pendingAmount = subs.filter(s => s.status === 'pending').reduce((sum, s) => sum + s.amount, 0);
-  const monthlyCount = subs.filter(s => s.planType.includes('Tháng') || s.planType.toLowerCase() === 'monthly').length;
-  const yearlyCount = subs.filter(s => s.planType.includes('Năm') || s.planType.toLowerCase() === 'yearly').length;
+  const activeCount = subs.filter(s => s.status === 'active').length;
+  const totalRevenue = subs.filter(s => s.status === 'active').reduce((sum, s) => sum + s.amount, 0);
 
   if (loading && subs.length === 0) {
     return (
@@ -169,7 +189,21 @@ const AdminSubscriptions: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Toast Notification Banner */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-xl border flex items-center gap-3 animate-fade-in transition-all ${
+          toast.type === 'success' ? 'bg-green-600 text-white border-green-500' :
+          toast.type === 'error' ? 'bg-red-600 text-white border-red-500' :
+          'bg-gray-900 text-white border-gray-800'
+        }`}>
+          <span className="material-symbols-outlined text-[20px]">
+            {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : 'info'}
+          </span>
+          <span className="text-xs font-bold">{toast.message}</span>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-600 rounded-2xl p-4 text-xs font-semibold">
           {error}
@@ -181,9 +215,9 @@ const AdminSubscriptions: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Giao dịch chờ duyệt', value: pendingCount, color: 'text-amber-500', icon: 'pending_actions' },
-            { label: 'Tổng tiền chờ duyệt', value: formatVND(pendingAmount), color: 'text-green-600', icon: 'payments' },
-            { label: 'Yêu cầu gói Tháng', value: monthlyCount, color: 'text-blue-500', icon: 'calendar_month' },
-            { label: 'Yêu cầu gói Năm', value: yearlyCount, color: 'text-purple-500', icon: 'workspace_premium' },
+            { label: 'Tiền chờ đối soát', value: formatVND(pendingAmount), color: 'text-blue-600', icon: 'payments' },
+            { label: 'Gói Pro hoạt động', value: activeCount, color: 'text-emerald-600', icon: 'verified' },
+            { label: 'Tổng doanh thu đã thu', value: formatVND(totalRevenue), color: 'text-purple-600', icon: 'workspace_premium' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-3xl border border-gray-100 soft-shadow p-5 flex items-center gap-4 hover:scale-[1.02] transition-transform">
               <div className={`w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0`}>
@@ -286,129 +320,251 @@ const AdminSubscriptions: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">Thay đổi bộ lọc tab phía trên để xem các giao dịch khác.</p>
               </div>
             ) : (
-              subs.map((s) => {
-                const initials = s.ownerName.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || 'CN';
-                const isBusy = actionId === s.id;
-                
+              (() => {
+                const totalPages = Math.ceil(subs.length / itemsPerPage) || 1;
+                const validCurrentPage = Math.min(currentPage, totalPages);
+                const startIndex = (validCurrentPage - 1) * itemsPerPage;
+                const paginatedSubs = subs.slice(startIndex, startIndex + itemsPerPage);
+
                 return (
-                  <div key={s.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 py-5 hover:bg-gray-50/40 transition-colors">
-                    {/* User and Info block */}
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#161d2e] to-[#25324d] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md">
-                        {initials}
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-black text-on-surface truncate">{s.ownerName}</p>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-indigo-600 bg-indigo-50 border border-indigo-100 uppercase tracking-wider">
-                            Gói {s.planType}
-                          </span>
+                  <>
+                    {paginatedSubs.map((s) => {
+                      const initials = s.ownerName.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || 'CN';
+                      const isBusy = actionId === s.id;
+                      
+                      return (
+                        <div key={s.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 py-5 hover:bg-gray-50/40 transition-colors">
+                          {/* User and Info block */}
+                          <div className="flex items-start gap-4 flex-1 min-w-0">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#161d2e] to-[#25324d] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md">
+                              {initials}
+                            </div>
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-black text-on-surface truncate">{s.ownerName}</p>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-indigo-600 bg-indigo-50 border border-indigo-100 uppercase tracking-wider">
+                                  Gói {s.planType}
+                                </span>
 
-                          {/* Status Badge */}
-                          {s.status === 'pending' && (
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-amber-700 bg-amber-50 border border-amber-200 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                              Chờ duyệt thủ công
-                            </span>
-                          )}
-                          {s.status === 'active' && (
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-green-700 bg-green-50 border border-green-200 flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                              Đã kích hoạt
-                            </span>
-                          )}
-                          {(s.status === 'rejected' || s.status === 'cancelled') && (
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-red-700 bg-red-50 border border-red-200 flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[12px]">cancel</span>
-                              {s.status === 'cancelled' ? 'Đã thu hồi / Hủy' : 'Đã từ chối'}
-                            </span>
-                          )}
-                        </div>
+                                {/* Status Badge */}
+                                {s.status === 'pending' && (
+                                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-amber-700 bg-amber-50 border border-amber-200 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Chờ duyệt thủ công
+                                  </span>
+                                )}
+                                {s.status === 'active' && (
+                                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-green-700 bg-green-50 border border-green-200 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                    Đã kích hoạt
+                                  </span>
+                                )}
+                                {(s.status === 'rejected' || s.status === 'cancelled') && (
+                                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-red-700 bg-red-50 border border-red-200 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[12px]">cancel</span>
+                                    {s.status === 'cancelled' ? 'Đã thu hồi / Hủy' : 'Đã từ chối'}
+                                  </span>
+                                )}
+                              </div>
 
-                        <p className="text-xs text-gray-500">{s.ownerEmail}</p>
-                        
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-gray-400">
-                          <span className="flex items-center gap-1 font-semibold text-primary-container">
-                            <span className="material-symbols-outlined text-[14px]">payments</span>
-                            {formatVND(s.amount)}
-                          </span>
-                          <span>·</span>
-                          <span className="flex items-center gap-1 font-medium">
-                            <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                            {s.date}
-                          </span>
-                        </div>
+                              <p className="text-xs text-gray-500">{s.ownerEmail}</p>
+                              
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-gray-400">
+                                <span className="flex items-center gap-1 font-semibold text-primary-container">
+                                  <span className="material-symbols-outlined text-[14px]">payments</span>
+                                  {formatVND(s.amount)}
+                                </span>
+                                <span>·</span>
+                                <span className="flex items-center gap-1 font-medium">
+                                  <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                  {s.date}
+                                </span>
+                              </div>
 
-                        {s.note && (
-                          <div className="mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-xl p-2.5 max-w-lg italic">
-                            &ldquo;{s.note}&rdquo;
+                              {s.note && (
+                                <div className="mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-xl p-2.5 max-w-lg italic">
+                                  &ldquo;{s.note}&rdquo;
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
+
+                          {/* Proof and Actions block */}
+                          <div className="flex flex-wrap items-center gap-3 shrink-0 self-end md:self-center">
+                            {s.transactionProofUrl ? (
+                              <button
+                                onClick={() => setPreviewSub(s)}
+                                className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">image</span>
+                                Xem hóa đơn
+                              </button>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-xl text-gray-500 bg-gray-50 border border-gray-100 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">qr_code_scanner</span>
+                                VietQR Online / Webhook
+                              </span>
+                            )}
+
+                            {/* Action buttons condition */}
+                            {s.status === 'pending' ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  disabled={isBusy}
+                                  onClick={() => setApproveId(s.id)}
+                                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 hover:shadow-green-500/20 transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                                >
+                                  {isBusy ? (
+                                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                                  ) : (
+                                    <span className="material-symbols-outlined text-[16px]">check</span>
+                                  )}
+                                  Duyệt
+                                </button>
+                                
+                                <button
+                                  disabled={isBusy}
+                                  onClick={() => setRejectId(s.id)}
+                                  className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">close</span>
+                                  Từ chối
+                                </button>
+                              </div>
+                            ) : s.status === 'active' ? (
+                              <button
+                                onClick={() => setRevokeId(s.id)}
+                                className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                                title="Thu hồi gói cước này nếu có sai sót/bất thường"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">unpublished</span>
+                                Thu hồi gói
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400 font-semibold italic">Đã đóng</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Pagination Controls Footer */}
+                    <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+                        <span>
+                          Hiển thị <strong>{startIndex + 1}</strong> - <strong>{Math.min(startIndex + itemsPerPage, subs.length)}</strong> trên <strong>{subs.length}</strong> giao dịch
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>Hiển thị:</span>
+                          <select
+                            value={itemsPerPage}
+                            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                            className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary-container cursor-pointer"
+                          >
+                            <option value={5}>5 / trang</option>
+                            <option value={10}>10 / trang</option>
+                            <option value={20}>20 / trang</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Page Buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={validCurrentPage === 1}
+                          className="w-8 h-8 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-primary-container disabled:opacity-40 disabled:hover:bg-white transition-all cursor-pointer"
+                          title="Trang trước"
+                        >
+                          <span className="material-symbols-outlined text-base">chevron_left</span>
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                          .filter((p) => Math.abs(p - validCurrentPage) <= 1 || p === 1 || p === totalPages)
+                          .map((page, index, arr) => {
+                            const prev = arr[index - 1];
+                            const showEllipsis = prev && page - prev > 1;
+                            return (
+                              <React.Fragment key={page}>
+                                {showEllipsis && <span className="text-gray-400 text-xs px-1">...</span>}
+                                <button
+                                  onClick={() => setCurrentPage(page)}
+                                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    page === validCurrentPage
+                                      ? 'bg-primary-container text-white shadow-sm'
+                                      : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-primary-container'
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              </React.Fragment>
+                            );
+                          })}
+
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={validCurrentPage === totalPages}
+                          className="w-8 h-8 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-primary-container disabled:opacity-40 disabled:hover:bg-white transition-all cursor-pointer"
+                          title="Trang tiếp"
+                        >
+                          <span className="material-symbols-outlined text-base">chevron_right</span>
+                        </button>
                       </div>
                     </div>
-
-                    {/* Proof and Actions block */}
-                    <div className="flex flex-wrap items-center gap-3 shrink-0 self-end md:self-center">
-                      {s.transactionProofUrl ? (
-                        <button
-                          onClick={() => setPreviewSub(s)}
-                          className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">image</span>
-                          Xem hóa đơn
-                        </button>
-                      ) : (
-                        <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-xl text-gray-500 bg-gray-50 border border-gray-100 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">qr_code_scanner</span>
-                          VietQR Online / Webhook
-                        </span>
-                      )}
-
-                      {/* Action buttons condition */}
-                      {s.status === 'pending' ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            disabled={isBusy}
-                            onClick={() => handleApprove(s.id)}
-                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 hover:shadow-green-500/20 transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
-                          >
-                            {isBusy ? (
-                              <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                            ) : (
-                              <span className="material-symbols-outlined text-[16px]">check</span>
-                            )}
-                            Duyệt
-                          </button>
-                          
-                          <button
-                            disabled={isBusy}
-                            onClick={() => setRejectId(s.id)}
-                            className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">close</span>
-                            Từ chối
-                          </button>
-                        </div>
-                      ) : s.status === 'active' ? (
-                        <button
-                          onClick={() => setRevokeId(s.id)}
-                          className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                          title="Thu hồi gói cước này nếu có sai sót/bất thường"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">unpublished</span>
-                          Thu hồi gói
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400 font-semibold italic">Đã đóng</span>
-                      )}
-                    </div>
-                  </div>
+                  </>
                 );
-              })
+              })()
             )}
           </div>
         </div>
       </Reveal>
+
+      {/* Approve Confirmation Dialog Modal */}
+      {approveId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-md w-full p-6 soft-shadow relative animate-scale-up border border-gray-100">
+            <button
+              onClick={() => setApproveId(null)}
+              className="absolute right-5 top-5 text-gray-400 hover:text-on-surface cursor-pointer outline-none"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="mb-5 text-left">
+              <h3 className="text-base font-black text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-green-600">verified</span> Xác nhận duyệt giao dịch
+              </h3>
+              <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                Bạn có chắc chắn muốn duyệt giao dịch này? Gói cước của chủ nhà sẽ được kích hoạt ngay lập tức và thông báo xác nhận sẽ được gửi tới chủ nhà.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-gray-50 pt-4">
+              <button
+                type="button"
+                onClick={() => setApproveId(null)}
+                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleApproveConfirm}
+                disabled={actionId === approveId}
+                className="px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {actionId === approveId ? (
+                  <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                )}
+                Xác nhận phê duyệt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Revoke Confirmation Modal */}
       {revokeId && (
@@ -611,7 +767,7 @@ const AdminSubscriptions: React.FC = () => {
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-100">
                 <button
                   disabled={actionId === previewSub.id}
-                  onClick={() => handleApprove(previewSub.id)}
+                  onClick={() => setApproveId(previewSub.id)}
                   className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 hover:shadow-green-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">check</span>
