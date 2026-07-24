@@ -46,6 +46,7 @@ namespace Infrastructure.Persistence.Repositories
                     .ThenInclude(c => c.Room)
                         .ThenInclude(r => r.Floor)
                             .ThenInclude(f => f.Building)
+                .Include(i => i.Payments)
                 .Where(i => i.Contract.OwnerId == ownerId)
                 .OrderByDescending(i => i.InvoiceDate)
                 .ToListAsync();
@@ -58,6 +59,7 @@ namespace Infrastructure.Persistence.Repositories
                     .ThenInclude(c => c.Room)
                         .ThenInclude(r => r.Floor)
                             .ThenInclude(f => f.Building)
+                .Include(i => i.Payments)
                 .Where(i => i.Contract.TenantId == tenantId && !i.Contract.IsDeleted)
                 .OrderByDescending(i => i.InvoiceDate)
                 .ToListAsync();

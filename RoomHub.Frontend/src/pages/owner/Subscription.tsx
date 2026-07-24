@@ -199,11 +199,11 @@ const Subscription: React.FC = () => {
                 <div className="mt-8 border-t border-orange-400/30 pt-4 flex justify-between items-center text-xs font-bold">
                   <span>Trạng thái:</span>
                   <span className="bg-white/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    {subStatus?.plan === 'Free' ? 'Miễn phí' : 'Hoạt động'}
+                    {subStatus?.status === 'Free' ? 'Miễn phí' : 'Hoạt động'}
                   </span>
                 </div>
                 {subStatus?.expiryDate && (
-                  <p className="text-[10px] text-orange-100 mt-2 text-right">Hết hạn: {new Date(subStatus.expiryDate).toLocaleDateString('vi-VN')}</p>
+                  <p className="text-[10px] text-orange-100 mt-2 text-right">Hết hạn: {subStatus.expiryDate}</p>
                 )}
               </div>
 

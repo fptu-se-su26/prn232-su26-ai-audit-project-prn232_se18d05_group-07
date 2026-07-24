@@ -69,14 +69,18 @@ namespace RoomHub.API.Controllers
         // ==========================================
         // 3. SIMULATED PAYMENT WEBHOOK (For sandbox testing)
         // ==========================================
-        [AllowAnonymous]
+        [Authorize(Roles = "PropertyOwner")]
         [HttpPost("subscription/simulate-webhook")]
         public async Task<IActionResult> SimulateWebhook([FromBody] SimulateWebhookRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Memo))
                 return BadRequest(new { message = "Nội dung giao dịch mô phỏng trống." });
 
-            var success = await _subscriptionService.HandlePayOSWebhookAsync(request.Memo);
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(ownerId))
+                return Unauthorized(new { message = "Không xác định danh tính chủ nhà." });
+
+            var success = await _subscriptionService.HandlePayOSWebhookAsync(request.Memo, ownerId);
             if (success)
             {
                 return Ok(new { success = true, message = "Thanh toán giả lập thành công. Gói cước đã được kích hoạt!" });

@@ -1,4 +1,3 @@
-using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Application.Common.DTOs.Contracts;
@@ -57,19 +56,12 @@ namespace RoomHub.API.Controllers
             if (request.StartDate >= request.EndDate)
                 return BadRequest(new { message = "Ngày kết thúc phải sau ngày bắt đầu thuê." });
 
-            try
+            var success = await _contractService.CreateContractAsync(request, ownerId);
+            if (success)
             {
-                var success = await _contractService.CreateContractAsync(request, ownerId);
-                if (success)
-                {
-                    return Ok(new { success = true, message = "Ký hợp đồng và thêm khách thuê vào phòng thành công." });
-                }
-                return BadRequest(new { message = "Không thể tạo hợp đồng." });
+                return Ok(new { success = true, message = "Ký hợp đồng và thêm khách thuê vào phòng thành công." });
             }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return BadRequest(new { message = "Không thể tạo hợp đồng." });
         }
 
         // ==========================================
@@ -85,19 +77,12 @@ namespace RoomHub.API.Controllers
             if (request == null)
                 return BadRequest(new { message = "Dữ liệu thanh lý không hợp lệ." });
 
-            try
+            var success = await _contractService.TerminateContractAsync(roomId, request, ownerId);
+            if (success)
             {
-                var success = await _contractService.TerminateContractAsync(roomId, request, ownerId);
-                if (success)
-                {
-                     return Ok(new { success = true, message = "Thanh lý hợp đồng và bàn giao trả phòng thành công." });
-                }
-                return BadRequest(new { message = "Không thể thanh lý hợp đồng." });
+                return Ok(new { success = true, message = "Thanh lý hợp đồng và bàn giao trả phòng thành công." });
             }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return BadRequest(new { message = "Không thể thanh lý hợp đồng." });
         }
 
         // ==========================================

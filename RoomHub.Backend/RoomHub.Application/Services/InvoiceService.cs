@@ -42,6 +42,15 @@ namespace Application.Services
             _userManager = userManager;
         }
 
+        // InvoiceStatus.Overdue is never persisted by any write path (batch billing always creates Unpaid,
+        // and nothing flips it later) - compute it at read time instead of leaving it permanently unreachable.
+        private static InvoiceStatus GetEffectiveStatus(Invoice invoice)
+        {
+            if (invoice.Status == InvoiceStatus.Unpaid && invoice.DueDate.Date < DateTime.UtcNow.Date)
+                return InvoiceStatus.Overdue;
+            return invoice.Status;
+        }
+
         public async Task<List<InvoiceHeaderDto>> GetOwnerInvoicesAsync(string ownerId)
         {
             var invoices = await _invoiceRepository.GetInvoicesByOwnerAsync(ownerId);
@@ -49,11 +58,13 @@ namespace Application.Services
             return invoices.Select(i => new InvoiceHeaderDto
             {
                 Id = i.Id,
+                RoomId = i.Contract.RoomId,
                 RoomNumber = i.Contract.Room.RoomNumber,
                 BuildingName = i.Contract.Room.Floor.Building.Name,
                 Month = i.InvoiceDate.ToString("MM/yyyy"),
                 TotalAmount = i.TotalAmount,
-                Status = i.Status switch
+                PaidAmount = i.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
+                Status = GetEffectiveStatus(i) switch
                 {
                     InvoiceStatus.Paid => "Đã thanh toán",
                     InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -90,7 +101,8 @@ namespace Application.Services
                 InvoiceDate = invoice.InvoiceDate.ToString("dd/MM/yyyy"),
                 DueDate = invoice.DueDate.ToString("dd/MM/yyyy"),
                 TotalAmount = invoice.TotalAmount,
-                Status = invoice.Status switch
+                PaidAmount = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
+                Status = GetEffectiveStatus(invoice) switch
                 {
                     InvoiceStatus.Paid => "Đã thanh toán",
                     InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -139,6 +151,9 @@ namespace Application.Services
                 var buildingRooms = await _roomRepository.GetRoomsByBuildingAsync(request.BuildingId);
                 var invoiceDate = new DateTime(request.Year, request.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
+                var existingInvoices = await _invoiceRepository.GetInvoicesByBuildingAndMonthAsync(request.BuildingId, request.Month, request.Year, ownerId);
+                var alreadyBilledContractIds = new HashSet<int>(existingInvoices.Where(inv => inv.Status != InvoiceStatus.Cancelled).Select(inv => inv.ContractId));
+
                 foreach (var readingInput in request.RoomReadings)
                 {
                     var room = buildingRooms.FirstOrDefault(r => r.Id == readingInput.RoomId);
@@ -149,19 +164,36 @@ namespace Application.Services
                     if (activeContract == null)
                         continue; // No active contract, skip billing this room
 
+                    if (alreadyBilledContractIds.Contains(activeContract.Id))
+                        continue; // Already has a non-cancelled invoice for this contract/month, skip to avoid duplicate billing
+
                     var building = room.Floor.Building;
 
+                    // Don't trust the client's "old reading" blindly - cross-check against the last
+                    // reading actually stored for this contract, which is what CreateBatchInvoicesAsync
+                    // itself wrote last time this room was billed.
+                    var lastElecReading = await _utilityReadingRepository.GetLastReadingForContractAsync(activeContract.Id, UtilityType.Electricity);
+                    var lastWaterReading = await _utilityReadingRepository.GetLastReadingForContractAsync(activeContract.Id, UtilityType.Water);
+                    var oldElectricity = lastElecReading?.NewIndex ?? readingInput.OldElectricity;
+                    var oldWater = lastWaterReading?.NewIndex ?? readingInput.OldWater;
+
                     // Calculate utilities costs
-                    var elecUsage = readingInput.NewElectricity - readingInput.OldElectricity;
-                    var waterUsage = readingInput.NewWater - readingInput.OldWater;
+                    var elecUsage = readingInput.NewElectricity - oldElectricity;
+                    var waterUsage = readingInput.NewWater - oldWater;
+
+                    var waterBillingType = room.WaterBillingType ?? building.WaterBillingType;
+                    bool isWaterFixed = (waterBillingType == "PerPerson");
+
+                    if (elecUsage < 0 || (!isWaterFixed && waterUsage < 0))
+                    {
+                        throw new ArgumentException(
+                            $"Chỉ số điện/nước mới của phòng {room.RoomNumber} nhỏ hơn chỉ số đã ghi nhận gần nhất (điện: {oldElectricity} -> {readingInput.NewElectricity}, nước: {oldWater} -> {readingInput.NewWater}). Vui lòng kiểm tra lại.");
+                    }
 
                     var elecPrice = room.ElectricityPrice ?? building.ElectricityPrice;
                     var waterPrice = room.WaterPrice ?? building.WaterPrice;
                     var internetPrice = room.InternetPrice ?? building.InternetPrice;
                     var garbagePrice = room.GarbagePrice ?? building.GarbagePrice;
-
-                    var waterBillingType = room.WaterBillingType ?? building.WaterBillingType;
-                    bool isWaterFixed = (waterBillingType == "PerPerson");
 
                     var elecCost = elecUsage > 0 ? elecUsage * elecPrice : 0;
                     var waterCost = isWaterFixed 
@@ -189,8 +221,8 @@ namespace Application.Services
                     var items = new List<InvoiceItem>
                     {
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Rent", Amount = activeContract.RentAmount, Description = $"Tiền thuê phòng tháng {request.Month:D2}/{request.Year}" },
-                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Electricity", Amount = elecCost, Description = $"Tiền điện (Chỉ số: {readingInput.OldElectricity} -> {readingInput.NewElectricity}, Sử dụng: {elecUsage} kWh)" },
-                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Water", Amount = waterCost, Description = isWaterFixed ? $"Tiền nước (Cố định theo đầu người: {room.MaxCapacity} người x {waterPrice:N0}đ)" : $"Tiền nước (Chỉ số: {readingInput.OldWater} -> {readingInput.NewWater}, Sử dụng: {waterUsage} m³)" },
+                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Electricity", Amount = elecCost, Description = $"Tiền điện (Chỉ số: {oldElectricity} -> {readingInput.NewElectricity}, Sử dụng: {elecUsage} kWh)" },
+                        new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Water", Amount = waterCost, Description = isWaterFixed ? $"Tiền nước (Cố định theo đầu người: {room.MaxCapacity} người x {waterPrice:N0}đ)" : $"Tiền nước (Chỉ số: {oldWater} -> {readingInput.NewWater}, Sử dụng: {waterUsage} m³)" },
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Internet", Amount = internetPrice, Description = "Tiền mạng Internet" },
                         new InvoiceItem { InvoiceId = invoice.Id, ItemType = "Garbage", Amount = garbagePrice, Description = "Phí vệ sinh & dịch vụ trọ" }
                     };
@@ -216,7 +248,7 @@ namespace Application.Services
                         ContractId = activeContract.Id,
                         ReadingDate = DateTime.UtcNow,
                         UtilityType = UtilityType.Electricity,
-                        OldIndex = readingInput.OldElectricity,
+                        OldIndex = oldElectricity,
                         NewIndex = readingInput.NewElectricity,
                         Usage = elecUsage,
                         Amount = elecCost
@@ -227,7 +259,7 @@ namespace Application.Services
                         ContractId = activeContract.Id,
                         ReadingDate = DateTime.UtcNow,
                         UtilityType = UtilityType.Water,
-                        OldIndex = readingInput.OldWater,
+                        OldIndex = oldWater,
                         NewIndex = readingInput.NewWater,
                         Usage = waterUsage,
                         Amount = waterCost
@@ -272,8 +304,8 @@ namespace Application.Services
 
                 invoice.Payments.Add(payment);
 
-                // Update invoice status based on total paid amount
-                var totalPaid = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount) + request.Amount;
+                // Update invoice status based on total paid amount (payment above is already in invoice.Payments, don't add it again)
+                var totalPaid = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount);
                 if (totalPaid >= invoice.TotalAmount)
                 {
                     invoice.Status = InvoiceStatus.Paid;
@@ -301,11 +333,27 @@ namespace Application.Services
             if (invoice == null || invoice.Contract.OwnerId != ownerId)
                 return false;
 
-            invoice.Status = InvoiceStatus.Cancelled;
+            if (invoice.Status == InvoiceStatus.Paid)
+                throw new InvalidOperationException("Không thể hủy hóa đơn đã thanh toán.");
 
-            await _invoiceRepository.UpdateAsync(invoice);
-            await _unitOfWork.SaveChangesAsync();
-            return true;
+            if (invoice.Status == InvoiceStatus.Cancelled)
+                return true; // Already cancelled
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                invoice.Status = InvoiceStatus.Cancelled;
+
+                await _invoiceRepository.UpdateAsync(invoice);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         private async Task<byte[]> GenerateExcelBytesAsync(Invoice invoice)
@@ -377,7 +425,7 @@ namespace Application.Services
                 worksheet.Cells[row, 3].Style.Numberformat.Format = "#,##0";
 
                 worksheet.Cells[row + 2, 1].Value = "Trạng thái hóa đơn:";
-                worksheet.Cells[row + 2, 2].Value = invoice.Status switch
+                worksheet.Cells[row + 2, 2].Value = GetEffectiveStatus(invoice) switch
                 {
                     InvoiceStatus.Paid => "Đã thanh toán",
                     InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -410,11 +458,13 @@ namespace Application.Services
             return invoices.Select(i => new InvoiceHeaderDto
             {
                 Id = i.Id,
+                RoomId = i.Contract.RoomId,
                 RoomNumber = i.Contract.Room.RoomNumber,
                 BuildingName = i.Contract.Room.Floor.Building.Name,
                 Month = i.InvoiceDate.ToString("MM/yyyy"),
                 TotalAmount = i.TotalAmount,
-                Status = i.Status switch
+                PaidAmount = i.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
+                Status = GetEffectiveStatus(i) switch
                 {
                     InvoiceStatus.Paid => "Đã thanh toán",
                     InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -451,7 +501,8 @@ namespace Application.Services
                 InvoiceDate = invoice.InvoiceDate.ToString("dd/MM/yyyy"),
                 DueDate = invoice.DueDate.ToString("dd/MM/yyyy"),
                 TotalAmount = invoice.TotalAmount,
-                Status = invoice.Status switch
+                PaidAmount = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
+                Status = GetEffectiveStatus(invoice) switch
                 {
                     InvoiceStatus.Paid => "Đã thanh toán",
                     InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -516,8 +567,8 @@ namespace Application.Services
 
                 invoice.Payments.Add(payment);
 
-                // Update invoice status based on total paid amount
-                var totalPaid = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount) + request.Amount;
+                // Update invoice status based on total paid amount (payment above is already in invoice.Payments, don't add it again)
+                var totalPaid = invoice.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount);
                 if (totalPaid >= invoice.TotalAmount)
                 {
                     invoice.Status = InvoiceStatus.Paid;
@@ -653,7 +704,7 @@ namespace Application.Services
                     worksheet.Cells[row, 9].Value = addItems;
                     worksheet.Cells[row, 10].Value = reduceItems;
                     worksheet.Cells[row, 11].Value = inv.TotalAmount;
-                    worksheet.Cells[row, 12].Value = inv.Status switch
+                    worksheet.Cells[row, 12].Value = GetEffectiveStatus(inv) switch
                     {
                         InvoiceStatus.Paid => "Đã thanh toán",
                         InvoiceStatus.Unpaid => "Chưa thanh toán",
@@ -697,7 +748,8 @@ namespace Application.Services
             {
                 foreach (var roomId in request.RoomIds)
                 {
-                    var room = await _roomRepository.GetByIdAsync(roomId);
+                    // Must load Floor/Building navigation - GetByIdAsync doesn't include them and the email body below dereferences room.Floor.Building
+                    var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
                     if (room == null || room.IsDeleted)
                         continue;
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Application.Common.DTOs.Listings;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -15,6 +16,8 @@ namespace Application.Common.Interfaces
         Task<Room?> FindVacantRoomInBuildingAsync(int buildingId, int excludeRoomId);
         Task<int> CountListingsByModerationStatusAsync(ModerationStatus status);
         Task<int> CountListingsModeratedSinceAsync(ModerationStatus status, DateTime since);
+        Task<(List<Room> Rooms, int TotalCount)> SearchPublicListingsAsync(PublicListingFilterRequest filter);
+        Task<Room?> GetPublicListingDetailAsync(int id);
         Task AddAsync(Room room);
         Task AddRangeAsync(IEnumerable<Room> rooms);
         Task UpdateAsync(Room room);

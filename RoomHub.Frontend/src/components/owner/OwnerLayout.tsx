@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HubConnectionBuilder, HubConnectionState, type HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../hooks/useAuth';
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import type { PageType } from '../../App';
-import api, { API_ORIGIN } from '../../services/api';
+import { API_ORIGIN } from '../../services/api';
 import { chatService } from '../../services/chats';
 
 interface OwnerLayoutProps {
@@ -23,7 +24,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const { unreadCount: unreadNotifCount } = useUnreadNotifications();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [chatToast, setChatToast] = useState<string | null>(null);
 
@@ -42,29 +43,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-
-    fetchUnreadCount();
-    const handleNotificationChange = () => {
-      fetchUnreadCount();
-    };
-    window.addEventListener('notification_changed', handleNotificationChange);
-    const interval = setInterval(fetchUnreadCount, 15000); // 15 seconds
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('notification_changed', handleNotificationChange);
-      clearInterval(interval);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await api.get('/notifications/unread-count');
-      setUnreadNotifCount(res.data.unreadCount);
-    } catch (err) {
-      console.error('Lỗi khi fetch unread count:', err);
-    }
-  };
 
   const fetchUnreadChatCount = async () => {
     try {

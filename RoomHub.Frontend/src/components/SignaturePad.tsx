@@ -38,6 +38,10 @@ const SignaturePad = forwardRef<SignaturePadHandle, Props>(({ heightClass = 'h-4
         ctx.lineJoin = 'round';
         ctx.strokeStyle = '#1f2937';
       }
+      // Resizing the canvas element always wipes its bitmap, so any signature drawn before this
+      // resize is gone - reset `empty` too, otherwise isEmpty()/toDataURL() would lie and let a
+      // blank canvas be saved as if it still held the previous signature.
+      setEmpty(true);
     };
 
     setupContext();
