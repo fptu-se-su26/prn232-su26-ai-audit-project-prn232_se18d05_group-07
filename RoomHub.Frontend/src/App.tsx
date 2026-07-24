@@ -8,6 +8,7 @@ import ForLandlords from './pages/ForLandlords';
 import HowItWorks from './pages/HowItWorks';
 import Support from './pages/Support';
 import Footer from './components/Footer';
+import ChatAssistant from './components/ChatAssistant';
 import OwnerLayout from './components/owner/OwnerLayout';
 import OwnerDashboard from './pages/owner/Dashboard';
 import PropertyList from './pages/owner/PropertyList';
@@ -375,6 +376,7 @@ const AppContent: React.FC = () => {
         </Routes>
       </div>
       {!isAuthPage && <Footer />}
+      {!isAuthPage && <ChatAssistant />}
     </div>
   );
 };
