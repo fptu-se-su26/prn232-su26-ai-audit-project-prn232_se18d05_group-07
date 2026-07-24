@@ -458,18 +458,35 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
                 Vị trí địa lý bản đồ
               </h2>
               <div className="w-full h-64 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 overflow-hidden relative soft-shadow">
-                <img
-                  alt="Bản đồ vị trí"
-                  className="w-full h-full object-cover opacity-60 filter grayscale-[20%]"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuADAD3WCdZBDbdcstsUN7au-HkxR1aY-E69qDUTrD01uSDNcHRUEPG4ciiDyFfbcPL2fBaaBJ6x-X58BtvizvwyGEC5SCzf2KLEyhfJNw1yYStBTsH3D_tWbS8u92BUvqbjz7hCb_HHdlHMUEQYH4XyME_wEHcYhFAdKRAj0xFg5M7-DrmpAuWUnpNXLNhR4nMEdSLfUj1rRwRvND3ciSx-9RDbIvtL9yx7H_waVRpFDgqGoo9Euht9sErkUxDJAaLDCvK2bDA5C9E"
-                />
+                {import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY ? (
+                  <iframe
+                    title="Bản đồ vị trí"
+                    className="w-full h-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                    src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY}&q=${encodeURIComponent([room.district, room.city, 'Việt Nam'].filter(Boolean).join(', '))}&zoom=14&language=vi`}
+                  />
+                ) : (
+                  <img
+                    alt="Bản đồ vị trí"
+                    className="w-full h-full object-cover opacity-60 filter grayscale-[20%]"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuADAD3WCdZBDbdcstsUN7au-HkxR1aY-E69qDUTrD01uSDNcHRUEPG4ciiDyFfbcPL2fBaaBJ6x-X58BtvizvwyGEC5SCzf2KLEyhfJNw1yYStBTsH3D_tWbS8u92BUvqbjz7hCb_HHdlHMUEQYH4XyME_wEHcYhFAdKRAj0xFg5M7-DrmpAuWUnpNXLNhR4nMEdSLfUj1rRwRvND3ciSx-9RDbIvtL9yx7H_waVRpFDgqGoo9Euht9sErkUxDJAaLDCvK2bDA5C9E"
+                  />
+                )}
+                {/* Overlay vùng khu vực (bảo mật — không lộ địa chỉ chính xác) */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-white/95 backdrop-blur px-5 py-2.5 rounded-full shadow-lg flex items-center gap-2 border border-orange-100 animate-bounce">
+                  <div className="absolute w-44 h-44 rounded-full bg-primary-container/10 border-2 border-primary-container/30 animate-pulse"></div>
+                  <div className="relative bg-white/95 backdrop-blur px-5 py-2.5 rounded-full shadow-lg flex items-center gap-2 border border-orange-100">
                     <span className="material-symbols-outlined text-primary-container icon-fill">location_on</span>
                     <span className="text-xs font-bold text-gray-700">Khu vực {room.district}</span>
                   </div>
                 </div>
               </div>
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">info</span>
+                Bản đồ hiển thị ở mức khu vực để bảo mật. Địa chỉ chính xác sẽ được cung cấp khi bạn liên hệ chủ nhà.
+              </p>
             </div>
 
           </div>

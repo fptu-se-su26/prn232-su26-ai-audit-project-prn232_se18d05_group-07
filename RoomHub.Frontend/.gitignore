@@ -33,3 +33,8 @@ obj/
 *.exe
 *.pdb
 *.cache
+
+# Local environment variables (keep real keys out of git)
+.env
+.env.local
+.env.*.local
