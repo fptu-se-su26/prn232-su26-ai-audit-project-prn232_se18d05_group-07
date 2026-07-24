@@ -7,6 +7,7 @@ using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services
 {
@@ -18,6 +19,7 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly INotificationRepository _notificationRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<SubscriptionService> _logger;
 
         public SubscriptionService(
             UserManager<ApplicationUser> userManager,
@@ -25,7 +27,8 @@ namespace Application.Services
             IBuildingRepository buildingRepository,
             IRoomRepository roomRepository,
             INotificationRepository notificationRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ILogger<SubscriptionService> logger)
         {
             _userManager = userManager;
             _subscriptionRepository = subscriptionRepository;
@@ -33,6 +36,7 @@ namespace Application.Services
             _roomRepository = roomRepository;
             _notificationRepository = notificationRepository;
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(string ownerId)
@@ -161,7 +165,7 @@ namespace Application.Services
             return response;
         }
 
-        public async Task<bool> HandlePayOSWebhookAsync(string webhookData)
+        public async Task<bool> HandlePayOSWebhookAsync(string webhookData, string ownerId)
         {
             try
             {
@@ -183,7 +187,9 @@ namespace Application.Services
                 if (subscriptionId == 0) return false;
 
                 var sub = await _subscriptionRepository.GetByIdAsync(subscriptionId);
-                if (sub == null || sub.Status != SubscriptionStatus.Pending) return false;
+                // Must belong to the caller - otherwise anyone could activate someone else's pending
+                // subscription for free by guessing the sequential id in the memo.
+                if (sub == null || sub.Status != SubscriptionStatus.Pending || sub.UserId != ownerId) return false;
 
                 sub.Status = SubscriptionStatus.Active;
                 sub.StartDate = DateTime.UtcNow;
@@ -213,8 +219,9 @@ namespace Application.Services
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "HandlePayOSWebhookAsync failed for webhookData={WebhookData}", webhookData);
                 return false;
             }
         }
