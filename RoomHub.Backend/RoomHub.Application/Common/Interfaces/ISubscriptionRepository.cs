@@ -8,6 +8,7 @@ namespace Application.Common.Interfaces
     {
         Task<Subscription?> GetByIdAsync(int id);
         Task<List<Subscription>> GetPendingSubscriptionsAsync();
+        Task<List<Subscription>> GetAllSubscriptionsAsync(string? status = "all");
         Task AddAsync(Subscription subscription);
         Task UpdateAsync(Subscription subscription);
     }

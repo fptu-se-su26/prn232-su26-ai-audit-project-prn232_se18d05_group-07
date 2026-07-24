@@ -228,8 +228,13 @@ namespace Application.Services
 
         public async Task<List<AdminSubscriptionDto>> GetPendingSubscriptionsAsync()
         {
-            var pending = await _subscriptionRepository.GetPendingSubscriptionsAsync();
-            return pending.Select(s => new AdminSubscriptionDto
+            return await GetAllSubscriptionsAsync("pending");
+        }
+
+        public async Task<List<AdminSubscriptionDto>> GetAllSubscriptionsAsync(string? status = "all")
+        {
+            var subs = await _subscriptionRepository.GetAllSubscriptionsAsync(status);
+            return subs.Select(s => new AdminSubscriptionDto
             {
                 Id = s.Id,
                 UserId = s.UserId,
@@ -243,7 +248,15 @@ namespace Application.Services
                 },
                 Amount = s.Amount,
                 Date = s.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
-                Status = "pending",
+                Status = s.Status switch
+                {
+                    SubscriptionStatus.Pending => "pending",
+                    SubscriptionStatus.Active => "active",
+                    SubscriptionStatus.Rejected => "rejected",
+                    SubscriptionStatus.Cancelled => "cancelled",
+                    SubscriptionStatus.Expired => "expired",
+                    _ => s.Status.ToString().ToLower()
+                },
                 TransactionProofUrl = s.TransactionProofUrl,
                 Note = s.Note
             }).ToList();
@@ -300,6 +313,35 @@ namespace Application.Services
                 Type = "SubscriptionRejected",
                 Title = "Yêu cầu nâng cấp gói bị từ chối",
                 Content = $"Yêu cầu nâng cấp gói của bạn đã bị từ chối. Lý do: {rejectReason}. Vui lòng kiểm tra lại ảnh biên lai chuyển khoản hoặc liên hệ ban quản trị để được hỗ trợ.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _notificationRepository.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> RevokeSubscriptionAsync(int subscriptionId, string reason, string adminId)
+        {
+            var sub = await _subscriptionRepository.GetByIdAsync(subscriptionId);
+            if (sub == null || sub.Status != SubscriptionStatus.Active) return false;
+
+            sub.Status = SubscriptionStatus.Cancelled;
+            sub.Note = string.IsNullOrWhiteSpace(reason) ? "Thu hồi bởi Admin" : $"Thu hồi: {reason}";
+            await _subscriptionRepository.UpdateAsync(sub);
+
+            var user = sub.User;
+            user.CurrentPlan = SubscriptionPlan.Free;
+            user.SubscriptionExpiry = null;
+            await _userManager.UpdateAsync(user);
+
+            var notification = new Notification
+            {
+                UserId = user.Id,
+                Type = "SubscriptionRevoked",
+                Title = "Thông báo thu hồi gói cước",
+                Content = $"Gói dịch vụ cước của bạn đã bị thu hồi bởi Ban quản trị. Lý do: {reason}. Tài khoản của bạn đã được chuyển về gói Starter (Miễn phí).",
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
             };

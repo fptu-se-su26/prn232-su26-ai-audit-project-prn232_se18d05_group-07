@@ -90,15 +90,15 @@ namespace RoomHub.API.Controllers
         }
 
         // ==========================================
-        // 4. ADMIN: GET ALL PENDING SUBSCRIPTIONS
+        // 4. ADMIN: GET ALL SUBSCRIPTIONS WITH STATUS FILTER
         // ==========================================
         [Authorize(Roles = "Administrator")]
         [HttpGet("admin/subscriptions")]
-        public async Task<IActionResult> GetPendingSubscriptions()
+        public async Task<IActionResult> GetPendingSubscriptions([FromQuery] string? status = "all")
         {
             try
             {
-                var result = await _subscriptionService.GetPendingSubscriptionsAsync();
+                var result = await _subscriptionService.GetAllSubscriptionsAsync(status);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -146,6 +146,27 @@ namespace RoomHub.API.Controllers
             }
 
             return BadRequest(new { message = "Không thể xử lý từ chối giao dịch này." });
+        }
+
+        // ==========================================
+        // 7. ADMIN: REVOKE / CANCEL SUBSCRIPTION
+        // ==========================================
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("admin/subscriptions/{id}/revoke")]
+        public async Task<IActionResult> Revoke(int id, [FromBody] RejectRequest request)
+        {
+            var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(adminId))
+                return Unauthorized(new { message = "Không xác định danh tính Admin." });
+
+            var reason = request?.Reason ?? "Thu hồi bởi Ban quản trị.";
+            var success = await _subscriptionService.RevokeSubscriptionAsync(id, reason, adminId);
+            if (success)
+            {
+                return Ok(new { success = true, message = "Đã thu hồi gói cước dịch vụ thành công." });
+            }
+
+            return BadRequest(new { message = "Không thể thu hồi gói cước này." });
         }
     }
 

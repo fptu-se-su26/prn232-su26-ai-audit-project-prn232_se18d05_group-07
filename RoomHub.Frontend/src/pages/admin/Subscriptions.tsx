@@ -19,19 +19,19 @@ const plans = [
   { 
     name: 'Starter', 
     price: '0đ', 
-    perks: ['Tối đa 1 tòa nhà', 'Tối đa 3 phòng trọ', '3 lượt AI Audit/tháng', 'Quản lý cơ bản'], 
+    perks: ['Tối đa 1 tòa nhà', 'Tối đa 10 phòng trọ', '3 lượt AI Audit/tháng', 'Quản lý cơ bản'], 
     color: 'border-gray-200' 
   },
   { 
     name: 'Pro (Tháng)', 
     price: '199.000đ/tháng', 
-    perks: ['Tối đa 3 tòa nhà', 'Tối đa 30 phòng trọ', 'Không giới hạn AI Audit', 'Tự động gửi email', 'Báo cáo Excel & PDF'], 
+    perks: ['Tối đa 5 tòa nhà', 'Tối đa 100 phòng trọ', 'Không giới hạn AI Audit', 'Tự động gửi email', 'Báo cáo Excel & PDF'], 
     color: 'border-orange-200' 
   },
   { 
     name: 'Pro (Năm)', 
     price: '1.990.000đ/năm', 
-    perks: ['Tiết kiệm 20%', 'Tối đa 3 tòa nhà', 'Tối đa 30 phòng trọ', 'Không giới hạn AI Audit', 'Hỗ trợ ưu tiên'], 
+    perks: ['Tiết kiệm 20%', 'Tối đa 10 tòa nhà', 'Tối đa 250 phòng trọ', 'Không giới hạn AI Audit', 'Hỗ trợ ưu tiên'], 
     color: 'border-indigo-400' 
   },
 ];
@@ -46,10 +46,17 @@ const AdminSubscriptions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<number | null>(null);
   
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
+  
   // Rejection modal state
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+
+  // Revoke modal state
+  const [revokeId, setRevokeId] = useState<number | null>(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revoking, setRevoking] = useState(false);
 
   // Lightbox modal state for viewing proof image
   const [previewSub, setPreviewSub] = useState<AdminSubscription | null>(null);
@@ -58,7 +65,7 @@ const AdminSubscriptions: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/admin/subscriptions');
+      const res = await api.get(`/admin/subscriptions?status=${statusFilter}`);
       setSubs(res.data);
     } catch (err: any) {
       console.error(err);
@@ -66,21 +73,20 @@ const AdminSubscriptions: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     loadSubscriptions();
   }, [loadSubscriptions]);
 
   const handleApprove = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn phê duyệt giao dịch này?')) return;
+    if (!window.confirm('Xác nhận phê duyệt giao dịch này và kích hoạt gói cước cho chủ nhà?')) return;
     
     setActionId(id);
     try {
       const res = await api.post(`/admin/subscriptions/${id}/approve`);
       if (res.data.success) {
         alert('Phê duyệt giao dịch thành công!');
-        // Close preview if it was open
         if (previewSub?.id === id) {
           setPreviewSub(null);
         }
@@ -111,7 +117,6 @@ const AdminSubscriptions: React.FC = () => {
         alert('Đã từ chối giao dịch thành công.');
         setRejectId(null);
         setRejectReason('');
-        // Close preview if it was open
         if (previewSub?.id === rejectId) {
           setPreviewSub(null);
         }
@@ -125,9 +130,32 @@ const AdminSubscriptions: React.FC = () => {
     }
   };
 
+  const handleRevokeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!revokeId) return;
+
+    setRevoking(true);
+    try {
+      const res = await api.post(`/admin/subscriptions/${revokeId}/revoke`, {
+        reason: revokeReason || 'Thu hồi bởi Ban quản trị'
+      });
+      if (res.data.success) {
+        alert('Đã thu hồi gói cước thành công.');
+        setRevokeId(null);
+        setRevokeReason('');
+        await loadSubscriptions();
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi thu hồi gói.');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
   // Compute stats dynamically
-  const pendingCount = subs.length;
-  const pendingAmount = subs.reduce((sum, s) => sum + s.amount, 0);
+  const pendingCount = subs.filter(s => s.status === 'pending').length;
+  const pendingAmount = subs.filter(s => s.status === 'pending').reduce((sum, s) => sum + s.amount, 0);
   const monthlyCount = subs.filter(s => s.planType.includes('Tháng') || s.planType.toLowerCase() === 'monthly').length;
   const yearlyCount = subs.filter(s => s.planType.includes('Năm') || s.planType.toLowerCase() === 'yearly').length;
 
@@ -194,29 +222,68 @@ const AdminSubscriptions: React.FC = () => {
         ))}
       </div>
 
-      {/* Pending List Card */}
+      {/* Subscriptions List Card */}
       <Reveal>
         <div className="bg-white rounded-3xl border border-gray-100 soft-shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <h3 className="font-black text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary-container">pending_actions</span> Danh sách thanh toán nâng cấp gói
-            </h3>
-            <button 
-              onClick={loadSubscriptions} 
-              disabled={loading}
-              className="p-2 text-gray-400 hover:text-primary-container rounded-xl hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
-              title="Làm mới dữ liệu"
-            >
-              <span className={`material-symbols-outlined text-[20px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
-            </button>
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 bg-gray-50/50">
+            <div className="flex items-center gap-3">
+              <h3 className="font-black text-on-surface flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary-container">receipt_long</span> Nhật ký & Giao dịch gói cước
+              </h3>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-gray-200 text-xs font-bold shadow-xs">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  statusFilter === 'all' ? 'bg-primary-container text-white shadow-xs' : 'text-gray-500 hover:text-on-surface'
+                }`}
+              >
+                Tất cả ({subs.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('pending')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  statusFilter === 'pending' ? 'bg-amber-500 text-white shadow-xs' : 'text-gray-500 hover:text-amber-600'
+                }`}
+              >
+                Chờ duyệt
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  statusFilter === 'active' ? 'bg-green-600 text-white shadow-xs' : 'text-gray-500 hover:text-green-600'
+                }`}
+              >
+                Đã kích hoạt
+              </button>
+              <button
+                onClick={() => setStatusFilter('rejected')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  statusFilter === 'rejected' ? 'bg-red-500 text-white shadow-xs' : 'text-gray-500 hover:text-red-500'
+                }`}
+              >
+                Từ chối / Hủy
+              </button>
+
+              <button 
+                onClick={loadSubscriptions} 
+                disabled={loading}
+                className="p-1.5 text-gray-400 hover:text-primary-container rounded-xl hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50 ml-1 border-l border-gray-100 pl-2"
+                title="Làm mới dữ liệu"
+              >
+                <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
+              </button>
+            </div>
           </div>
           
           <div className="divide-y divide-gray-100">
             {subs.length === 0 ? (
               <div className="py-16 text-center">
-                <span className="material-symbols-outlined text-[56px] text-green-400 mb-2">verified</span>
-                <p className="font-black text-on-surface">Tuyệt vời! Không có yêu cầu thanh toán nào chờ duyệt.</p>
-                <p className="text-xs text-gray-500 mt-1">Các giao dịch chuyển khoản thủ công sẽ xuất hiện ở đây.</p>
+                <span className="material-symbols-outlined text-[56px] text-gray-300 mb-2">folder_off</span>
+                <p className="font-black text-on-surface">Không có giao dịch nào thuộc danh mục này.</p>
+                <p className="text-xs text-gray-500 mt-1">Thay đổi bộ lọc tab phía trên để xem các giao dịch khác.</p>
               </div>
             ) : (
               subs.map((s) => {
@@ -231,12 +298,33 @@ const AdminSubscriptions: React.FC = () => {
                         {initials}
                       </div>
                       <div className="min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-black text-on-surface truncate">{s.ownerName}</p>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-indigo-600 bg-indigo-50 border border-indigo-100 uppercase tracking-wider">
                             Gói {s.planType}
                           </span>
+
+                          {/* Status Badge */}
+                          {s.status === 'pending' && (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-amber-700 bg-amber-50 border border-amber-200 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              Chờ duyệt thủ công
+                            </span>
+                          )}
+                          {s.status === 'active' && (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-green-700 bg-green-50 border border-green-200 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                              Đã kích hoạt
+                            </span>
+                          )}
+                          {(s.status === 'rejected' || s.status === 'cancelled') && (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full text-red-700 bg-red-50 border border-red-200 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">cancel</span>
+                              {s.status === 'cancelled' ? 'Đã thu hồi / Hủy' : 'Đã từ chối'}
+                            </span>
+                          )}
                         </div>
+
                         <p className="text-xs text-gray-500">{s.ownerEmail}</p>
                         
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-gray-400">
@@ -272,33 +360,47 @@ const AdminSubscriptions: React.FC = () => {
                       ) : (
                         <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-xl text-gray-500 bg-gray-50 border border-gray-100 flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px]">qr_code_scanner</span>
-                          VietQR Online
+                          VietQR Online / Webhook
                         </span>
                       )}
 
-                      <div className="flex items-center gap-2">
+                      {/* Action buttons condition */}
+                      {s.status === 'pending' ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => handleApprove(s.id)}
+                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 hover:shadow-green-500/20 transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                          >
+                            {isBusy ? (
+                              <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[16px]">check</span>
+                            )}
+                            Duyệt
+                          </button>
+                          
+                          <button
+                            disabled={isBusy}
+                            onClick={() => setRejectId(s.id)}
+                            className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                            Từ chối
+                          </button>
+                        </div>
+                      ) : s.status === 'active' ? (
                         <button
-                          disabled={isBusy}
-                          onClick={() => handleApprove(s.id)}
-                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-green-500/10 hover:shadow-green-500/20 transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                          onClick={() => setRevokeId(s.id)}
+                          className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                          title="Thu hồi gói cước này nếu có sai sót/bất thường"
                         >
-                          {isBusy ? (
-                            <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                          ) : (
-                            <span className="material-symbols-outlined text-[16px]">check</span>
-                          )}
-                          Duyệt
+                          <span className="material-symbols-outlined text-[15px]">unpublished</span>
+                          Thu hồi gói
                         </button>
-                        
-                        <button
-                          disabled={isBusy}
-                          onClick={() => setRejectId(s.id)}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">close</span>
-                          Từ chối
-                        </button>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 font-semibold italic">Đã đóng</span>
+                      )}
                     </div>
                   </div>
                 );
@@ -307,6 +409,71 @@ const AdminSubscriptions: React.FC = () => {
           </div>
         </div>
       </Reveal>
+
+      {/* Revoke Confirmation Modal */}
+      {revokeId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[28px] max-w-md w-full p-6 soft-shadow relative animate-scale-up border border-gray-100">
+            <button
+              onClick={() => {
+                setRevokeId(null);
+                setRevokeReason('');
+              }}
+              className="absolute right-5 top-5 text-gray-400 hover:text-on-surface cursor-pointer outline-none"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="mb-5">
+              <h3 className="text-base font-black text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-orange-500">unpublished</span> Thu hồi gói cước dịch vụ
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Tài khoản chủ nhà sẽ được hạ về gói Starter (Miễn phí). Hệ thống sẽ gửi thông báo giải thích cho chủ nhà.
+              </p>
+            </div>
+
+            <form onSubmit={handleRevokeSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Lý do thu hồi gói</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  placeholder="Ví dụ: Phát hiện gian lận biên lai thanh toán hoặc hủy gói theo yêu cầu của chủ nhà..."
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-primary-container transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-gray-50 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRevokeId(null);
+                    setRevokeReason('');
+                  }}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={revoking}
+                  className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-orange-500/10 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {revoking ? (
+                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  )}
+                  Xác nhận thu hồi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Beautiful Custom Rejection Dialog Modal */}
       {rejectId && (

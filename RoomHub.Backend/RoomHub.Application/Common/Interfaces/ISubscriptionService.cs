@@ -10,7 +10,9 @@ namespace Application.Common.Interfaces
         Task<UpgradeResponseDto> RequestUpgradeAsync(string ownerId, UpgradeRequestDto request);
         Task<bool> HandlePayOSWebhookAsync(string webhookData, string ownerId);
         Task<List<AdminSubscriptionDto>> GetPendingSubscriptionsAsync();
+        Task<List<AdminSubscriptionDto>> GetAllSubscriptionsAsync(string? status = "all");
         Task<bool> ApproveSubscriptionAsync(int subscriptionId, string adminId);
         Task<bool> RejectSubscriptionAsync(int subscriptionId, string rejectReason, string adminId);
+        Task<bool> RevokeSubscriptionAsync(int subscriptionId, string reason, string adminId);
     }
 }

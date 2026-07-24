@@ -11,6 +11,7 @@ namespace Domain.Enums
         Pending = 0,
         Active = 1,
         Expired = 2,
-        Rejected = 3
+        Rejected = 3,
+        Cancelled = 4
     }
 }

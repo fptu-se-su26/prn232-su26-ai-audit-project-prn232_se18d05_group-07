@@ -32,6 +32,31 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Subscription>> GetAllSubscriptionsAsync(string? status = "all")
+        {
+            var query = _context.Subscriptions
+                .Include(s => s.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(status) && !status.Equals("all", System.StringComparison.OrdinalIgnoreCase))
+            {
+                if (status.Equals("pending", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(s => s.Status == Domain.Enums.SubscriptionStatus.Pending);
+                }
+                else if (status.Equals("active", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(s => s.Status == Domain.Enums.SubscriptionStatus.Active);
+                }
+                else if (status.Equals("rejected", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(s => s.Status == Domain.Enums.SubscriptionStatus.Rejected || s.Status == Domain.Enums.SubscriptionStatus.Cancelled);
+                }
+            }
+
+            return await query.OrderByDescending(s => s.CreatedAt).ToListAsync();
+        }
+
         public async Task AddAsync(Subscription subscription)
         {
             await _context.Subscriptions.AddAsync(subscription);
