@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Application.Common.DTOs.Contracts;
+using Application.Common.Exceptions;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
@@ -67,14 +68,19 @@ namespace Application.Services
         {
             var room = await _roomRepository.GetRoomWithDetailsAsync(request.RoomId);
             if (room == null || room.Floor.Building.OwnerId != ownerId)
-                throw new Exception("Không tìm thấy phòng này hoặc bạn không có quyền truy cập.");
+                throw new NotFoundException("Không tìm thấy phòng này hoặc bạn không có quyền truy cập.");
 
             if (room.Status == RoomStatus.Occupied)
-                throw new Exception("Phòng trọ này đang có người thuê.");
+                throw new InvalidOperationException("Phòng trọ này đang có người thuê.");
 
             await _unitOfWork.BeginTransactionAsync();
             try
             {
+                // Re-check inside the transaction: the check above can be stale if two requests raced
+                // in between reading room.Status and getting here, since both would have passed it.
+                if (await _contractRepository.HasActiveOrPendingContractAsync(room.Id))
+                    throw new InvalidOperationException("Phòng trọ này vừa được cho thuê bởi một yêu cầu khác. Vui lòng thử lại.");
+
                 // Link account if email or phone matches a RoomHub account
                 ApplicationUser? linkedTenant = null;
                 string? contactToSearch = request.TenantEmailOrPhone;
@@ -182,11 +188,11 @@ namespace Application.Services
         {
             var room = await _roomRepository.GetRoomWithDetailsAsync(roomId);
             if (room == null || room.Floor.Building.OwnerId != ownerId)
-                throw new Exception("Không tìm thấy phòng này hoặc bạn không có quyền truy cập.");
+                throw new NotFoundException("Không tìm thấy phòng này hoặc bạn không có quyền truy cập.");
 
             var activeContract = room.Contracts.FirstOrDefault(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) && !c.IsDeleted);
             if (activeContract == null)
-                throw new Exception("Phòng trọ này hiện đang trống hoặc không có hợp đồng hoạt động.");
+                throw new NotFoundException("Phòng trọ này hiện đang trống hoặc không có hợp đồng hoạt động.");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -274,11 +280,11 @@ namespace Application.Services
         public async Task<bool> SignContractAsync(string tenantId, string signatureUrl)
         {
             if (string.IsNullOrWhiteSpace(signatureUrl))
-                throw new Exception("Chữ ký không hợp lệ.");
+                throw new ArgumentException("Chữ ký không hợp lệ.");
 
             var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
             if (contract == null || (contract.Status != ContractStatus.Pending && contract.Status != ContractStatus.Active))
-                throw new Exception("Không tìm thấy hợp đồng để ký.");
+                throw new NotFoundException("Không tìm thấy hợp đồng để ký.");
 
             contract.SignaturePath = signatureUrl;
             contract.UpdatedAt = DateTime.UtcNow;
@@ -291,7 +297,7 @@ namespace Application.Services
         {
             var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
             if (contract == null || contract.Status != ContractStatus.Pending)
-                throw new Exception("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
+                throw new NotFoundException("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -364,7 +370,7 @@ namespace Application.Services
         {
             var contract = await _contractRepository.GetActiveContractByTenantIdAsync(tenantId);
             if (contract == null || contract.Status != ContractStatus.Pending)
-                throw new Exception("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
+                throw new NotFoundException("Không tìm thấy yêu cầu nhận phòng chờ xác nhận nào.");
 
             await _unitOfWork.BeginTransactionAsync();
             try

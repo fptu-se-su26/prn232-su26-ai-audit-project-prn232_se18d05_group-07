@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-using Microsoft.Extensions.Configuration;
-
 namespace RoomHub.API.Controllers
 {
     [Authorize(Roles = "PropertyOwner")]
@@ -19,12 +17,12 @@ namespace RoomHub.API.Controllers
     public class PropertiesController : ControllerBase
     {
         private readonly IPropertyService _propertyService;
-        private readonly IConfiguration _configuration;
+        private readonly IFileUploadService _fileUploadService;
 
-        public PropertiesController(IPropertyService propertyService, IConfiguration configuration)
+        public PropertiesController(IPropertyService propertyService, IFileUploadService fileUploadService)
         {
             _propertyService = propertyService;
-            _configuration = configuration;
+            _fileUploadService = fileUploadService;
         }
 
         // ==========================================
@@ -98,62 +96,16 @@ namespace RoomHub.API.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "Không nhận được tập tin hình ảnh." });
 
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-            var extension = Path.GetExtension(file.FileName).ToLower();
-            if (!allowedExtensions.Contains(extension))
-                return BadRequest(new { message = "Định dạng tập tin không hợp lệ. Chỉ hỗ trợ JPG, JPEG, PNG, GIF, WEBP." });
-
             try
             {
-                // Check if Cloudinary is configured
-                var cloudName = _configuration["CloudinarySettings:CloudName"];
-                var apiKey = _configuration["CloudinarySettings:ApiKey"];
-                var apiSecret = _configuration["CloudinarySettings:ApiSecret"];
-
-                bool isCloudinaryConfigured = !string.IsNullOrWhiteSpace(cloudName) && 
-                                              !cloudName.Contains("YOUR_CLOUDINARY_CLOUD_NAME") && 
-                                              !string.IsNullOrWhiteSpace(apiKey) && 
-                                              !apiKey.Contains("YOUR_CLOUDINARY_API_KEY") && 
-                                              !string.IsNullOrWhiteSpace(apiSecret) && 
-                                              !apiSecret.Contains("YOUR_CLOUDINARY_API_SECRET");
-
-                if (isCloudinaryConfigured)
-                {
-                    var acc = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
-                    var cloudinary = new CloudinaryDotNet.Cloudinary(acc);
-
-                    using (var stream = file.OpenReadStream())
-                    {
-                        var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
-                        {
-                            File = new CloudinaryDotNet.FileDescription(file.FileName, stream),
-                            Folder = "roomhub_uploads"
-                        };
-                        var uploadResult = await cloudinary.UploadAsync(uploadParams);
-                        if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
-                        {
-                            return Ok(new { url = uploadResult.SecureUrl.ToString() });
-                        }
-                    }
-                }
-
-                // Fallback to local upload
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadsFolder))
-                    Directory.CreateDirectory(uploadsFolder);
-
-                var uniqueFileName = Guid.NewGuid().ToString() + extension;
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
-
+                using var stream = file.OpenReadStream();
                 var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var fileUrl = $"{baseUrl}/uploads/{uniqueFileName}";
-
-                return Ok(new { url = fileUrl });
+                var url = await _fileUploadService.UploadImageAsync(stream, file.FileName, "roomhub_uploads", baseUrl);
+                return Ok(new { url });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {

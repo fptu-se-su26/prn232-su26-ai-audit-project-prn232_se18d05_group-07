@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Domain.Entities;
 using Infrastructure.Persistence;
@@ -31,18 +32,25 @@ namespace Infrastructure
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.Password.RequireDigit = true;
-                options.Password.RequiredLength = 6;
-                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireLowercase = true;
                 options.User.RequireUniqueEmail = true;
                 options.SignIn.RequireConfirmedEmail = false;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
             // Configure JWT Token Services
-            var jwtSecret = configuration["JwtSettings:Secret"] ?? "SuperSecretKeyForRoomHubSplitArchitecture2026!";
+            var jwtSecret = configuration["JwtSettings:Secret"];
+            if (string.IsNullOrWhiteSpace(jwtSecret))
+            {
+                throw new InvalidOperationException(
+                    "JwtSettings:Secret is not configured. Set it in appsettings.Development.json (gitignored) or another configuration source before starting the app.");
+            }
             var key = Encoding.UTF8.GetBytes(jwtSecret);
 
             services.AddAuthentication(options =>
@@ -68,6 +76,7 @@ namespace Infrastructure
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<IFileUploadService, FileUploadService>();
 
             // Register HttpClient and AI Moderation Services
             services.AddHttpClient<GroqModerationService>();
@@ -82,6 +91,7 @@ namespace Infrastructure
             services.AddScoped<IUtilityReadingRepository, Persistence.Repositories.UtilityReadingRepository>();
             services.AddScoped<INotificationRepository, Persistence.Repositories.NotificationRepository>();
             services.AddScoped<ISubscriptionRepository, Persistence.Repositories.SubscriptionRepository>();
+            services.AddScoped<IRefreshTokenRepository, Persistence.Repositories.RefreshTokenRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -93,6 +103,8 @@ namespace Infrastructure
             services.AddScoped<IDashboardService, Application.Services.DashboardService>();
             services.AddScoped<INotificationService, Application.Services.NotificationService>();
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
+            services.AddScoped<IAuthService, Application.Services.AuthService>();
+            services.AddScoped<IPublicListingService, Application.Services.PublicListingService>();
 
             return services;
         }
