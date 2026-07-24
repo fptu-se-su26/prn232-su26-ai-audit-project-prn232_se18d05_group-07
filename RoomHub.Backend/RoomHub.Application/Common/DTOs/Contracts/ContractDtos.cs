@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Application.Common.DTOs.Contracts
 {
@@ -11,7 +12,9 @@ namespace Application.Common.DTOs.Contracts
         public string? TemporaryTenantEmail { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Tiền thuê phòng không được âm.")]
         public decimal RentAmount { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Tiền đặt cọc không được âm.")]
         public decimal DepositAmount { get; set; }
         public string? Terms { get; set; }
     }
@@ -20,7 +23,9 @@ namespace Application.Common.DTOs.Contracts
     {
         public DateTime EndDate { get; set; }
         public string? Reason { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Số tiền hoàn trả không được âm.")]
         public decimal? RefundAmount { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Số tiền phạt không được âm.")]
         public decimal? PenaltyAmount { get; set; }
     }
 

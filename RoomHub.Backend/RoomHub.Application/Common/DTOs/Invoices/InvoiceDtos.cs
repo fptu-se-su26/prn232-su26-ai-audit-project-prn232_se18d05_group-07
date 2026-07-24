@@ -6,10 +6,12 @@ namespace Application.Common.DTOs.Invoices
     public class InvoiceHeaderDto
     {
         public int Id { get; set; }
+        public int RoomId { get; set; }
         public string RoomNumber { get; set; } = null!;
         public string BuildingName { get; set; } = null!;
         public string Month { get; set; } = null!;
         public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; }
         public string Status { get; set; } = null!;
         public string DueDate { get; set; } = null!;
         public string TenantName { get; set; } = "";
@@ -44,6 +46,7 @@ namespace Application.Common.DTOs.Invoices
         public string InvoiceDate { get; set; } = null!;
         public string DueDate { get; set; } = null!;
         public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; }
         public string Status { get; set; } = null!;
         public List<InvoiceItemDto> Items { get; set; } = new();
         public List<InvoicePaymentDto> Payments { get; set; } = new();

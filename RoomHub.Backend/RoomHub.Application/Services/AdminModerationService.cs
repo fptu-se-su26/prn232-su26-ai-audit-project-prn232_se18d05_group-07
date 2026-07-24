@@ -12,11 +12,13 @@ namespace Application.Services
     public class AdminModerationService : IAdminModerationService
     {
         private readonly IRoomRepository _roomRepository;
+        private readonly INotificationRepository _notificationRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AdminModerationService(IRoomRepository roomRepository, IUnitOfWork unitOfWork)
+        public AdminModerationService(IRoomRepository roomRepository, INotificationRepository notificationRepository, IUnitOfWork unitOfWork)
         {
             _roomRepository = roomRepository;
+            _notificationRepository = notificationRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -78,6 +80,7 @@ namespace Application.Services
             room.UpdatedAt = DateTime.UtcNow;
 
             await _roomRepository.UpdateAsync(room);
+            await NotifyOwnerAsync(room, approved: true);
             await _unitOfWork.SaveChangesAsync();
 
             return new AdminModerationActionResult
@@ -120,6 +123,7 @@ namespace Application.Services
             room.UpdatedAt = DateTime.UtcNow;
 
             await _roomRepository.UpdateAsync(room);
+            await NotifyOwnerAsync(room, approved: false);
             await _unitOfWork.SaveChangesAsync();
 
             return new AdminModerationActionResult
@@ -129,6 +133,28 @@ namespace Application.Services
                 ModerationStatus = ModerationStatus.Rejected.ToString(),
                 IsPublished = false
             };
+        }
+
+        private async Task NotifyOwnerAsync(Room room, bool approved)
+        {
+            var ownerId = room.Floor?.Building?.OwnerId;
+            if (string.IsNullOrEmpty(ownerId))
+                return;
+
+            var roomLabel = room.Title ?? $"Phòng {room.RoomNumber}";
+            var notification = new Notification
+            {
+                UserId = ownerId,
+                Type = approved ? "ListingApproved" : "ListingRejected",
+                Title = approved ? "Tin đăng đã được duyệt" : "Tin đăng bị từ chối",
+                Content = approved
+                    ? $"Tin đăng \"{roomLabel}\" của bạn đã được Admin duyệt{(room.IsPublished ? " và công bố" : "")}."
+                    : $"Tin đăng \"{roomLabel}\" của bạn đã bị Admin từ chối. Vui lòng kiểm tra ghi chú kiểm duyệt để chỉnh sửa lại.",
+                LinkedId = room.Id,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _notificationRepository.AddAsync(notification);
         }
 
         private static AdminModerationListingDto MapToDto(Room room) => new()

@@ -16,6 +16,7 @@ namespace Application.Services
         private readonly IBuildingRepository _buildingRepository;
         private readonly IRoomRepository _roomRepository;
         private readonly IInvoiceRepository _invoiceRepository;
+        private readonly IContractRepository _contractRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -23,12 +24,14 @@ namespace Application.Services
             IBuildingRepository buildingRepository,
             IRoomRepository roomRepository,
             IInvoiceRepository invoiceRepository,
+            IContractRepository contractRepository,
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager)
         {
             _buildingRepository = buildingRepository;
             _roomRepository = roomRepository;
             _invoiceRepository = invoiceRepository;
+            _contractRepository = contractRepository;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
         }
@@ -97,6 +100,7 @@ namespace Application.Services
 
                 string? tenantName = activeContract?.TemporaryTenantName;
                 string? tenantPhone = activeContract?.TemporaryTenantPhone;
+                string? tenantEmail = activeContract?.TemporaryTenantEmail ?? activeContract?.Tenant?.Email;
                 string? tenantStartDate = activeContract?.StartDate.ToString("dd/MM/yyyy");
                 decimal deposit = activeContract?.DepositAmount ?? 0;
 
@@ -160,6 +164,7 @@ namespace Application.Services
                     Status = roomStatusStr,
                     TenantName = tenantName,
                     TenantPhone = tenantPhone,
+                    TenantEmail = tenantEmail,
                     TenantStartDate = tenantStartDate,
                     Deposit = deposit,
                     OutstandingBillStatus = outstandingBillStatus,
@@ -529,7 +534,7 @@ namespace Application.Services
             if (room == null || room.Floor.Building.OwnerId != ownerId)
                 return false;
 
-            room.Status = status switch
+            var newStatus = status switch
             {
                 "Còn trống" => RoomStatus.Available,
                 "Trống" => RoomStatus.Available,
@@ -542,6 +547,16 @@ namespace Application.Services
                 _ => RoomStatus.Available
             };
 
+            // Room.Status must stay in sync with whether a real contract exists, otherwise the
+            // owner can manually mark an occupied room "Available" and re-open double-booking, or
+            // mark a vacant room "Occupied" with no contract behind it.
+            var hasContract = await _contractRepository.HasActiveOrPendingContractAsync(roomId);
+            if (hasContract && newStatus != RoomStatus.Occupied)
+                throw new InvalidOperationException("Phòng này đang có hợp đồng thuê hiệu lực. Vui lòng thanh lý hợp đồng trước khi đổi trạng thái.");
+            if (!hasContract && newStatus == RoomStatus.Occupied)
+                throw new InvalidOperationException("Phòng này chưa có hợp đồng thuê nào. Vui lòng thêm khách thuê để chuyển trạng thái Đang thuê.");
+
+            room.Status = newStatus;
             room.UpdatedAt = DateTime.UtcNow;
             await _roomRepository.UpdateAsync(room);
             await _unitOfWork.SaveChangesAsync();

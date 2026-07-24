@@ -37,6 +37,7 @@ namespace Application.Common.DTOs.Properties
         public string Status { get; set; } = null!;
         public string? TenantName { get; set; }
         public string? TenantPhone { get; set; }
+        public string? TenantEmail { get; set; }
         public string? TenantStartDate { get; set; }
         public decimal Deposit { get; set; }
         public string OutstandingBillStatus { get; set; } = null!;

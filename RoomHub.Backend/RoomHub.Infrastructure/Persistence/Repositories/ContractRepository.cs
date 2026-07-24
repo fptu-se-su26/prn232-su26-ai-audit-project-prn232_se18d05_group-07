@@ -74,6 +74,17 @@ namespace Infrastructure.Persistence.Repositories
                     !c.IsDeleted);
         }
 
+        public async Task<bool> HasActiveOrPendingContractAsync(int roomId)
+        {
+            // AsNoTracking + AnyAsync always hits the DB (no entity materialization), so this reflects
+            // the latest committed state even if this DbContext already has a stale Room tracked earlier.
+            return await _context.Contracts
+                .AsNoTracking()
+                .AnyAsync(c => c.RoomId == roomId &&
+                    (c.Status == ContractStatus.Active || c.Status == ContractStatus.Pending) &&
+                    !c.IsDeleted);
+        }
+
         public async Task AddAsync(Contract contract)
         {
             await _context.Contracts.AddAsync(contract);
