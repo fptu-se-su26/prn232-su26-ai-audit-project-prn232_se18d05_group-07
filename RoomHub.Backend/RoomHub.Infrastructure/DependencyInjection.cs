@@ -105,6 +105,10 @@ namespace Infrastructure
             services.AddHttpClient<GeminiModerationService>();
             services.AddScoped<IModerationService, ModerationManager>();
 
+            // Register AI Room-Finder Assistant (RAG)
+            services.AddHttpClient<IEmbeddingService, GeminiEmbeddingService>();
+            services.AddHttpClient<IRoomAssistantService, RoomAssistantService>();
+
             // Register Repositories
             services.AddScoped<IBuildingRepository, Persistence.Repositories.BuildingRepository>();
             services.AddScoped<IRoomRepository, Persistence.Repositories.RoomRepository>();
