@@ -32,6 +32,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ currentPage, setCurrentPage, 
   const { user, logout } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   const fullName = user?.fullName || 'Quản trị viên';
@@ -48,11 +49,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ currentPage, setCurrentPage, 
 
   const pageInfo = pageInfoMap[currentPage] || { title: 'Quản trị', subtitle: 'RoomHub Admin' };
 
-  const handleLogout = () => {
-    if (window.confirm('Đăng xuất khỏi trang quản trị?')) {
-      logout();
-      setCurrentPage('home');
-    }
+  const handleLogoutClick = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutConfirmOpen(false);
+    logout();
+    setCurrentPage('home');
   };
 
   const renderSidebar = () => (
@@ -86,7 +90,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ currentPage, setCurrentPage, 
       </nav>
 
       <div className="p-3 border-t border-white/10">
-        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer text-left">
+        <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer text-left">
           <span className="material-symbols-outlined text-[20px]">logout</span>
           <span>Đăng xuất</span>
         </button>
@@ -139,7 +143,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ currentPage, setCurrentPage, 
                   <button onClick={() => { setIsAvatarOpen(false); setCurrentPage('home'); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 rounded-lg text-left transition-colors cursor-pointer w-full">
                     <span className="material-symbols-outlined text-[16px]">arrow_back</span> Về trang chủ
                   </button>
-                  <button onClick={() => { setIsAvatarOpen(false); handleLogout(); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg text-left transition-colors cursor-pointer w-full">
+                  <button onClick={() => { setIsAvatarOpen(false); handleLogoutClick(); }} className="flex items-center gap-2 px-2.5 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg text-left transition-colors cursor-pointer w-full">
                     <span className="material-symbols-outlined text-[16px]">logout</span> Đăng xuất
                   </button>
                 </div>
@@ -152,6 +156,39 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ currentPage, setCurrentPage, 
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
+
+      {/* Modern React Confirmation Modal for Logout */}
+      {isLogoutConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full soft-shadow relative animate-scaleUp text-center space-y-4 border border-gray-100">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-[32px]">logout</span>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-on-surface">Đăng xuất quản trị?</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Bạn có chắc chắn muốn đăng xuất khỏi trang quản trị RoomHub Admin không?
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsLogoutConfirmOpen(false)}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-600/20 cursor-pointer"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

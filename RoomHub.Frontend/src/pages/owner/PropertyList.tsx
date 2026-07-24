@@ -25,7 +25,9 @@ export interface Property {
   parkingPrice: number;
   servicePrice: number;
   image: string;
-  status: 'Đang hoạt động' | 'Đang bảo trì' | 'Ngừng hoạt động';
+  status: string;
+  isLocked?: boolean;
+  lockReason?: string;
 }
 
 const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelectedPropertyId }) => {
@@ -287,17 +289,28 @@ const PropertyList: React.FC<PropertyListProps> = ({ setCurrentPage, setSelected
                     {property.type}
                   </div>
                   <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-extrabold border ${
-                    property.status === 'Đang hoạt động'
+                    property.isLocked || property.status === 'Tạm khóa'
+                      ? 'bg-red-600/90 text-white border-red-400/30 backdrop-blur-sm'
+                      : property.status === 'Đang hoạt động'
                       ? 'bg-emerald-500/90 text-white border-emerald-400/30 backdrop-blur-sm'
                       : 'bg-slate-500/90 text-white border-slate-400/30 backdrop-blur-sm'
                   }`}>
-                    {property.status}
+                    {property.isLocked || property.status === 'Tạm khóa' ? '🔴 Bị tạm khóa' : property.status}
                   </div>
                 </div>
 
                 {/* Details Section */}
                 <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
                   <div className="space-y-3.5">
+                    {(property.isLocked || property.status === 'Tạm khóa') && (
+                      <div className="p-2.5 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700 flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-red-500 shrink-0 mt-0.5">error</span>
+                        <div>
+                          <strong className="font-bold">Đang bị Admin tạm khóa:</strong>
+                          <p className="text-[10px] italic mt-0.5">{property.lockReason || 'Vi phạm quy định nền tảng'}</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0 flex-grow">
                         <h4 className="text-base font-extrabold text-slate-800 line-clamp-1 group-hover:text-primary-container transition-colors duration-205">

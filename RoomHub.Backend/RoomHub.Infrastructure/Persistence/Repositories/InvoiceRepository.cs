@@ -65,6 +65,22 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Invoice>> GetInvoicesByTenantEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return new List<Invoice>();
+
+            var lowerEmail = email.ToLower();
+            return await _context.Invoices
+                .Include(i => i.Contract)
+                    .ThenInclude(c => c.Room)
+                        .ThenInclude(r => r.Floor)
+                            .ThenInclude(f => f.Building)
+                .Include(i => i.Payments)
+                .Where(i => i.Contract.TemporaryTenantEmail != null && i.Contract.TemporaryTenantEmail.ToLower() == lowerEmail && !i.Contract.IsDeleted)
+                .OrderByDescending(i => i.InvoiceDate)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(Invoice invoice)
         {
             await _context.Invoices.AddAsync(invoice);

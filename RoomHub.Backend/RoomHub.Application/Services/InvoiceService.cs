@@ -267,6 +267,29 @@ namespace Application.Services
 
                     await _utilityReadingRepository.AddAsync(elecReading);
                     await _utilityReadingRepository.AddAsync(waterReading);
+
+                    // 4. Create Notification for Tenant
+                    var notifyTargetUserId = activeContract.TenantId ?? activeContract.Tenant?.Id;
+                    if (string.IsNullOrEmpty(notifyTargetUserId) && !string.IsNullOrEmpty(activeContract.TemporaryTenantEmail))
+                    {
+                        var matchingUser = await _userManager.FindByEmailAsync(activeContract.TemporaryTenantEmail);
+                        notifyTargetUserId = matchingUser?.Id;
+                    }
+
+                    if (!string.IsNullOrEmpty(notifyTargetUserId))
+                    {
+                        var notification = new Notification
+                        {
+                            UserId = notifyTargetUserId,
+                            Title = $"Hóa đơn mới tháng {request.Month:D2}/{request.Year}",
+                            Content = $"Chủ trọ vừa phát hành hóa đơn phòng {room.RoomNumber} với tổng tiền {total:N0}đ. Hạn thanh toán: {request.DueDate:dd/MM/yyyy}.",
+                            Type = "InvoiceCreated",
+                            LinkedId = invoice.Id,
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _notificationRepository.AddAsync(notification);
+                    }
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -453,31 +476,50 @@ namespace Application.Services
 
         public async Task<List<InvoiceHeaderDto>> GetTenantInvoicesAsync(string tenantId)
         {
+            var tenantUser = await _userManager.FindByIdAsync(tenantId);
+            var tenantEmail = tenantUser?.Email;
+
             var invoices = await _invoiceRepository.GetInvoicesByTenantAsync(tenantId);
 
-            return invoices.Select(i => new InvoiceHeaderDto
+            if (!string.IsNullOrEmpty(tenantEmail))
             {
-                Id = i.Id,
-                RoomId = i.Contract.RoomId,
-                RoomNumber = i.Contract.Room.RoomNumber,
-                BuildingName = i.Contract.Room.Floor.Building.Name,
-                Month = i.InvoiceDate.ToString("MM/yyyy"),
-                TotalAmount = i.TotalAmount,
-                PaidAmount = i.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
-                Status = GetEffectiveStatus(i) switch
+                var existingIds = new HashSet<int>(invoices.Select(i => i.Id));
+                var emailInvoices = await _invoiceRepository.GetInvoicesByTenantEmailAsync(tenantEmail);
+                foreach (var inv in emailInvoices)
                 {
-                    InvoiceStatus.Paid => "Đã thanh toán",
-                    InvoiceStatus.Unpaid => "Chưa thanh toán",
-                    InvoiceStatus.Overdue => "Quá hạn",
-                    InvoiceStatus.Pending => "Chờ xử lý",
-                    InvoiceStatus.Cancelled => "Đã hủy",
-                    _ => "Chưa thanh toán"
-                },
-                DueDate = i.DueDate.ToString("dd/MM/yyyy"),
-                TenantName = i.Contract.TemporaryTenantName ?? i.Contract.Tenant?.FullName ?? "Chưa rõ",
-                TenantPhone = i.Contract.TemporaryTenantPhone ?? i.Contract.Tenant?.PhoneNumber ?? "",
-                IsLinkedAccount = i.Contract.TenantId != null
-            }).ToList();
+                    if (!existingIds.Contains(inv.Id))
+                    {
+                        invoices.Add(inv);
+                    }
+                }
+            }
+
+            return invoices
+                .OrderByDescending(i => i.InvoiceDate)
+                .ThenByDescending(i => i.Id)
+                .Select(i => new InvoiceHeaderDto
+                {
+                    Id = i.Id,
+                    RoomId = i.Contract.RoomId,
+                    RoomNumber = i.Contract.Room.RoomNumber,
+                    BuildingName = i.Contract.Room.Floor.Building.Name,
+                    Month = i.InvoiceDate.ToString("MM/yyyy"),
+                    TotalAmount = i.TotalAmount,
+                    PaidAmount = i.Payments.Where(p => p.Status == "Completed").Sum(p => p.Amount),
+                    Status = GetEffectiveStatus(i) switch
+                    {
+                        InvoiceStatus.Paid => "Đã thanh toán",
+                        InvoiceStatus.Unpaid => "Chưa thanh toán",
+                        InvoiceStatus.Overdue => "Quá hạn",
+                        InvoiceStatus.Pending => "Chờ xử lý",
+                        InvoiceStatus.Cancelled => "Đã hủy",
+                        _ => "Chưa thanh toán"
+                    },
+                    DueDate = i.DueDate.ToString("dd/MM/yyyy"),
+                    TenantName = i.Contract.TemporaryTenantName ?? i.Contract.Tenant?.FullName ?? "Chưa rõ",
+                    TenantPhone = i.Contract.TemporaryTenantPhone ?? i.Contract.Tenant?.PhoneNumber ?? "",
+                    IsLinkedAccount = i.Contract.TenantId != null
+                }).ToList();
         }
 
         public async Task<InvoiceDetailDto?> GetTenantInvoiceDetailAsync(int invoiceId, string tenantId)

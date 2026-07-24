@@ -108,8 +108,8 @@ const Subscription: React.FC = () => {
       name: 'Starter',
       price: '0đ',
       period: 'mãi mãi',
-      desc: 'Phù hợp cho chủ nhà nhỏ lẻ, quản lý khu trọ mini dưới 3 phòng.',
-      perks: ['Tối đa 1 tòa nhà/tài sản', 'Tối đa 3 phòng trọ', 'Tối đa 3 lượt AI Audit/tháng', 'Tính tiền & quản lý hóa đơn cơ bản'],
+      desc: 'Phù hợp cho chủ nhà nhỏ lẻ, quản lý khu trọ mini dưới 10 phòng.',
+      perks: ['Tối đa 1 tòa nhà/tài sản', 'Tối đa 10 phòng trọ', 'Tối đa 3 lượt AI Audit/tháng', 'Tính tiền & quản lý hóa đơn cơ bản'],
       color: 'border-gray-200 bg-white text-gray-500',
       popular: false,
     },
@@ -118,13 +118,21 @@ const Subscription: React.FC = () => {
       price: selectedPlanType === 'Monthly' ? '199.000đ' : '1.990.000đ',
       period: selectedPlanType === 'Monthly' ? 'tháng' : 'năm (tiết kiệm 20%)',
       desc: 'Gói tối ưu nhất cho các chủ trọ chuyên nghiệp, chung cư mini homestay.',
-      perks: [
-        'Tối đa 3 tòa nhà/tài sản',
-        'Tối đa 30 phòng trọ',
+      perks: selectedPlanType === 'Monthly' ? [
+        'Tối đa 5 tòa nhà/tài sản',
+        'Tối đa 100 phòng trọ',
         'Không giới hạn lượt AI Audit tin đăng',
         'Tặng 5 lượt đẩy tin nổi bật/tháng',
         'Xuất hóa đơn & báo cáo ra Excel/PDF',
         'Gửi email thông báo tự động cho người thuê',
+      ] : [
+        'Tối đa 10 tòa nhà/tài sản',
+        'Tối đa 250 phòng trọ',
+        'Tiết kiệm 20% chi phí sử dụng',
+        'Không giới hạn lượt AI Audit tin đăng',
+        'Tặng 10 lượt đẩy tin nổi bật/tháng',
+        'Xuất hóa đơn & báo cáo ra Excel/PDF',
+        'Hỗ trợ ưu tiên 24/7',
       ],
       color: 'border-orange-500 bg-gradient-to-br from-orange-50/50 to-white relative shadow-md shadow-orange-100',
       popular: true,
@@ -470,26 +478,27 @@ const Subscription: React.FC = () => {
                         </p>
                       </div>
                     ) : (
-                      <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100 h-full flex flex-col justify-center text-center">
-                        <span className="material-symbols-outlined text-[36px] text-primary-container mb-2">qr_code_scanner</span>
+                      <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100 text-center flex flex-col items-center justify-center space-y-1">
+                        <span className="material-symbols-outlined text-[32px] text-primary-container">qr_code_scanner</span>
                         <h4 className="text-xs font-bold text-on-surface">Thanh toán quét mã QR cực tiện lợi</h4>
-                        <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
-                          Hệ thống sẽ sinh mã VietQR ngân hàng. Chỉ cần mở ví hoặc app ngân hàng để quét mà không cần điền tay số tiền và nội dung. Gói kích hoạt tự động sau khi chuyển khoản.
+                        <p className="text-[10px] text-gray-500 leading-relaxed">
+                          Hệ thống sẽ sinh mã VietQR ngân hàng. Chỉ cần mở ví hoặc app ngân hàng để quét. Gói kích hoạt tự động ngay sau khi hoàn tất.
                         </p>
                       </div>
                     )}
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Ghi chú (Tùy chọn)</label>
-                      <textarea
-                        rows={2}
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        placeholder="Ví dụ: Nâng cấp gói cước cho tài khoản..."
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-primary-container transition-all resize-none"
-                      />
-                    </div>
                   </div>
+                </div>
+
+                {/* Full Width Ghi Chú */}
+                <div className="text-left">
+                  <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Ghi chú (Tùy chọn)</label>
+                  <textarea
+                    rows={2}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ví dụ: Nâng cấp gói cước cho tài khoản..."
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-primary-container transition-all resize-none"
+                  />
                 </div>
 
                 <div className="pt-5 border-t border-gray-100 flex justify-end gap-3">

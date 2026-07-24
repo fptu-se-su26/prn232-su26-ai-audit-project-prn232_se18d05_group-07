@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
+import axios from 'axios';
 import api from '../services/api';
 
 export interface UserInfo {
@@ -203,10 +204,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     const refreshToken = localStorage.getItem('refreshToken');
+    const token = localStorage.getItem('token');
+
     if (refreshToken) {
-      // Best-effort: revoke server-side so the refresh token can't be replayed after logout.
-      api.post('/auth/logout', { refreshToken }).catch(() => {});
+      // Best-effort: revoke server-side using unintercepted axios call
+      axios.post(
+        'http://localhost:5143/api/auth/logout',
+        { refreshToken },
+        { headers: { Authorization: token ? `Bearer ${token}` : '' } }
+      ).catch(() => {});
     }
+
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
@@ -214,6 +222,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('user');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('resetEmail');
+
+    if (window.location.hash) {
+      window.location.hash = '';
+    }
   };
 
   return (

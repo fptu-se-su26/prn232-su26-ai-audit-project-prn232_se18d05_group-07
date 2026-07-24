@@ -410,17 +410,24 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
             <span className="text-xs font-bold text-gray-650 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{property.type}</span>
             <span className="text-xs font-bold text-gray-650 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">{stats.total} phòng/căn</span>
             <span className="text-xs font-bold text-orange-605 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">{Math.round((stats.occupied / stats.total) * 100)}% lấp đầy</span>
+            {(property.isLocked || property.status === 'Tạm khóa') && (
+              <span className="text-xs font-extrabold text-white bg-red-600 px-3 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">lock</span> 🔴 ĐANG BỊ TẠM KHÓA
+              </span>
+            )}
           </div>
         </div>
 
         {/* Action Header Panel */}
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <button 
-            onClick={() => setIsAddRoomOpen(true)}
-            className="px-4 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px] font-bold">add</span> Thêm phòng/căn
-          </button>
+          {!property.isLocked && property.status !== 'Tạm khóa' && (
+            <button 
+              onClick={() => setIsAddRoomOpen(true)}
+              className="px-4 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[16px] font-bold">add</span> Thêm phòng/căn
+            </button>
+          )}
           <button 
             onClick={() => setCurrentPage('owner-listings-create')}
             className="px-4 py-2.5 bg-orange-50 hover:bg-orange-100 text-primary-container rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 border border-orange-100"
@@ -441,6 +448,25 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
           </button>
         </div>
       </div>
+
+      {/* Warning Alert Banner if Property is Locked by Admin */}
+      {(property.isLocked || property.status === 'Tạm khóa') && (
+        <div className="bg-red-600 text-white rounded-3xl p-5 shadow-xl border border-red-400 flex items-start gap-4 animate-shake">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-2xl">lock</span>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-extrabold flex items-center gap-2">
+              🚫 TÒA NHÀ ĐANG BỊ QUẢN TRỊ VIÊN (ADMIN) TẠM KHÓA
+            </h3>
+            <p className="text-xs text-red-100 leading-relaxed font-medium">
+              Lý do tạm khóa: <strong>{property.lockReason || 'Vi phạm quy định nền tảng / thông tin cần xác minh'}</strong>.
+              <br />
+              Tất cả các bài đăng và phòng trọ thuộc tòa nhà này tạm thời bị ẩn khỏi trang tìm kiếm công khai. Quý chủ nhà vui lòng liên hệ Bộ phận Hỗ trợ Admin để được hướng dẫn giải quyết.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Property Overview Details Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
