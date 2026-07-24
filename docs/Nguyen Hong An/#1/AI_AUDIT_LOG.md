@@ -10,7 +10,7 @@
 | Học kỳ | SU26 |
 | Tên bài tập / Project | RoomHub - Quản lý phòng/nhà trọ (Tách biệt FE-BE) |
 | Tên sinh viên / Nhóm | Nguyễn Hồng An / Nhóm 07 |
-| MSSV / Danh sách MSSV | DE180999 |
+| MSSV / Danh sách MSSV | DE180358 |
 | Giảng viên hướng dẫn | Thầy Lê Thiện Nhật Quang |
 | Ngày bắt đầu | 01/06/2026 |
 | Ngày hoàn thành | 01/06/2026 |
@@ -186,7 +186,7 @@ Sửa đổi lỗi cú pháp JSX (`class` sang `className`) để tương thích
 
 | Thành viên | MSSV | Nhiệm vụ chính | Có sử dụng AI không? | Minh chứng đóng góp |
 |---|---|---|---|---|
-| Nguyễn Hồng An | DE180999 | Lập trình di chuyển đăng ký/đăng nhập/xác thực phân tách, viết tài liệu logs | Có | Đã đẩy toàn bộ file code FE/BE và thư mục tài liệu cá nhân lên Git |
+| Nguyễn Hồng An | DE180358 | Lập trình di chuyển đăng ký/đăng nhập/xác thực phân tách, viết tài liệu logs | Có | Đã đẩy toàn bộ file code FE/BE và thư mục tài liệu cá nhân lên Git |
 
 ---
 
