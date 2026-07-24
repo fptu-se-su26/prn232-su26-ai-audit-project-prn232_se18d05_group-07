@@ -23,6 +23,8 @@ interface AdminBuilding {
   internetPrice: number;
   garbagePrice: number;
   thumbnailUrl: string;
+  isLocked?: boolean;
+  lockReason?: string;
   createdAt: string;
 }
 
@@ -31,8 +33,21 @@ const AdminBuildings: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'all' | 'high_occupancy' | 'has_vacant'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'locked' | 'high_occupancy' | 'has_vacant'>('all');
+  
+  // Selection & Lock Modal States
   const [selectedBuilding, setSelectedBuilding] = useState<AdminBuilding | null>(null);
+  const [lockTargetBuilding, setLockTargetBuilding] = useState<AdminBuilding | null>(null);
+  const [lockReasonInput, setLockReasonInput] = useState<string>('');
+  const [actionBusy, setActionBusy] = useState<boolean>(false);
+  
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -64,6 +79,8 @@ const AdminBuildings: React.FC = () => {
         internetPrice: b.internetPrice || 0,
         garbagePrice: b.garbagePrice || 0,
         thumbnailUrl: b.thumbnailUrl || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80',
+        isLocked: !!b.isLocked,
+        lockReason: b.lockReason || '',
         createdAt: b.createdAt || ''
       }));
       setBuildings(normalizedData);
@@ -88,8 +105,37 @@ const AdminBuildings: React.FC = () => {
     setCurrentPage(1);
   }, [searchQuery, activeTab, itemsPerPage]);
 
+  // Handle Toggle Lock / Unlock
+  const handleConfirmToggleLock = async () => {
+    if (!lockTargetBuilding) return;
+    setActionBusy(true);
+    try {
+      const res = await api.post(`/admin/buildings/${lockTargetBuilding.id}/toggle-lock`, {
+        reason: lockReasonInput.trim() || 'Vi phạm quy định nền tảng'
+      });
+      if (res.data.success) {
+        showToast(
+          lockTargetBuilding.isLocked
+            ? `Đã mở khóa tòa nhà "${lockTargetBuilding.name}" thành công!`
+            : `Đã tạm khóa tòa nhà "${lockTargetBuilding.name}".`,
+          'success'
+        );
+        setLockTargetBuilding(null);
+        setLockReasonInput('');
+        await fetchBuildings();
+      }
+    } catch (err: any) {
+      console.error('Error toggling building lock:', err);
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật khóa tòa nhà.', 'error');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   // Statistics calculation
   const totalBuildings = buildings.length;
+  const activeBuildingsCount = buildings.filter((b) => !b.isLocked).length;
+  const lockedBuildingsCount = buildings.filter((b) => b.isLocked).length;
   const totalRoomsSum = buildings.reduce((acc, b) => acc + (b.totalRooms || 0), 0);
   const totalOccupiedSum = buildings.reduce((acc, b) => acc + (b.occupiedRooms || 0), 0);
   const avgOccupancy = totalRoomsSum > 0 ? Math.round((totalOccupiedSum / totalRoomsSum) * 100) : 0;
@@ -103,6 +149,9 @@ const AdminBuildings: React.FC = () => {
       b.ownerName.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
+
+    if (activeTab === 'active') return !b.isLocked;
+    if (activeTab === 'locked') return b.isLocked;
 
     const rate = b.totalRooms > 0 ? (b.occupiedRooms / b.totalRooms) * 100 : 0;
     if (activeTab === 'high_occupancy') return rate >= 80;
@@ -118,6 +167,22 @@ const AdminBuildings: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-slide-down ${
+            toast.type === 'success'
+              ? 'bg-green-600 text-white border-green-500'
+              : 'bg-red-600 text-white border-red-500'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">
+            {toast.type === 'success' ? 'check_circle' : 'error'}
+          </span>
+          {toast.message}
+        </div>
+      )}
+
       {/* Top Header / KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-gray-100 soft-shadow flex items-center gap-4">
@@ -131,22 +196,22 @@ const AdminBuildings: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 soft-shadow flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-2xl">meeting_room</span>
+          <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+            <span className="material-symbols-outlined text-2xl">verified</span>
           </div>
           <div>
-            <p className="text-xs text-gray-500 font-medium">Tổng phòng quản lý</p>
-            <h4 className="text-2xl font-bold text-on-surface mt-0.5">{loading ? '...' : totalRoomsSum}</h4>
+            <p className="text-xs text-gray-500 font-medium">Tòa đang hoạt động</p>
+            <h4 className="text-2xl font-bold text-green-600 mt-0.5">{loading ? '...' : activeBuildingsCount}</h4>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 soft-shadow flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
-            <span className="material-symbols-outlined text-2xl">person_check</span>
+          <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+            <span className="material-symbols-outlined text-2xl">lock</span>
           </div>
           <div>
-            <p className="text-xs text-gray-500 font-medium">Số phòng đang ở</p>
-            <h4 className="text-2xl font-bold text-on-surface mt-0.5">{loading ? '...' : totalOccupiedSum}</h4>
+            <p className="text-xs text-gray-500 font-medium">Tòa đang bị khóa</p>
+            <h4 className="text-2xl font-bold text-red-600 mt-0.5">{loading ? '...' : lockedBuildingsCount}</h4>
           </div>
         </div>
 
@@ -164,10 +229,10 @@ const AdminBuildings: React.FC = () => {
       {/* Filter & Search Bar */}
       <div className="bg-white rounded-2xl p-4 border border-gray-100 soft-shadow flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full md:w-auto">
+        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'all'
                 ? 'bg-white text-primary-container shadow-sm'
                 : 'text-gray-500 hover:text-gray-800'
@@ -176,8 +241,28 @@ const AdminBuildings: React.FC = () => {
             Tất cả ({totalBuildings})
           </button>
           <button
+            onClick={() => setActiveTab('active')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'active'
+                ? 'bg-white text-green-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            🟢 Hoạt động ({activeBuildingsCount})
+          </button>
+          <button
+            onClick={() => setActiveTab('locked')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'locked'
+                ? 'bg-white text-red-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            🔴 Đã bị khóa ({lockedBuildingsCount})
+          </button>
+          <button
             onClick={() => setActiveTab('high_occupancy')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'high_occupancy'
                 ? 'bg-white text-primary-container shadow-sm'
                 : 'text-gray-500 hover:text-gray-800'
@@ -187,7 +272,7 @@ const AdminBuildings: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('has_vacant')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'has_vacant'
                 ? 'bg-white text-primary-container shadow-sm'
                 : 'text-gray-500 hover:text-gray-800'
@@ -224,7 +309,7 @@ const AdminBuildings: React.FC = () => {
           <p className="font-semibold text-sm">{error}</p>
           <button
             onClick={fetchBuildings}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors"
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer"
           >
             Thử lại
           </button>
@@ -243,25 +328,42 @@ const AdminBuildings: React.FC = () => {
               const rate = b.totalRooms > 0 ? Math.round((b.occupiedRooms / b.totalRooms) * 100) : 0;
               return (
                 <Reveal key={b.id} delay={i * 50}>
-                  <div className="bg-white rounded-2xl border border-gray-100 soft-shadow overflow-hidden hover-lift h-full flex flex-col justify-between">
+                  <div className={`bg-white rounded-2xl border soft-shadow overflow-hidden hover-lift h-full flex flex-col justify-between transition-all ${
+                    b.isLocked ? 'border-red-200 bg-red-50/10' : 'border-gray-100'
+                  }`}>
                     <div>
                       {/* Thumbnail Image Header */}
                       <div className="h-44 relative overflow-hidden bg-gray-100">
                         <img
                           src={b.thumbnailUrl}
                           alt={b.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className={`w-full h-full object-cover transition-transform duration-300 ${
+                            b.isLocked ? 'grayscale opacity-75' : 'group-hover:scale-105'
+                          }`}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80';
                           }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                        <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/20">
-                          {rate}% Lấp đầy
+
+                        {/* Top Badges */}
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                          {b.isLocked ? (
+                            <span className="bg-red-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-red-400/30 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">lock</span> ĐÃ BỊ KHÓA
+                            </span>
+                          ) : (
+                            <span className="bg-black/40 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/20">
+                              {rate}% Lấp đầy
+                            </span>
+                          )}
                         </div>
+
                         <div className="absolute bottom-3 left-4 right-4">
-                          <h3 className="text-white font-bold text-base leading-tight drop-shadow-sm">{b.name}</h3>
+                          <h3 className="text-white font-bold text-base leading-tight drop-shadow-sm flex items-center gap-1.5">
+                            {b.name}
+                          </h3>
                           <p className="text-white/80 text-xs flex items-center gap-1 mt-1 truncate">
                             <span className="material-symbols-outlined text-[13px]">location_on</span>
                             {b.address || `${b.district}, ${b.city}`}
@@ -271,6 +373,17 @@ const AdminBuildings: React.FC = () => {
 
                       {/* Card Body */}
                       <div className="p-5 space-y-4">
+                        {/* Lock Reason Warning Box if Locked */}
+                        {b.isLocked && (
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                            <span className="material-symbols-outlined text-base text-red-500 shrink-0 mt-0.5">error</span>
+                            <div>
+                              <strong className="font-bold">Tòa nhà bị tạm khóa:</strong>
+                              <p className="text-[11px] mt-0.5 italic">{b.lockReason || 'Vi phạm quy định nền tảng'}</p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Owner info */}
                         <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl">
                           <div className="flex items-center gap-2.5">
@@ -294,7 +407,7 @@ const AdminBuildings: React.FC = () => {
                           <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
                             <div
                               className={`h-full transition-all duration-500 ${
-                                rate >= 80 ? 'bg-green-500' : 'bg-primary-container'
+                                b.isLocked ? 'bg-gray-400' : rate >= 80 ? 'bg-green-500' : 'bg-primary-container'
                               }`}
                               style={{ width: `${rate}%` }}
                             ></div>
@@ -307,14 +420,31 @@ const AdminBuildings: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Card Footer Button */}
-                    <div className="p-5 pt-0">
+                    {/* Card Footer Actions */}
+                    <div className="p-5 pt-0 grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setSelectedBuilding(b)}
-                        className="w-full py-2.5 bg-gray-50 hover:bg-orange-50 text-on-surface hover:text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-gray-100 cursor-pointer"
+                        className="py-2.5 bg-gray-50 hover:bg-orange-50 text-on-surface hover:text-primary-container rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border border-gray-100 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-base">visibility</span>
-                        Xem chi tiết tòa nhà
+                        Chi tiết
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setLockTargetBuilding(b);
+                          setLockReasonInput('');
+                        }}
+                        className={`py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border ${
+                          b.isLocked
+                            ? 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                            : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">
+                          {b.isLocked ? 'lock_open' : 'lock'}
+                        </span>
+                        {b.isLocked ? 'Mở khóa' : 'Tạm khóa'}
                       </button>
                     </div>
                   </div>
@@ -408,6 +538,70 @@ const AdminBuildings: React.FC = () => {
         </div>
       )}
 
+      {/* Lock / Unlock Confirmation Dialog */}
+      {lockTargetBuilding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                lockTargetBuilding.isLocked ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}>
+                <span className="material-symbols-outlined text-xl">
+                  {lockTargetBuilding.isLocked ? 'lock_open' : 'lock'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-on-surface">
+                  {lockTargetBuilding.isLocked ? 'Xác nhận mở khóa tòa nhà' : 'Xác nhận tạm khóa tòa nhà'}
+                </h3>
+                <p className="text-xs text-gray-500 font-medium">{lockTargetBuilding.name}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {lockTargetBuilding.isLocked
+                ? 'Khi mở khóa, tòa nhà và các bài đăng/phòng trọ thuộc tòa nhà sẽ khôi phục trạng thái hiển thị công khai bình thường.'
+                : 'Khi tạm khóa, toàn bộ bài đăng/phòng trọ thuộc tòa nhà này sẽ tự động bị ẩn khỏi trang tìm kiếm của Người thuê.'}
+            </p>
+
+            {!lockTargetBuilding.isLocked && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700">Lý do khóa tòa nhà:</label>
+                <textarea
+                  rows={3}
+                  value={lockReasonInput}
+                  onChange={(e) => setLockReasonInput(e.target.value)}
+                  placeholder="Nhập lý do khóa (Ví dụ: Gian lận thông tin, vi phạm PCCC...)"
+                  className="w-full p-3 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <button
+                disabled={actionBusy}
+                onClick={() => setLockTargetBuilding(null)}
+                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                disabled={actionBusy}
+                onClick={handleConfirmToggleLock}
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-md ${
+                  lockTargetBuilding.isLocked
+                    ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20'
+                    : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                }`}
+              >
+                {actionBusy && <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>}
+                {lockTargetBuilding.isLocked ? 'Xác nhận Mở khóa' : 'Xác nhận Tạm khóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Building Detail Modal */}
       {selectedBuilding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -431,6 +625,17 @@ const AdminBuildings: React.FC = () => {
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </div>
+
+            {/* Warning if Locked */}
+            {selectedBuilding.isLocked && (
+              <div className="bg-red-50 border border-red-200 p-3.5 rounded-2xl text-xs text-red-700 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-red-800">
+                  <span className="material-symbols-outlined text-base">lock</span>
+                  Tòa nhà này hiện đang bị Admin tạm khóa!
+                </div>
+                <p className="text-[11px] text-red-600">Lý do: {selectedBuilding.lockReason || 'Vi phạm quy định hệ thống'}</p>
+              </div>
+            )}
 
             {/* Owner Section */}
             <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/50 space-y-2">
@@ -497,7 +702,7 @@ const AdminBuildings: React.FC = () => {
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-2">
+            <div className="pt-2 flex items-center gap-2">
               <button
                 onClick={() => setSelectedBuilding(null)}
                 className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"

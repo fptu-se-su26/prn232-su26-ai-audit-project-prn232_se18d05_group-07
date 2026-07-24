@@ -24,6 +24,8 @@ namespace Application.Common.DTOs.Properties
         public decimal ServicePrice { get; set; }
         public string Image { get; set; } = null!;
         public string Status { get; set; } = null!;
+        public bool IsLocked { get; set; }
+        public string? LockReason { get; set; }
     }
 
     public class RoomUnitDto

@@ -34,5 +34,30 @@ namespace RoomHub.API.Controllers
                 return StatusCode(500, new { success = false, message = "Lỗi khi lấy danh sách tòa nhà", details = ex.Message });
             }
         }
+
+        // ==========================================
+        // 2. TOGGLE LOCK / UNLOCK BUILDING
+        // ==========================================
+        [HttpPost("{id}/toggle-lock")]
+        public async Task<IActionResult> ToggleLockBuilding(int id, [FromBody] LockBuildingRequest? request)
+        {
+            try
+            {
+                var success = await _adminBuildingService.ToggleLockBuildingAsync(id, request?.Reason);
+                if (!success)
+                    return NotFound(new { success = false, message = "Không tìm thấy tòa nhà hoặc tòa nhà đã bị xóa." });
+
+                return Ok(new { success = true, message = "Cập nhật trạng thái khóa tòa nhà thành công." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Lỗi khi cập nhật trạng thái khóa tòa nhà", details = ex.Message });
+            }
+        }
+    }
+
+    public class LockBuildingRequest
+    {
+        public string? Reason { get; set; }
     }
 }

@@ -28,6 +28,8 @@ namespace Domain.Entities
         public decimal InternetPrice { get; set; } = 0;
         public decimal GarbagePrice { get; set; } = 0;
         public string? ThumbnailUrl { get; set; }
+        public bool IsLocked { get; set; } = false;
+        public string? LockReason { get; set; }
         // Navigation
         public virtual ApplicationUser Owner { get; set; } = null!;
         public virtual ICollection<Floor> Floors { get; set; } = new List<Floor>();

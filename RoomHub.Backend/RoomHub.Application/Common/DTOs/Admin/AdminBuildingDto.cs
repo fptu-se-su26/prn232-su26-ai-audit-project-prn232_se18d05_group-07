@@ -23,5 +23,7 @@ namespace Application.Common.DTOs.Admin
         public decimal GarbagePrice { get; set; }
         public string ThumbnailUrl { get; set; } = string.Empty;
         public string CreatedAt { get; set; } = string.Empty;
+        public bool IsLocked { get; set; }
+        public string? LockReason { get; set; }
     }
 }

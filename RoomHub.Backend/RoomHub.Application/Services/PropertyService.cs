@@ -77,7 +77,9 @@ namespace Application.Services
                     ParkingPrice = 50000,
                     ServicePrice = 0,
                     Image = b.ThumbnailUrl ?? "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
-                    Status = b.IsDeleted ? "Ngừng hoạt động" : "Đang hoạt động"
+                    Status = b.IsLocked ? "Tạm khóa" : (b.IsDeleted ? "Ngừng hoạt động" : "Đang hoạt động"),
+                    IsLocked = b.IsLocked,
+                    LockReason = b.LockReason
                 };
             }).ToList();
         }
@@ -208,7 +210,9 @@ namespace Application.Services
                 ParkingPrice = 50000,
                 ServicePrice = 0,
                 Image = building.ThumbnailUrl ?? "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
-                Status = "Đang hoạt động"
+                Status = building.IsLocked ? "Tạm khóa" : "Đang hoạt động",
+                IsLocked = building.IsLocked,
+                LockReason = building.LockReason
             };
 
             return new PropertyDetailDto
