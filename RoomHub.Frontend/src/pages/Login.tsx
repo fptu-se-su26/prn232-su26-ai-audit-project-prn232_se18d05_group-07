@@ -53,10 +53,13 @@ const Login: React.FC = () => {
       // paths - matching the same redirect Navbar's goDashboard() uses after login.
       if (result.role === 'Administrator') {
         window.location.hash = '#/admin/dashboard';
+        navigate('/');
       } else if (result.role === 'PropertyOwner') {
         window.location.hash = '#/owner/dashboard';
+        navigate('/');
       } else if (result.role === 'Tenant') {
         window.location.hash = '#/tenant/dashboard';
+        navigate('/');
       } else {
         navigate('/browse');
       }

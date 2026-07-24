@@ -27,13 +27,22 @@ api.interceptors.request.use(
 let refreshPromise: Promise<string | null> | null = null;
 
 const clearSessionAndRedirect = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('user');
-  localStorage.removeItem('userEmail');
-  if (window.location.pathname !== '/login') {
+  const token = localStorage.getItem('token');
+  // Only purge session if a token was present
+  if (token) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userEmail');
+  }
+
+  const isAuthPath =
+    window.location.pathname === '/login' ||
+    window.location.pathname === '/register' ||
+    window.location.hash.startsWith('#/login');
+
+  if (!isAuthPath) {
     window.location.hash = '';
-    window.location.href = '/login';
   }
 };
 
@@ -43,6 +52,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Do NOT clear session on 403 Forbidden errors (user simply lacks role permission for specific endpoint)
+    if (error.response?.status === 403) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refreshToken');

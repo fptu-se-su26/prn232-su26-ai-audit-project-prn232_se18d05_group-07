@@ -10,6 +10,7 @@ namespace Application.Common.Interfaces
         Task<List<Invoice>> GetUnpaidInvoicesByContractAsync(int contractId);
         Task<List<Invoice>> GetInvoicesByOwnerAsync(string ownerId);
         Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId);
+        Task<List<Invoice>> GetInvoicesByTenantEmailAsync(string email);
         Task AddAsync(Invoice invoice);
         Task UpdateAsync(Invoice invoice);
         Task<List<Invoice>> GetInvoicesByBuildingAndMonthAsync(int buildingId, int month, int year, string ownerId);

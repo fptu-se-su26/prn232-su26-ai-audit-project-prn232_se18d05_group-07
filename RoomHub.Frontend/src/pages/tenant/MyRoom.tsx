@@ -70,8 +70,13 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
       setRoomData(res.data);
     } catch (err: any) {
       console.error(err);
-      if (err.response?.status === 404) {
+      const status = err.response?.status;
+      if (status === 404) {
         setRoomData(null);
+      } else if (status === 403) {
+        setError('Tài khoản của bạn không có quyền truy cập vào thông tin phòng khách thuê (Vui lòng kiểm tra lại vai trò tài khoản đăng nhập).');
+      } else if (status === 401) {
+        setError('Phiên đăng nhập đã hết hạn hoặc tài khoản vừa bị đăng nhập đè từ tab khác. Vui lòng tải lại trang hoặc đăng nhập lại.');
       } else {
         setError(err.response?.data?.message || 'Không thể tải thông tin phòng của bạn.');
       }

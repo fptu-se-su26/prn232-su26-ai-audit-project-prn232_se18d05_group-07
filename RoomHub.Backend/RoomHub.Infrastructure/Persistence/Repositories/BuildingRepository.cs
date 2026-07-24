@@ -28,6 +28,10 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(b => b.Floors)
                     .ThenInclude(f => f.Rooms)
                         .ThenInclude(r => r.Contracts)
+                            .ThenInclude(c => c.UtilityReadings)
+                .Include(b => b.Floors)
+                    .ThenInclude(f => f.Rooms)
+                        .ThenInclude(r => r.Contracts)
                             .ThenInclude(c => c.Tenant)
                 .FirstOrDefaultAsync(b => b.Id == id && b.OwnerId == ownerId && !b.IsDeleted);
         }
