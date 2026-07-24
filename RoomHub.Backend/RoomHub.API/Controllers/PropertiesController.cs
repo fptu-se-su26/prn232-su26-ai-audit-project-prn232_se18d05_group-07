@@ -81,9 +81,13 @@ namespace RoomHub.API.Controllers
                 }
                 return BadRequest(new { message = "Có lỗi xảy ra khi tạo tài sản." });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Có lỗi xảy ra khi tạo tài sản.", details = ex.Message });
+                return StatusCode(500, new { message = ex.Message, details = ex.ToString() });
             }
         }
 
@@ -138,9 +142,13 @@ namespace RoomHub.API.Controllers
                 }
                 return NotFound(new { message = "Không tìm thấy tài sản này hoặc bạn không có quyền cập nhật." });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Có lỗi xảy ra khi cập nhật thông tin tài sản.", details = ex.Message });
+                return StatusCode(500, new { message = ex.Message, details = ex.ToString() });
             }
         }
 

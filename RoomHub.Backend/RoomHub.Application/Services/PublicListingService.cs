@@ -65,6 +65,7 @@ namespace Application.Services
                 WaterPrice = (double)water,
                 InternetPrice = (double)internet,
                 GarbagePrice = (double)garbage,
+                OwnerId = building.OwnerId,
                 LandlordName = building.Owner.FullName ?? "Chủ nhà RoomHub",
                 LandlordPhone = building.Owner.PhoneNumber ?? "0905 *** ***",
                 LandlordAvatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",

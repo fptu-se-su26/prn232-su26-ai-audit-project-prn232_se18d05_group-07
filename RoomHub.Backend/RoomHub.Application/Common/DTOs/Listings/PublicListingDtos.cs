@@ -60,6 +60,7 @@ namespace Application.Common.DTOs.Listings
         public double WaterPrice { get; set; }
         public double InternetPrice { get; set; }
         public double GarbagePrice { get; set; }
+        public string OwnerId { get; set; } = null!;
         public string LandlordName { get; set; } = null!;
         public string LandlordPhone { get; set; } = null!;
         public string LandlordAvatar { get; set; } = null!;

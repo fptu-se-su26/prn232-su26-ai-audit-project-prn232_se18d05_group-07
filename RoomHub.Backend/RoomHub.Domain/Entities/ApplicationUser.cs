@@ -24,6 +24,10 @@ namespace Domain.Entities
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; }
         public bool IsBanned { get; set; }
+        public DateTime? BannedAt { get; set; }
+        public DateTime? BannedUntil { get; set; }
+        public string? BanReason { get; set; }
+        public string? BannedByAdminId { get; set; }
         public DateTime? ReviewBlockedUntil { get; set; }
         
         // Subscription fields

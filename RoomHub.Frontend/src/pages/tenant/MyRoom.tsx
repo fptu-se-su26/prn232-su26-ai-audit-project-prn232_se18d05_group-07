@@ -30,6 +30,7 @@ interface RoomData {
   endDate: string;
   status: string;
   isPending: boolean;
+  ownerId: string;
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
@@ -370,7 +371,16 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
                   <p className="text-xs text-gray-500 leading-normal mt-0.5">{roomData.ownerPhone} · {roomData.ownerEmail}</p>
                 </div>
               </div>
-              <button onClick={() => setCurrentPage('tenant-messages')} className="w-full py-2.5 bg-primary-container text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95">
+              <button onClick={async () => {
+                if (user && roomData.ownerId) {
+                  try {
+                    await api.post('/chats/conversations', { tenantId: user.id, ownerId: roomData.ownerId });
+                    setCurrentPage('tenant-messages');
+                  } catch (e) {
+                    console.error('Lỗi khi tạo cuộc trò chuyện:', e);
+                  }
+                }
+              }} className="w-full py-2.5 bg-primary-container text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95">
                 <span className="material-symbols-outlined text-[18px]">chat</span> Nhắn tin
               </button>
             </div>

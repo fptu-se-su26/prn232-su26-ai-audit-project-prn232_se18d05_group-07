@@ -2,6 +2,9 @@ using System.Threading.RateLimiting;
 using Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
 using RoomHub.API.Middlewares;
+using Application.Common.Interfaces;
+using RoomHub.API.Hubs;
+using RoomHub.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IChatNotifier, SignalRChatNotifier>();
+builder.Services.AddHostedService<DepositExpiryHostedService>();
 
 // Auth endpoints (login/register/OTP) have no other brute-force protection at the HTTP layer,
 // so cap how many attempts an IP can make per minute.
@@ -88,6 +94,7 @@ app.UseAuthorization();
 
 // Map endpoints
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 var summaries = new[]
 {

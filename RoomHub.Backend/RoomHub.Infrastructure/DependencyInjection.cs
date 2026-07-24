@@ -70,6 +70,28 @@ namespace Infrastructure
                     ValidAudience = configuration["JwtSettings:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                            context.Token = accessToken;
+
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = async context =>
+                    {
+                        var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        if (string.IsNullOrEmpty(userId)) { context.Fail("Invalid user token."); return; }
+                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                        var now = DateTime.UtcNow;
+                        var allowed = await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId && !u.IsDeleted &&
+                            (!u.IsBanned || (u.BannedUntil != null && u.BannedUntil <= now)));
+                        if (!allowed) context.Fail("This account is suspended or deleted.");
+                    }
+                };
             });
 
             // Register Custom Services
@@ -92,6 +114,11 @@ namespace Infrastructure
             services.AddScoped<INotificationRepository, Persistence.Repositories.NotificationRepository>();
             services.AddScoped<ISubscriptionRepository, Persistence.Repositories.SubscriptionRepository>();
             services.AddScoped<IRefreshTokenRepository, Persistence.Repositories.RefreshTokenRepository>();
+            services.AddScoped<IConversationRepository, Persistence.Repositories.ConversationRepository>();
+            services.AddScoped<IChatMessageRepository, Persistence.Repositories.ChatMessageRepository>();
+            services.AddScoped<IReviewRepository, Persistence.Repositories.ReviewRepository>();
+            services.AddScoped<ISearchHistoryRepository, Persistence.Repositories.SearchHistoryRepository>();
+            services.AddScoped<IFavoriteRoomRepository, Persistence.Repositories.FavoriteRoomRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -105,6 +132,14 @@ namespace Infrastructure
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
             services.AddScoped<IAuthService, Application.Services.AuthService>();
             services.AddScoped<IPublicListingService, Application.Services.PublicListingService>();
+            services.AddScoped<IChatService, Application.Services.ChatService>();
+            services.AddScoped<IReviewService, Application.Services.ReviewService>();
+            services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
+            services.AddScoped<IFavoriteRoomService, Application.Services.FavoriteRoomService>();
+            services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
+            services.AddScoped<IAdminUserService, AdminUserService>();
+            services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+            services.AddScoped<IReviewModerationService, ReviewModerationService>();
 
             return services;
         }

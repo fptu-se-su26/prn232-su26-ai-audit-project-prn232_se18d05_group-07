@@ -188,10 +188,15 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
   // Settings Configuration Form Binding
   const [priceElec, setPriceElec] = useState(0);
   const [priceWater, setPriceWater] = useState(0);
+  const [waterBillingType, setWaterBillingType] = useState<'PerCubicMeter' | 'PerPerson'>('PerCubicMeter');
   const [priceNet, setPriceNet] = useState(0);
   const [priceGarbage, setPriceGarbage] = useState(0);
   const [priceParking, setPriceParking] = useState(50000);
   const [priceService, setPriceService] = useState(0);
+
+  // Property Listings State
+  const [listings, setListings] = useState<any[]>([]);
+  const [loadingListings, setLoadingListings] = useState(false);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('vi-VN') + 'đ';
@@ -220,12 +225,41 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
     if (property) {
       setPriceElec(property.electricityPrice);
       setPriceWater(property.waterPrice);
+      setWaterBillingType(property.waterBillingType || 'PerCubicMeter');
       setPriceNet(property.internetPrice);
       setPriceGarbage(property.garbagePrice);
       setPriceParking(property.parkingPrice || 50000);
       setPriceService(property.servicePrice || 0);
     }
   }, [property]);
+
+  const fetchPropertyListings = async () => {
+    if (!property) return;
+    try {
+      setLoadingListings(true);
+      const res = await api.get('/owner/listings');
+      const allListings = res.data || [];
+      const propertyRoomIds = new Set(rooms.map(r => r.id.toString()));
+      const propertyRoomNumbers = new Set(rooms.map(r => r.roomNumber));
+
+      const filtered = allListings.filter((l: any) => 
+        (l.roomId && propertyRoomIds.has(l.roomId.toString())) ||
+        (l.buildingName && property.name && l.buildingName.toLowerCase() === property.name.toLowerCase()) ||
+        (l.roomNumber && propertyRoomNumbers.has(l.roomNumber))
+      );
+      setListings(filtered);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách tin đăng:', err);
+    } finally {
+      setLoadingListings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (property && rooms.length > 0) {
+      fetchPropertyListings();
+    }
+  }, [property, rooms]);
 
   // Group rooms by floor (Highest to Lowest floor)
   const groupedRoomsByFloor = useMemo(() => {
@@ -286,45 +320,34 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
     }));
   }, [rooms]);
 
-  const activeListings = useMemo(() => {
-    return [
-      {
-        id: 101,
-        title: 'Phòng trọ đẹp, ban công thoáng gần đại học FPT Đà Nẵng',
-        type: 'Phòng trọ',
-        roomLink: 'Phòng trống (Tầng 4)',
-        price: 2500000,
-        status: 'Đang hiển thị',
-        createdDate: '10/04/2026',
-        image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=400&q=80'
-      },
-      {
-        id: 102,
-        title: 'Căn phòng khép kín, an ninh cao cấp tòa FPT House',
-        type: 'Phòng trọ',
-        roomLink: 'Phòng trống (Tầng 1)',
-        price: 2500000,
-        status: 'Chờ duyệt',
-        createdDate: '28/05/2026',
-        image: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80'
-      }
-    ];
-  }, []);
-
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Lưu đơn giá cài đặt dịch vụ thành công! Các chỉ số hóa đơn kế tiếp sẽ tự động áp dụng biểu phí mới.');
+    if (!property) return;
+
+    try {
+      await api.put(`/owner/properties/${activePropertyId}`, {
+        name: property.name,
+        description: property.description,
+        address: property.address,
+        district: property.district,
+        ward: property.ward,
+        imageUrl: property.image,
+        electricityPrice: priceElec,
+        waterPrice: priceWater,
+        waterBillingType: waterBillingType,
+        internetPrice: priceNet,
+        garbagePrice: priceGarbage
+      });
+      alert('Lưu đơn giá cài đặt dịch vụ thành công! Các chỉ số hóa đơn kế tiếp sẽ tự động áp dụng biểu phí mới.');
+      await fetchPropertyDetail();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Không thể lưu cài đặt chi phí.');
+    }
   };
 
   const handleInvoicePaid = (roomId: string) => {
     alert(`Đã chốt thành công hóa đơn cho phòng ${roomId}! Đã gửi thông báo thanh toán Zalo/Email cho khách.`);
-  };
-
-  const handleEndTenancy = (roomId: string, tenantName: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn kết thúc hợp đồng thuê và trả phòng cho khách "${tenantName}" tại phòng ${roomId}?`)) {
-      alert(`Đã hoàn tất thủ tục thanh lý hợp đồng phòng ${roomId}. Trạng thái phòng được đưa về "Còn trống".`);
-      setSelectedRoom(null);
-    }
   };
 
   if (loading) {
@@ -433,7 +456,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
               <div className="space-y-1">
                 <span className="text-gray-400 block font-medium">Quy mô tài sản:</span>
-                <span className="font-bold text-slate-800 block text-sm">{property.floors} Tầng · {property.roomsPerFloor} phòng/tầng</span>
+                <span className="font-bold text-slate-800 block text-sm">{property.floors || groupedRoomsByFloor.length} Tầng</span>
               </div>
               <div className="space-y-1">
                 <span className="text-gray-400 block font-medium">Tổng phòng trọ:</span>
@@ -449,7 +472,9 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
               </div>
               <div className="space-y-1 border-t border-gray-50 pt-3">
                 <span className="text-gray-400 block font-medium">Đơn giá nước:</span>
-                <span className="font-bold text-gray-700 block text-sm">{formatPrice(property.waterPrice)}/m³</span>
+                <span className="font-bold text-gray-700 block text-sm">
+                  {formatPrice(property.waterPrice)} / {property.waterBillingType === 'PerPerson' ? 'người/tháng' : 'm³'}
+                </span>
               </div>
               <div className="space-y-1 border-t border-gray-50 pt-3">
                 <span className="text-gray-400 block font-medium">Chi phí Internet cố định:</span>
@@ -559,22 +584,13 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
         {/* Action button triggers */}
         <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end">
           <button 
-            onClick={() => alert('Đang mở form thêm hợp đồng khách thuê mới...')}
+            onClick={() => {
+              window.location.hash = '#/owner/invoices';
+              setCurrentPage('owner-invoices');
+            }}
             className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
           >
-            <span className="material-symbols-outlined text-[16px] font-bold">person_add</span> Thêm người thuê
-          </button>
-          <button 
-            onClick={() => alert(`Đã mô phỏng quá trình chốt chỉ số điện nước & lập hóa đơn cho toàn bộ 20 phòng của ${property.name}.`)}
-            className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-primary-container border border-orange-100 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[16px]">calculate</span> Chốt tiền tháng
-          </button>
-          <button 
-            onClick={() => alert('Xuất bảng tổng hợp công suất và doanh thu của tài sản ra Excel...')}
-            className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px] text-gray-400">table_view</span> Xuất Excel
+            <span className="material-symbols-outlined text-[16px] font-bold">calculate</span> Chốt tiền tháng
           </button>
         </div>
       </div>
@@ -930,7 +946,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
         {activeTab === 'listings' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-on-surface">Tin đăng tuyển khách ({activeListings.length} tin)</h3>
+              <h3 className="text-sm font-bold text-on-surface">Tin đăng tuyển khách ({listings.length} tin)</h3>
               <button 
                 onClick={() => setCurrentPage('owner-listings-create')}
                 className="px-4 py-2 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
@@ -939,27 +955,49 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeListings.map((list) => (
-                <div key={list.id} className="bg-white rounded-2xl border border-gray-100 soft-shadow overflow-hidden flex gap-4 p-4 hover-lift">
-                  <img src={list.image} alt={list.title} className="w-24 h-24 rounded-xl object-cover shrink-0" />
-                  <div className="flex-grow flex flex-col justify-between min-w-0">
-                    <div>
-                      <h4 className="text-xs font-bold text-on-surface line-clamp-2">{list.title}</h4>
-                      <p className="text-[10px] text-gray-500 mt-1 font-medium">Loại hình: {list.type} · Liên kết: {list.roomLink}</p>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs font-bold text-primary-container">{formatPrice(list.price)}/tháng</span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                        list.status === 'Đang hiển thị' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-750'
-                      }`}>
-                        {list.status}
-                      </span>
+            {loadingListings ? (
+              <div className="py-8 text-center text-xs font-bold text-gray-400">Đang tải danh sách tin đăng...</div>
+            ) : listings.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {listings.map((list: any) => (
+                  <div key={list.id || list.roomId} className="bg-white rounded-2xl border border-gray-100 soft-shadow overflow-hidden flex gap-4 p-4 hover-lift">
+                    <img 
+                      src={list.imageUrls?.[0] || 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=400&q=80'} 
+                      alt={list.title} 
+                      className="w-24 h-24 rounded-xl object-cover shrink-0" 
+                    />
+                    <div className="flex-grow flex flex-col justify-between min-w-0">
+                      <div>
+                        <h4 className="text-xs font-bold text-on-surface line-clamp-2">{list.title}</h4>
+                        <p className="text-[10px] text-gray-500 mt-1 font-medium">Loại hình: {list.type || 'Phòng trọ'} · Phòng {list.roomNumber}</p>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-xs font-bold text-primary-container">{formatPrice(list.price)}/tháng</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                          list.isPublished ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-750'
+                        }`}>
+                          {list.isPublished ? 'Đang hiển thị' : 'Chờ duyệt / Tạm ẩn'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-gray-100 soft-shadow p-8 text-center space-y-3">
+                <span className="material-symbols-outlined text-gray-300 text-[40px]">campaign</span>
+                <p className="text-xs font-bold text-slate-700">Chưa có tin cho thuê nào được đăng cho tòa nhà {property.name}</p>
+                <p className="text-[11px] text-gray-400 max-w-md mx-auto">
+                  Tạo bài đăng tuyển khách để tự động liên kết với phòng trống thuộc tòa nhà này và tiếp cận người thuê trên RoomHub.
+                </p>
+                <button
+                  onClick={() => setCurrentPage('owner-listings-create')}
+                  className="px-5 py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span> Tạo tin cho thuê mới
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -980,18 +1018,33 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   <input 
                     type="number" 
                     value={priceElec}
-                    onChange={(e) => setPriceElec(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceElec(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
 
-                {/* Water */}
+                {/* Water Billing Type */}
                 <div className="space-y-1">
-                  <label className="uppercase">Giá nước (VNĐ/m³)</label>
+                  <label className="uppercase">Hình thức tính tiền nước</label>
+                  <select
+                    value={waterBillingType}
+                    onChange={(e) => setWaterBillingType(e.target.value as 'PerCubicMeter' | 'PerPerson')}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50"
+                  >
+                    <option value="PerCubicMeter">Tính theo khối (m³)</option>
+                    <option value="PerPerson">Tính theo đầu người (người/tháng)</option>
+                  </select>
+                </div>
+
+                {/* Water Price */}
+                <div className="space-y-1">
+                  <label className="uppercase">
+                    {waterBillingType === 'PerPerson' ? 'Giá nước (VNĐ/người/tháng)' : 'Giá nước (VNĐ/m³)'}
+                  </label>
                   <input 
                     type="number" 
                     value={priceWater}
-                    onChange={(e) => setPriceWater(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceWater(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
@@ -1002,7 +1055,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   <input 
                     type="number" 
                     value={priceNet}
-                    onChange={(e) => setPriceNet(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceNet(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
@@ -1013,7 +1066,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   <input 
                     type="number" 
                     value={priceGarbage}
-                    onChange={(e) => setPriceGarbage(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceGarbage(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
@@ -1024,18 +1077,18 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   <input 
                     type="number" 
                     value={priceParking}
-                    onChange={(e) => setPriceParking(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceParking(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
 
                 {/* General Service fee */}
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="uppercase">Phí dịch vụ chung quản lý (VNĐ/Phòng)</label>
                   <input 
                     type="number" 
                     value={priceService}
-                    onChange={(e) => setPriceService(parseInt(e.target.value, 10))}
+                    onChange={(e) => setPriceService(parseInt(e.target.value, 10) || 0)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary-container font-semibold text-gray-700 bg-gray-50/50" 
                   />
                 </div>
@@ -1045,7 +1098,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
               <div className="bg-orange-50 border border-orange-100 p-3 rounded-2xl flex items-start gap-2 mt-4">
                 <span className="material-symbols-outlined text-primary-container text-[18px]">info</span>
                 <p className="text-[10px] text-gray-600 leading-normal font-medium">
-                  Thay đổi biểu phí dịch vụ sẽ được thông báo ngay cho toàn bộ khách thuê qua hệ thống, bảng kê chốt hóa đơn của tháng kế tiếp sẽ áp dụng đơn giá mới này.
+                  Thay đổi biểu phí dịch vụ sẽ được đồng bộ ngay cho toàn bộ tòa nhà, bảng kê chốt hóa đơn của tháng kế tiếp sẽ áp dụng đơn giá mới này.
                 </p>
               </div>
 
@@ -1203,25 +1256,15 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
               {selectedRoom.tenantName ? (
                 <>
                   <button 
-                    onClick={() => { alert(`Đang lập hóa đơn thu tiền chi tiết cho phòng ${selectedRoom.id}...`); setSelectedRoom(null); }}
+                    onClick={() => {
+                      window.location.hash = '#/owner/invoices';
+                      setCurrentPage('owner-invoices');
+                      setSelectedRoom(null);
+                    }}
                     className="w-full py-2.5 bg-primary-container hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-[16px] font-bold">receipt_long</span> Chốt tiền & Tạo hóa đơn
                   </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={() => alert(`Mở nhật ký đo lường chỉ số điện nước chi tiết của phòng ${selectedRoom.id}`)}
-                      className="py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all text-center cursor-pointer"
-                    >
-                      Lịch sử đo
-                    </button>
-                    <button 
-                      onClick={() => handleEndTenancy(selectedRoom.id, selectedRoom.tenantName!)}
-                      className="py-2.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-bold transition-all text-center cursor-pointer"
-                    >
-                      Kết thúc thuê
-                    </button>
-                  </div>
                 </>
               ) : (
                 /* If Empty */

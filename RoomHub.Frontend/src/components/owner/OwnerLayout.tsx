@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { HubConnectionBuilder, HubConnectionState, type HubConnection } from '@microsoft/signalr';
 import { useAuth } from '../../hooks/useAuth';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import type { PageType } from '../../App';
+import { API_ORIGIN } from '../../services/api';
+import { chatService } from '../../services/chats';
 
 interface OwnerLayoutProps {
   currentPage: PageType;
@@ -22,6 +25,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const { unreadCount: unreadNotifCount } = useUnreadNotifications();
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [chatToast, setChatToast] = useState<string | null>(null);
 
   const avatarRef = useRef<HTMLDivElement>(null);
   const quickAddRef = useRef<HTMLDivElement>(null);
@@ -40,6 +45,47 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const fetchUnreadChatCount = async () => {
+    try {
+      const conversations = await chatService.getConversations();
+      setUnreadChatCount(conversations.reduce((total, conversation) => total + conversation.unreadCount, 0));
+    } catch (err) {
+      console.error('Không thể tải số tin nhắn chưa đọc:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    void fetchUnreadChatCount();
+    const handleChatRead = () => {
+      void fetchUnreadChatCount();
+    };
+    window.addEventListener('chat_read', handleChatRead);
+    const connection: HubConnection = new HubConnectionBuilder()
+      .withUrl(`${API_ORIGIN}/hubs/chat`, {
+        accessTokenFactory: () => localStorage.getItem('token') ?? '',
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('messageReceived', () => {
+      void fetchUnreadChatCount();
+      setChatToast('Bạn có tin nhắn mới từ khách thuê.');
+    });
+
+    connection.start().catch((err) => {
+      console.error('Không thể kết nối thông báo chat:', err);
+    });
+
+    return () => {
+      window.removeEventListener('chat_read', handleChatRead);
+      if (connection.state !== HubConnectionState.Disconnected) {
+        void connection.stop();
+      }
+    };
+  }, [user?.id]);
 
   // Title and subtitle mapping based on current page
   const getPageInfo = () => {
@@ -60,6 +106,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         return { title: 'Đăng tin cho thuê mới', subtitle: 'Tạo tin cho phòng trọ, studio, căn hộ mini hoặc căn hộ để người thuê có thể tìm thấy trên RoomHub.' };
       case 'owner-tenants':
         return { title: 'Người thuê', subtitle: 'Danh sách khách thuê trọ và thông tin liên hệ.' };
+      case 'owner-viewing-bookings':
+        return { title: 'Lịch xem & đặt cọc', subtitle: 'Duyệt lịch xem và quản lý vòng đời tiền cọc.' };
       case 'owner-invoices':
         return { title: 'Hóa đơn & Chốt tiền', subtitle: 'Quản lý hóa đơn hàng tháng, chốt chỉ số điện nước.' };
       case 'owner-invoices-create':
@@ -86,7 +134,9 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
     { label: 'Tổng quan', icon: 'dashboard', route: 'owner-dashboard' as PageType },
     { label: 'Tài sản & Phòng', icon: 'corporate_fare', route: 'owner-properties' as PageType, activeMatches: ['owner-properties', 'owner-property-detail', 'owner-properties-create', 'owner-unit-detail', 'owner-units'] },
     { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType, activeMatches: ['owner-listings', 'owner-listings-create'] },
+    { label: 'Tin nhắn', icon: 'chat', route: 'owner-messages' as PageType, badge: unreadChatCount > 0 ? unreadChatCount : undefined },
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
+    { label: 'Lịch xem & đặt cọc', icon: 'event_available', route: 'owner-viewing-bookings' as PageType },
     { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType, activeMatches: ['owner-invoices', 'owner-invoices-create', 'owner-invoice-detail'] },
     { label: 'Cài đặt chi phí', icon: 'calculate', route: 'owner-cost-settings' as PageType },
     { label: 'Thông báo', icon: 'notifications', route: 'owner-notifications' as PageType, badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
@@ -364,6 +414,21 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
             {children}
           </div>
         </main>
+
+      {chatToast && (
+        <button
+          type="button"
+          onClick={() => {
+            setChatToast(null);
+            setCurrentPage('owner-messages');
+          }}
+          className="fixed right-5 top-24 z-[60] flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-left text-sm font-semibold text-white shadow-xl hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-orange-300">chat</span>
+          <span>{chatToast}</span>
+          <span className="material-symbols-outlined text-base text-gray-300">arrow_forward</span>
+        </button>
+      )}
 
       {isLogoutConfirmOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
