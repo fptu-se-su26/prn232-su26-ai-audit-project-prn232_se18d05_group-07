@@ -50,6 +50,10 @@ namespace Application.Common.DTOs.Listings
         public string Type { get; set; } = null!;
         public string Location { get; set; } = null!;
         public string District { get; set; } = null!;
+        public string Ward { get; set; } = "";
+        public string City { get; set; } = "";
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
         public double Price { get; set; }
         public double Area { get; set; }
         public int MaxPeople { get; set; }
