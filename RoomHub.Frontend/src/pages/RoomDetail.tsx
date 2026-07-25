@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -51,6 +51,18 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     if (!activeRoomId || activeRoomId >= 100000) return;
     api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
   }, [activeRoomId]);
+
+  // Ghi lại lịch sử xem phòng cho người thuê đã đăng nhập (bỏ qua phòng mock; lỗi được bỏ qua).
+  // loggedRoomsRef chặn việc ghi trùng khi effect chạy 2 lần (React StrictMode) cho cùng một phòng.
+  const loggedRoomsRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (!activeRoomId || activeRoomId >= 100000) return;
+    if (user?.role !== 'Tenant') return;
+    if (loggedRoomsRef.current.has(activeRoomId)) return;
+    loggedRoomsRef.current.add(activeRoomId);
+    api.post('/tenant/booking-history', { roomId: activeRoomId })
+      .catch(() => loggedRoomsRef.current.delete(activeRoomId));
+  }, [activeRoomId, user]);
 
   // Fetch listing detail from API
   useEffect(() => {
