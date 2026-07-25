@@ -55,6 +55,9 @@ import AdminSubscriptions from './pages/admin/Subscriptions';
 import { useAuth } from './hooks/useAuth';
 import Chat from './pages/Chat';
 import ViewingBookings from './pages/ViewingBookings';
+import TenantServiceRequests from './pages/tenant/ServiceRequests';
+import OwnerServiceRequests from './pages/owner/ServiceRequests';
+import AdminServices from './pages/admin/Services';
 
 export type PageType = 
   | 'home' 
@@ -78,6 +81,7 @@ export type PageType =
   | 'owner-notifications'
   | 'owner-profile'
   | 'owner-subscription'
+  | 'owner-service-requests'
   | 'owner-messages'
   | 'owner-viewing-bookings'
   | 'tenant-dashboard'
@@ -92,6 +96,7 @@ export type PageType =
   | 'tenant-reviews'
   | 'tenant-search-history'
   | 'tenant-booking-history'
+  | 'tenant-service-requests'
   | 'tenant-viewing-bookings'
   | 'admin-dashboard'
   | 'admin-users'
@@ -99,7 +104,8 @@ export type PageType =
   | 'admin-rooms'
   | 'admin-moderation'
   | 'admin-review-moderation'
-  | 'admin-subscriptions';
+  | 'admin-subscriptions'
+  | 'admin-services';
 
 const ROLE_BY_SECTION: Record<'admin' | 'owner' | 'tenant', string> = {
   admin: 'Administrator',
@@ -156,6 +162,7 @@ const AppContent: React.FC = () => {
           'reviews': 'tenant-reviews',
           'search-history': 'tenant-search-history',
           'booking-history': 'tenant-booking-history',
+          'service-requests': 'tenant-service-requests',
           'viewing-bookings': 'tenant-viewing-bookings',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
@@ -171,6 +178,7 @@ const AppContent: React.FC = () => {
           'rooms': 'admin-rooms',
           'moderation': 'admin-moderation',
           'subscriptions': 'admin-subscriptions',
+          'services': 'admin-services',
         };
         if (adminMap[sub]) { setCurrentPage(adminMap[sub]); return; }
       }
@@ -226,6 +234,7 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
       if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
+      if (hash === '#/owner/service-requests') { setCurrentPage('owner-service-requests'); return; }
       if (hash === '#/owner/messages') { setCurrentPage('owner-messages'); return; }
       if (hash === '#/owner/viewing-bookings') { setCurrentPage('owner-viewing-bookings'); return; }
     };
@@ -327,6 +336,8 @@ const AppContent: React.FC = () => {
           <AdminReviewModeration />
         ) : currentPage === 'admin-subscriptions' ? (
           <AdminSubscriptions />
+        ) : currentPage === 'admin-services' ? (
+          <AdminServices />
         ) : (
           <AdminDashboard setCurrentPage={setCurrentPage} />
         )}
@@ -359,6 +370,8 @@ const AppContent: React.FC = () => {
           <TenantSearchHistory setCurrentPage={setCurrentPage} />
         ) : currentPage === 'tenant-booking-history' ? (
           <TenantBookingHistory setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-service-requests' ? (
+          <TenantServiceRequests />
         ) : currentPage === 'tenant-viewing-bookings' ? (
           <ViewingBookings actor="tenant" />
         ) : (
@@ -405,6 +418,8 @@ const AppContent: React.FC = () => {
           <Chat />
         ) : currentPage === 'owner-viewing-bookings' ? (
           <ViewingBookings actor="owner" />
+        ) : currentPage === 'owner-service-requests' ? (
+          <OwnerServiceRequests />
         ) : (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 soft-shadow min-h-[400px] flex flex-col items-center justify-center text-center">
             <span className="material-symbols-outlined text-[64px] text-primary-container mb-4">construction</span>

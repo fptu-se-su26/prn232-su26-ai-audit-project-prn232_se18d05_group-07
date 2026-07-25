@@ -48,6 +48,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     'tenant-reviews': { title: 'Đánh giá của tôi', subtitle: 'Chấm sao và nhận xét về phòng bạn đang thuê.' },
     'tenant-search-history': { title: 'Lịch sử tìm kiếm', subtitle: 'Các lượt tìm phòng gần đây của bạn.' },
     'tenant-booking-history': { title: 'Lịch sử xem phòng', subtitle: 'Những phòng bạn đã xem gần đây.' },
+    'tenant-service-requests': { title: 'Dịch vụ', subtitle: 'Yêu cầu các dịch vụ tiện ích cho phòng bạn.' },
     'tenant-viewing-bookings': { title: 'Lịch xem & đặt cọc', subtitle: 'Theo dõi lịch hẹn, phản hồi của chủ nhà và thời gian giữ phòng.' },
   };
   const pageInfo = pageInfoMap[currentPage] || { title: 'Khách thuê', subtitle: 'RoomHub Platform' };
@@ -75,6 +76,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     { label: 'Đánh giá của tôi', icon: 'reviews', route: 'tenant-reviews' },
     { label: 'Lịch sử tìm kiếm', icon: 'manage_search', route: 'tenant-search-history' },
     { label: 'Lịch sử xem phòng', icon: 'history', route: 'tenant-booking-history' },
+    { label: 'Dịch vụ', icon: 'room_service', route: 'tenant-service-requests' },
     { label: 'Lịch xem & đặt cọc', icon: 'event_available', route: 'tenant-viewing-bookings' },
     { label: 'Thông báo', icon: 'notifications', route: 'tenant-notifications', badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
     { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: 2 },

@@ -122,6 +122,8 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
         return { title: 'Hồ sơ cá nhân', subtitle: 'Cập nhật thông tin liên hệ chủ nhà.' };
       case 'owner-subscription':
         return { title: 'Gói dịch vụ', subtitle: 'Nâng cấp gói cước và quản lý giới hạn tài nguyên.' };
+      case 'owner-service-requests':
+        return { title: 'Yêu cầu dịch vụ', subtitle: 'Yêu cầu dịch vụ từ khách thuê của bạn.' };
       default:
         return { title: 'Quản lý Chủ nhà', subtitle: 'RoomHub Platform' };
     }
@@ -136,6 +138,7 @@ const OwnerLayout: React.FC<OwnerLayoutProps> = ({ currentPage, setCurrentPage, 
     { label: 'Tin cho thuê', icon: 'campaign', route: 'owner-listings' as PageType, activeMatches: ['owner-listings', 'owner-listings-create'] },
     { label: 'Tin nhắn', icon: 'chat', route: 'owner-messages' as PageType, badge: unreadChatCount > 0 ? unreadChatCount : undefined },
     { label: 'Người thuê', icon: 'people', route: 'owner-tenants' as PageType },
+    { label: 'Yêu cầu dịch vụ', icon: 'room_service', route: 'owner-service-requests' as PageType },
     { label: 'Lịch xem & đặt cọc', icon: 'event_available', route: 'owner-viewing-bookings' as PageType },
     { label: 'Hóa đơn & Chốt tiền', icon: 'receipt_long', route: 'owner-invoices' as PageType, activeMatches: ['owner-invoices', 'owner-invoices-create', 'owner-invoice-detail'] },
     { label: 'Cài đặt chi phí', icon: 'calculate', route: 'owner-cost-settings' as PageType },
