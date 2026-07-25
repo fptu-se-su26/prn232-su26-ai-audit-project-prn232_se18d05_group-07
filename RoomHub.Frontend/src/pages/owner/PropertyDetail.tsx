@@ -489,8 +489,12 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                 <span className="font-bold text-slate-800 block text-sm">{stats.total} phòng khép kín</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-400 block font-medium">Đơn giá thuê trung bình:</span>
-                <span className="font-bold text-primary-container block text-sm">{formatPrice(property.basePrice)}/tháng</span>
+                <span className="text-gray-400 block font-medium">Khoảng giá thuê niêm yết:</span>
+                <span className="font-bold text-primary-container block text-sm">
+                  {(property as any).minPrice && (property as any).maxPrice && (property as any).minPrice !== (property as any).maxPrice
+                    ? `${formatPrice((property as any).minPrice)} - ${formatPrice((property as any).maxPrice)}/tháng`
+                    : `${formatPrice(property.basePrice)}/tháng`}
+                </span>
               </div>
               <div className="space-y-1 border-t border-gray-50 pt-3">
                 <span className="text-gray-400 block font-medium">Đơn giá điện:</span>
@@ -1158,7 +1162,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
               {/* Drawer Title header */}
               <div className="flex justify-between items-center border-b border-gray-100 pb-4">
                 <div>
-                  <h3 className="text-lg font-black text-on-surface">Phòng {selectedRoom.id}</h3>
+                  <h3 className="text-lg font-black text-on-surface">Phòng {selectedRoom.roomNumber}</h3>
                   <p className="text-xs text-gray-500 font-semibold">{selectedRoom.type} · Tầng {selectedRoom.floor}</p>
                 </div>
                 <button 
@@ -1192,7 +1196,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                   <span className="text-on-surface">{selectedRoom.area} m²</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Giá thuê trần:</span>
+                  <span className="text-gray-400">Giá thuê niêm yết:</span>
                   <span className="text-primary-container font-bold">{formatPrice(selectedRoom.price)}/tháng</span>
                 </div>
                 <div className="flex justify-between">
@@ -1224,7 +1228,7 @@ const PropertyDetail: React.FC<PropertyDetailProps> = ({ propertyId, setCurrentP
                     </div>
                     <div className="flex justify-between border-t border-orange-100 pt-2.5">
                       <span className="text-gray-400">Tiền cọc giữ chân:</span>
-                      <span className="text-gray-600">{formatPrice(selectedRoom.deposit || 2500000)}</span>
+                      <span className="text-gray-600">{formatPrice(selectedRoom.deposit || selectedRoom.price)}</span>
                     </div>
                   </div>
 

@@ -1185,11 +1185,11 @@ const PropertyCreate: React.FC<PropertyCreateProps> = ({ setCurrentPage }) => {
                   <span className="text-on-surface font-bold">{defaultArea} m²</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Sức chứa trần:</span>
+                  <span>Sức chứa tối đa:</span>
                   <span className="text-on-surface font-bold">{maxPeople} người</span>
                 </div>
                 <div className="flex justify-between border-t border-orange-150 pt-2 font-black">
-                  <span>Giá cho thuê trần:</span>
+                  <span>Giá thuê niêm yết:</span>
                   <span className="text-primary-container">{formatPrice(basePrice)}/tháng</span>
                 </div>
               </div>

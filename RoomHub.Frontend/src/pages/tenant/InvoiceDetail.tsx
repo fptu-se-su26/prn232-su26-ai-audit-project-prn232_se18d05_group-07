@@ -52,6 +52,13 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const fetchInvoiceDetail = async () => {
     if (!invoiceId) return;
     try {
@@ -103,11 +110,11 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
         paymentMethod,
         transactionId
       });
-      alert(`Thanh toán thành công hóa đơn HD-${invoice.id} qua ${method.toUpperCase()}!`);
+      showToast(`Thanh toán thành công hóa đơn HD-${invoice.id} qua cổng ${method.toUpperCase()}!`, 'success');
       fetchInvoiceDetail();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Thanh toán thất bại, vui lòng thử lại.');
+      showToast(err.response?.data?.message || 'Thanh toán thất bại, vui lòng thử lại.', 'error');
     } finally {
       setPaying(false);
     }
@@ -128,7 +135,7 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
       link.parentNode?.removeChild(link);
     } catch (err: any) {
       console.error('Không thể xuất file Excel hóa đơn:', err);
-      alert('Không thể xuất file Excel hóa đơn này.');
+      showToast('Không thể xuất file Excel hóa đơn này.', 'error');
     }
   };
 
@@ -156,7 +163,25 @@ const TenantInvoiceDetail: React.FC<Props> = ({ invoiceId, setCurrentPage }) => 
   const isPaid = invoice.status === 'Đã thanh toán';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {toast && (
+        <div className={`fixed top-6 right-6 z-[9999] px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 animate-slideIn ${
+          toast.type === 'success'
+            ? 'bg-emerald-600 text-white border-emerald-500'
+            : toast.type === 'error'
+            ? 'bg-red-600 text-white border-red-500'
+            : 'bg-slate-800 text-white border-slate-700'
+        }`}>
+          <span className="material-symbols-outlined text-[22px]">
+            {toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : 'info'}
+          </span>
+          <span className="text-xs font-bold leading-relaxed">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75 cursor-pointer">
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <button onClick={() => setCurrentPage('tenant-invoices')} className="flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-primary-container transition-colors">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Quay lại danh sách

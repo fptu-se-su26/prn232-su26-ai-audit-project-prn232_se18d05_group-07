@@ -557,7 +557,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
           </h4>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">
-          <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Giá thuê trần</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Giá thuê niêm yết</p>
           <h4 className="text-sm font-black text-on-surface leading-tight">{formatPrice(data.price)}/th</h4>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-gray-100 soft-shadow">

@@ -152,7 +152,13 @@ namespace Application.Services
                 var invoiceDate = new DateTime(request.Year, request.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
                 var existingInvoices = await _invoiceRepository.GetInvoicesByBuildingAndMonthAsync(request.BuildingId, request.Month, request.Year, ownerId);
-                var alreadyBilledContractIds = new HashSet<int>(existingInvoices.Where(inv => inv.Status != InvoiceStatus.Cancelled).Select(inv => inv.ContractId));
+                // Only block duplicate creation if there is an ACTIVE UNPAID or PENDING invoice for this contract/month.
+                // If the tenant already paid the invoice for the month (or if it was cancelled), allow issuing a new invoice.
+                var pendingBilledContractIds = new HashSet<int>(
+                    existingInvoices
+                        .Where(inv => inv.Status == InvoiceStatus.Unpaid || inv.Status == InvoiceStatus.Pending)
+                        .Select(inv => inv.ContractId)
+                );
 
                 foreach (var readingInput in request.RoomReadings)
                 {
@@ -164,8 +170,8 @@ namespace Application.Services
                     if (activeContract == null)
                         continue; // No active contract, skip billing this room
 
-                    if (alreadyBilledContractIds.Contains(activeContract.Id))
-                        continue; // Already has a non-cancelled invoice for this contract/month, skip to avoid duplicate billing
+                    if (pendingBilledContractIds.Contains(activeContract.Id))
+                        continue; // Already has an unpaid/pending invoice for this contract/month, skip to avoid duplicate unpaid billing
 
                     var building = room.Floor.Building;
 
