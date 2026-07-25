@@ -86,6 +86,8 @@ namespace Application.Services
             Type = MapRoomType(r.RoomType),
             Location = $"{r.Floor.Building.Address}, {r.Floor.Building.Ward}, {r.Floor.Building.District}, {r.Floor.Building.City}",
             District = r.Floor.Building.District,
+            Latitude = (double?)r.Floor.Building.Latitude,
+            Longitude = (double?)r.Floor.Building.Longitude,
             Price = (double)r.BasePrice,
             Area = (double)(r.SurfaceArea ?? 25),
             MaxPeople = r.MaxCapacity,
