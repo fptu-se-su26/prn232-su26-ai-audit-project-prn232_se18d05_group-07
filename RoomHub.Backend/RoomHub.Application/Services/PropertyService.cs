@@ -17,6 +17,7 @@ namespace Application.Services
         private readonly IRoomRepository _roomRepository;
         private readonly IInvoiceRepository _invoiceRepository;
         private readonly IContractRepository _contractRepository;
+        private readonly IUtilityReadingRepository _utilityReadingRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -25,6 +26,7 @@ namespace Application.Services
             IRoomRepository roomRepository,
             IInvoiceRepository invoiceRepository,
             IContractRepository contractRepository,
+            IUtilityReadingRepository utilityReadingRepository,
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager)
         {
@@ -32,6 +34,7 @@ namespace Application.Services
             _roomRepository = roomRepository;
             _invoiceRepository = invoiceRepository;
             _contractRepository = contractRepository;
+            _utilityReadingRepository = utilityReadingRepository;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
         }
@@ -55,7 +58,9 @@ namespace Application.Services
                     _ => "Phòng trọ"
                 };
 
-                var basePrice = firstRoom?.BasePrice ?? 2500000;
+                var minPrice = allRooms.Any() ? allRooms.Min(r => r.BasePrice) : 2500000;
+                var maxPrice = allRooms.Any() ? allRooms.Max(r => r.BasePrice) : 2500000;
+                var basePrice = allRooms.Any() ? Math.Round(allRooms.Average(r => r.BasePrice)) : 2500000;
 
                 return new PropertyDto
                 {
@@ -69,6 +74,8 @@ namespace Application.Services
                     TotalRooms = totalRooms,
                     OccupiedRooms = occupiedRooms,
                     BasePrice = basePrice,
+                    MinPrice = minPrice,
+                    MaxPrice = maxPrice,
                     ElectricityPrice = b.ElectricityPrice,
                     WaterPrice = b.WaterPrice,
                     WaterBillingType = b.WaterBillingType,
@@ -130,22 +137,16 @@ namespace Application.Services
                 decimal oldWater = 0;
                 if (activeContract != null)
                 {
-                    var latestElecReading = activeContract.UtilityReadings
-                        .Where(ur => ur.UtilityType == UtilityType.Electricity)
-                        .OrderByDescending(ur => ur.ReadingDate)
-                        .FirstOrDefault();
-                    if (latestElecReading != null)
+                    var lastElecReading = await _utilityReadingRepository.GetLastReadingForContractAsync(activeContract.Id, UtilityType.Electricity);
+                    if (lastElecReading != null)
                     {
-                        oldElectricity = latestElecReading.NewIndex ?? 0;
+                        oldElectricity = lastElecReading.NewIndex ?? 0;
                     }
 
-                    var latestWaterReading = activeContract.UtilityReadings
-                        .Where(ur => ur.UtilityType == UtilityType.Water)
-                        .OrderByDescending(ur => ur.ReadingDate)
-                        .FirstOrDefault();
-                    if (latestWaterReading != null)
+                    var lastWaterReading = await _utilityReadingRepository.GetLastReadingForContractAsync(activeContract.Id, UtilityType.Water);
+                    if (lastWaterReading != null)
                     {
-                        oldWater = latestWaterReading.NewIndex ?? 0;
+                        oldWater = lastWaterReading.NewIndex ?? 0;
                     }
                 }
 
@@ -190,6 +191,10 @@ namespace Application.Services
                 _ => "Phòng trọ"
             };
 
+            var minPriceDetail = allRooms.Any() ? allRooms.Min(r => r.BasePrice) : 2500000;
+            var maxPriceDetail = allRooms.Any() ? allRooms.Max(r => r.BasePrice) : 2500000;
+            var avgPriceDetail = allRooms.Any() ? Math.Round(allRooms.Average(r => r.BasePrice)) : 2500000;
+
             var propertyDto = new PropertyDto
             {
                 Id = building.Id,
@@ -201,7 +206,9 @@ namespace Application.Services
                 RoomsPerFloor = building.Floors.FirstOrDefault()?.Rooms.Count(r => !r.IsDeleted) ?? 0,
                 TotalRooms = totalRoomsCount,
                 OccupiedRooms = occupiedRoomsCount,
-                BasePrice = allRooms.FirstOrDefault()?.BasePrice ?? 2500000,
+                BasePrice = avgPriceDetail,
+                MinPrice = minPriceDetail,
+                MaxPrice = maxPriceDetail,
                 ElectricityPrice = building.ElectricityPrice,
                 WaterPrice = building.WaterPrice,
                 WaterBillingType = building.WaterBillingType,

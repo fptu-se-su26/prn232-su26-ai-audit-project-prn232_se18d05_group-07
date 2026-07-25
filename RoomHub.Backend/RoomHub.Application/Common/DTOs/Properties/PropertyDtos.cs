@@ -15,6 +15,8 @@ namespace Application.Common.DTOs.Properties
         public int TotalRooms { get; set; }
         public int OccupiedRooms { get; set; }
         public decimal BasePrice { get; set; }
+        public decimal MinPrice { get; set; }
+        public decimal MaxPrice { get; set; }
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
         public string WaterBillingType { get; set; } = "PerCubicMeter";
