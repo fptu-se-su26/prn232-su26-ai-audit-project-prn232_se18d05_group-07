@@ -16,6 +16,7 @@ const menuItems: { label: string; icon: string; route: PageType }[] = [
   { label: 'Kiểm duyệt', icon: 'gavel', route: 'admin-moderation' },
   { label: 'Kiểm duyệt đánh giá', icon: 'rate_review', route: 'admin-review-moderation' },
   { label: 'Gói dịch vụ', icon: 'workspace_premium', route: 'admin-subscriptions' },
+  { label: 'Dịch vụ tiện ích', icon: 'room_service', route: 'admin-services' },
 ];
 
 const pageInfoMap: Record<string, { title: string; subtitle: string }> = {
