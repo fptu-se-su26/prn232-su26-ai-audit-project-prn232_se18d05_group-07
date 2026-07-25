@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { favoritesApi } from '../services/favorites';
+import MapBrowse from '../components/MapBrowse';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ export interface Room {
   image: string;
   amenities: string[];
   isNew?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 
@@ -212,6 +215,11 @@ const Browse: React.FC<BrowseProps> = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // ── Map view state ────────────────────────────────────────────────────────
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [mapRooms, setMapRooms] = useState<Room[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
+
   // ── Modal state ───────────────────────────────────────────────────────────
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
@@ -263,6 +271,40 @@ const Browse: React.FC<BrowseProps> = () => {
       setIsLoading(false);
     }
   }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy, currentPage]);
+
+  // ── Fetch listings for the map view: same filters, but pull a larger batch
+  // (page 1, pageSize 100) so all matching rooms can be plotted as pins.
+  const fetchMapListings = useCallback(async () => {
+    setMapLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchKeyword.trim()) params.set('searchQuery', searchKeyword.trim());
+      if (selectedType !== 'Tất cả') params.set('roomType', selectedType);
+      if (selectedLocation !== 'Tất cả') params.set('district', selectedLocation);
+      if (sortBy) params.set('sortBy', sortBy);
+
+      const priceFilter = PRICE_RANGES[priceRange] ?? {};
+      if (priceFilter.min != null) params.set('minPrice', String(priceFilter.min));
+      if (priceFilter.max != null) params.set('maxPrice', String(priceFilter.max));
+      if (selectedAmenities.length > 0) params.set('amenities', selectedAmenities.join(','));
+
+      params.set('page', '1');
+      params.set('pageSize', '100');
+
+      const response = await api.get(`/public/listings?${params.toString()}`);
+      const data = response.data;
+      setMapRooms(Array.isArray(data) ? (data as Room[]) : (data.items ?? []));
+    } catch {
+      setMapRooms([]);
+    } finally {
+      setMapLoading(false);
+    }
+  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities, sortBy]);
+
+  // Refetch map data whenever the map is active and filters change.
+  useEffect(() => {
+    if (viewMode === 'map') fetchMapListings();
+  }, [viewMode, fetchMapListings]);
 
   // Filter & Sort Logic for Mock Rooms
   const filteredMockRooms = useMemo(() => {
@@ -677,6 +719,27 @@ const Browse: React.FC<BrowseProps> = () => {
               )}
             </h2>
             <div className="flex items-center gap-2">
+              {/* List / Map view toggle */}
+              <div className="flex items-center bg-gray-100 rounded-xl p-0.5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1 transition-all ${
+                    viewMode === 'list' ? 'bg-white text-primary-container soft-shadow' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">view_list</span>
+                  <span className="hidden sm:inline">Danh sách</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1 transition-all ${
+                    viewMode === 'map' ? 'bg-white text-primary-container soft-shadow' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">map</span>
+                  <span className="hidden sm:inline">Bản đồ</span>
+                </button>
+              </div>
               <span className="text-sm text-gray-500 font-medium whitespace-nowrap">Sắp xếp:</span>
               <select
                 id="browse-sort-select"
@@ -691,8 +754,11 @@ const Browse: React.FC<BrowseProps> = () => {
             </div>
           </div>
 
+          {/* ── Map View ─────────────────────────────────────────────────────── */}
+          {viewMode === 'map' && <MapBrowse rooms={mapRooms} loading={mapLoading} />}
+
           {/* ── Loading Skeleton ─────────────────────────────────────────────── */}
-          {isLoading && (
+          {viewMode === 'list' && isLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
@@ -709,7 +775,7 @@ const Browse: React.FC<BrowseProps> = () => {
           )}
 
           {/* ── API Error State ──────────────────────────────────────────────── */}
-          {!isLoading && hasError && (
+          {viewMode === 'list' && !isLoading && hasError && (
             <div className="bg-white border border-red-100 rounded-2xl p-12 text-center soft-shadow">
               <span className="material-symbols-outlined text-[64px] text-red-300 mb-4 block">wifi_off</span>
               <h3 className="text-lg font-bold text-on-surface mb-2">Không thể kết nối máy chủ</h3>
@@ -727,7 +793,7 @@ const Browse: React.FC<BrowseProps> = () => {
           )}
 
           {/* ── Empty Results ────────────────────────────────────────────────── */}
-          {!isLoading && !hasError && rooms.length === 0 && (
+          {viewMode === 'list' && !isLoading && !hasError && rooms.length === 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center soft-shadow">
               <span className="material-symbols-outlined text-[64px] text-gray-300 mb-4 block">search_off</span>
               <h3 className="text-lg font-bold text-on-surface mb-2">Không tìm thấy phòng phù hợp</h3>
@@ -744,7 +810,7 @@ const Browse: React.FC<BrowseProps> = () => {
           )}
 
           {/* ── Listings Grid ────────────────────────────────────────────────── */}
-          {!isLoading && !hasError && rooms.length > 0 && (
+          {viewMode === 'list' && !isLoading && !hasError && rooms.length > 0 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {rooms.map((room: Room) => (
