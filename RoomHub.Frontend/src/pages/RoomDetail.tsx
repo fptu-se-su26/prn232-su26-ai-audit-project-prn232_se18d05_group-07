@@ -52,6 +52,13 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
   }, [activeRoomId]);
 
+  // Ghi lại lịch sử xem phòng cho người thuê đã đăng nhập (bỏ qua phòng mock; lỗi được bỏ qua).
+  useEffect(() => {
+    if (!activeRoomId || activeRoomId >= 100000) return;
+    if (user?.role !== 'Tenant') return;
+    api.post('/tenant/booking-history', { roomId: activeRoomId }).catch(() => { /* bỏ qua */ });
+  }, [activeRoomId, user]);
+
   // Fetch listing detail from API
   useEffect(() => {
     if (!activeRoomId) {

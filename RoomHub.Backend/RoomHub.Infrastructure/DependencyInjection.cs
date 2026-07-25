@@ -123,6 +123,7 @@ namespace Infrastructure
             services.AddScoped<IReviewRepository, Persistence.Repositories.ReviewRepository>();
             services.AddScoped<ISearchHistoryRepository, Persistence.Repositories.SearchHistoryRepository>();
             services.AddScoped<IFavoriteRoomRepository, Persistence.Repositories.FavoriteRoomRepository>();
+            services.AddScoped<IBookingHistoryRepository, Persistence.Repositories.BookingHistoryRepository>();
             services.AddScoped<IUnitOfWork, Persistence.Repositories.UnitOfWork>();
 
             // Register Business Services
@@ -140,6 +141,7 @@ namespace Infrastructure
             services.AddScoped<IReviewService, Application.Services.ReviewService>();
             services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
             services.AddScoped<IFavoriteRoomService, Application.Services.FavoriteRoomService>();
+            services.AddScoped<IBookingHistoryService, Application.Services.BookingHistoryService>();
             services.AddScoped<IViewingWorkflowService, ViewingWorkflowService>();
             services.AddScoped<IAdminUserService, AdminUserService>();
             services.AddScoped<IAdminDashboardService, AdminDashboardService>();

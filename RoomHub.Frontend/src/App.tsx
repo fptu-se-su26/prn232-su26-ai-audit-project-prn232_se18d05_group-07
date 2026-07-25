@@ -40,6 +40,7 @@ import TenantProfile from './pages/tenant/Profile';
 import TenantNotifications from './pages/tenant/Notifications';
 import TenantMyReviews from './pages/tenant/MyReviews';
 import TenantSearchHistory from './pages/tenant/SearchHistory';
+import TenantBookingHistory from './pages/tenant/BookingHistory';
 import OwnerNotifications from './pages/owner/Notifications';
 import Profile from './pages/owner/Profile';
 import OwnerSubscription from './pages/owner/Subscription';
@@ -90,6 +91,7 @@ export type PageType =
   | 'tenant-notifications'
   | 'tenant-reviews'
   | 'tenant-search-history'
+  | 'tenant-booking-history'
   | 'tenant-viewing-bookings'
   | 'admin-dashboard'
   | 'admin-users'
@@ -153,6 +155,7 @@ const AppContent: React.FC = () => {
           'notifications': 'tenant-notifications',
           'reviews': 'tenant-reviews',
           'search-history': 'tenant-search-history',
+          'booking-history': 'tenant-booking-history',
           'viewing-bookings': 'tenant-viewing-bookings',
         };
         if (tenantMap[sub]) { setCurrentPage(tenantMap[sub]); return; }
@@ -354,6 +357,8 @@ const AppContent: React.FC = () => {
           <TenantMyReviews />
         ) : currentPage === 'tenant-search-history' ? (
           <TenantSearchHistory setCurrentPage={setCurrentPage} />
+        ) : currentPage === 'tenant-booking-history' ? (
+          <TenantBookingHistory setCurrentPage={setCurrentPage} />
         ) : currentPage === 'tenant-viewing-bookings' ? (
           <ViewingBookings actor="tenant" />
         ) : (

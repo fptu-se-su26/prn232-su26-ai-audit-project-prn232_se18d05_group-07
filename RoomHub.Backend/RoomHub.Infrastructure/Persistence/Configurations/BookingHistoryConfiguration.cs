@@ -18,13 +18,23 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(b => b.PriceAtBooking).HasColumnType("decimal(18,2)");
 
+            builder.Property(b => b.TenantId).IsRequired();
+
             builder.HasOne(b => b.Room)
                 .WithMany(r => r.BookingHistories)
                 .HasForeignKey(b => b.RoomId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            builder.HasOne(b => b.Tenant)
+                .WithMany()
+                .HasForeignKey(b => b.TenantId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             builder.HasIndex(b => b.RoomId)
                 .HasDatabaseName("IX_BookingHistories_RoomId");
+
+            builder.HasIndex(b => b.TenantId)
+                .HasDatabaseName("IX_BookingHistories_TenantId");
         }
     }
 }
