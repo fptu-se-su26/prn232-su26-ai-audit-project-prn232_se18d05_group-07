@@ -84,7 +84,10 @@ const TenantBookingHistory: React.FC<Props> = ({ setCurrentPage }) => {
 
   const formatDate = (s: string) => {
     try {
-      return new Date(s).toLocaleString('vi-VN', {
+      // Backend trả về giờ UTC nhưng có thể thiếu hậu tố 'Z'; thêm vào để đổi đúng sang giờ địa phương (VN).
+      const hasTz = /[zZ]$|[+-]\d\d:?\d\d$/.test(s);
+      const iso = hasTz ? s : `${s}Z`;
+      return new Date(iso).toLocaleString('vi-VN', {
         hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
       });
     } catch { return s; }
