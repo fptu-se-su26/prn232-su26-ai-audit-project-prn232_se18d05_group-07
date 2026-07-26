@@ -87,6 +87,51 @@ public sealed class ReviewModerationBypassTests
         Assert.Equal(0, unitOfWork.SaveCount);
     }
 
+    [Fact]
+    public async Task ReportAsync_UnknownReasonCode_IsRejected()
+    {
+        var repository = new FakeReviewRepository(ReviewModerationStatus.Visible);
+        var service = new ReviewService(repository, new FakeUnitOfWork());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReportAsync(
+            7,
+            "reporter-a",
+            new CreateReviewReportRequest { ReasonCode = "InjectedReason" }));
+
+        Assert.Empty(repository.Reports);
+    }
+
+    [Fact]
+    public async Task ReportAsync_OtherWithoutDescription_IsRejected()
+    {
+        var repository = new FakeReviewRepository(ReviewModerationStatus.Visible);
+        var service = new ReviewService(repository, new FakeUnitOfWork());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReportAsync(
+            7,
+            "reporter-a",
+            new CreateReviewReportRequest { ReasonCode = "Other", Description = " " }));
+
+        Assert.Empty(repository.Reports);
+    }
+
+    [Fact]
+    public async Task ReportAsync_KnownReason_IsCanonicalizedAndSaved()
+    {
+        var repository = new FakeReviewRepository(ReviewModerationStatus.Visible);
+        var unitOfWork = new FakeUnitOfWork();
+        var service = new ReviewService(repository, unitOfWork);
+
+        await service.ReportAsync(
+            7,
+            "reporter-a",
+            new CreateReviewReportRequest { ReasonCode = " falseinformation ", Description = "Incorrect claim" });
+
+        var report = Assert.Single(repository.Reports);
+        Assert.Equal("FalseInformation", report.ReasonCode);
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
     private sealed class FakeReviewRepository : IReviewRepository
     {
         private readonly Review review;
@@ -107,6 +152,7 @@ public sealed class ReviewModerationBypassTests
         public List<ReviewRevision> Revisions { get; } = [];
         public List<AuditLog> AuditLogs { get; } = [];
         public List<Notification> Notifications { get; } = [];
+        public List<ReviewViolation> Reports { get; } = [];
 
         public Task<Review?> GetByIdAsync(int id) => Task.FromResult<Review?>(id == review.Id ? review : null);
         public Task<List<Review>> GetByRoomIdAsync(int roomId) => Task.FromResult(new List<Review>());
@@ -117,7 +163,11 @@ public sealed class ReviewModerationBypassTests
         public Task<ApplicationUser?> GetUserAsync(string userId) => Task.FromResult<ApplicationUser?>(new ApplicationUser { Id = userId });
         public Task<int> GetReviewEligibilityDaysAsync() => Task.FromResult(90);
         public Task<bool> HasPendingReportAsync(int reviewId, string reporterId) => Task.FromResult(false);
-        public Task AddReportAsync(ReviewViolation report) => Task.CompletedTask;
+        public Task AddReportAsync(ReviewViolation report)
+        {
+            Reports.Add(report);
+            return Task.CompletedTask;
+        }
         public Task AddAsync(Review review) => Task.CompletedTask;
         public Task UpdateAsync(Review review) => Task.CompletedTask;
         public Task DeleteAsync(Review review) => Task.CompletedTask;
