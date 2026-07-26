@@ -177,6 +177,7 @@ const AppContent: React.FC = () => {
           'buildings': 'admin-buildings',
           'rooms': 'admin-rooms',
           'moderation': 'admin-moderation',
+          'review-moderation': 'admin-review-moderation',
           'subscriptions': 'admin-subscriptions',
           'services': 'admin-services',
         };

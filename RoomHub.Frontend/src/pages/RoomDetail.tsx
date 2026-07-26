@@ -12,6 +12,9 @@ interface RoomDetailProps {
   setSelectedRoomId?: (id: number | null) => void;
 }
 
+type ReviewReportReason = { code: string; label: string };
+type ReportableReview = { id: number; tenantName: string; comment?: string };
+
 // Additional mockup interior images for the gallery grid
 const INTERIOR_IMAGES = [
   "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80",
@@ -32,6 +35,12 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<any>({ averageRating: 0, totalReviews: 0, reviews: [] });
+  const [reportingReview, setReportingReview] = useState<ReportableReview | null>(null);
+  const [reportReasons, setReportReasons] = useState<ReviewReportReason[]>([]);
+  const [reportReasonCode, setReportReasonCode] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportError, setReportError] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id: routeId } = useParams<{ id: string }>();
@@ -51,6 +60,18 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     if (!activeRoomId || activeRoomId >= 100000) return;
     api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
   }, [activeRoomId]);
+
+  useEffect(() => {
+    api.get('/reviews/report-reasons')
+      .then(response => setReportReasons(response.data))
+      .catch(() => setReportReasons([
+        { code: 'Spam', label: 'Nội dung spam hoặc quảng cáo' },
+        { code: 'Abuse', label: 'Ngôn từ xúc phạm hoặc quấy rối' },
+        { code: 'FalseInformation', label: 'Thông tin sai lệch' },
+        { code: 'PersonalInformation', label: 'Tiết lộ thông tin cá nhân' },
+        { code: 'Other', label: 'Lý do khác' }
+      ]));
+  }, []);
 
   // Ghi lại lịch sử xem phòng cho người thuê đã đăng nhập (bỏ qua phòng mock; lỗi được bỏ qua).
   // loggedRoomsRef chặn việc ghi trùng khi effect chạy 2 lần (React StrictMode) cho cùng một phòng.
@@ -182,6 +203,42 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
 
   const handleAlert = (message: string) => {
     alert(message);
+  };
+
+  const openReviewReport = (review: ReportableReview) => {
+    setReportingReview(review);
+    setReportReasonCode('');
+    setReportDescription('');
+    setReportError('');
+  };
+
+  const submitReviewReport = async () => {
+    if (!reportingReview) return;
+    if (!reportReasonCode) {
+      setReportError('Vui lòng chọn lý do báo cáo.');
+      return;
+    }
+    if (reportReasonCode === 'Other' && !reportDescription.trim()) {
+      setReportError('Vui lòng mô tả lý do báo cáo.');
+      return;
+    }
+    try {
+      setReportSubmitting(true);
+      setReportError('');
+      await api.post(`/reviews/${reportingReview.id}/reports`, {
+        reasonCode: reportReasonCode,
+        description: reportDescription.trim() || null
+      });
+      setReportingReview(null);
+      alert('Đã gửi báo cáo.');
+    } catch (requestError: unknown) {
+      const message = typeof requestError === 'object' && requestError !== null && 'response' in requestError
+        ? (requestError as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      setReportError(message || 'Không thể gửi báo cáo.');
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   if (loading || !room) {
@@ -581,8 +638,71 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
         {/* Similar Listings Section */}
         <section className="mt-16 bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
           <div className="flex items-end justify-between"><div><h2 className="text-xl font-black">Đánh giá từ người thuê đã xác minh</h2><p className="text-sm text-gray-500">Chỉ hiển thị đánh giá hợp lệ đã qua kiểm duyệt.</p></div><div className="text-right"><span className="text-3xl font-black text-amber-500">{reviewSummary.averageRating}</span><span className="text-gray-500">/5 ({reviewSummary.totalReviews})</span></div></div>
-          {!reviewSummary.reviews.length ? <p className="py-8 text-center text-gray-500">Phòng này chưa có đánh giá.</p> : <div className="space-y-3">{reviewSummary.reviews.map((r:any)=><article key={r.id} className="border-t pt-4"><div className="flex justify-between"><b>{r.tenantName}</b><span className="text-amber-500">{'★'.repeat(r.rating||0)}{'☆'.repeat(5-(r.rating||0))}</span></div><p className="mt-2 text-sm text-gray-700">{r.comment||'Không có nhận xét.'}</p>{user&&<button onClick={async()=>{const reasonCode=prompt('Lý do báo cáo (Spam, Abuse, FalseInformation...)');if(!reasonCode)return;try{await api.post(`/reviews/${r.id}/reports`,{reasonCode,description:null});alert('Đã gửi báo cáo.')}catch(e:any){alert(e.response?.data?.message||'Không thể gửi báo cáo.')}}} className="mt-2 text-xs text-red-500">Báo cáo</button>}</article>)}</div>}
+          {!reviewSummary.reviews.length ? (
+            <p className="py-8 text-center text-gray-500">Phòng này chưa có đánh giá.</p>
+          ) : (
+            <div className="space-y-3">
+              {reviewSummary.reviews.map((review: ReportableReview & { rating?: number }) => (
+                <article key={review.id} className="border-t pt-4">
+                  <div className="flex justify-between">
+                    <b>{review.tenantName}</b>
+                    <span className="text-amber-500">{'★'.repeat(review.rating || 0)}{'☆'.repeat(5 - (review.rating || 0))}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700">{review.comment || 'Không có nhận xét.'}</p>
+                  {user && (
+                    <button onClick={() => openReviewReport(review)} className="mt-2 text-xs text-red-500">
+                      Báo cáo
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
+
+        {reportingReview && (
+          <div className="fixed inset-0 z-[70] bg-black/50 grid place-items-center p-4">
+            <form className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4" onSubmit={event => { event.preventDefault(); void submitReviewReport(); }}>
+              <div className="flex justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold">Báo cáo đánh giá</h3>
+                  <p className="text-sm text-gray-500">Đánh giá của {reportingReview.tenantName}</p>
+                </div>
+                <button type="button" onClick={() => setReportingReview(null)}>✕</button>
+              </div>
+              <label className="block text-sm font-semibold" htmlFor="review-report-reason">Lý do</label>
+              <select
+                id="review-report-reason"
+                value={reportReasonCode}
+                onChange={event => setReportReasonCode(event.target.value)}
+                className="w-full rounded-xl border p-3"
+              >
+                <option value="">Chọn lý do báo cáo</option>
+                {reportReasons.map(reason => <option key={reason.code} value={reason.code}>{reason.label}</option>)}
+              </select>
+              <label className="block text-sm font-semibold" htmlFor="review-report-description">
+                Mô tả {reportReasonCode === 'Other' ? '(bắt buộc)' : '(không bắt buộc)'}
+              </label>
+              <textarea
+                id="review-report-description"
+                value={reportDescription}
+                onChange={event => setReportDescription(event.target.value)}
+                maxLength={1000}
+                rows={4}
+                className="w-full rounded-xl border p-3"
+                placeholder="Cung cấp thông tin giúp quản trị viên xác minh báo cáo"
+              />
+              <p className="text-xs text-gray-500 text-right">{reportDescription.length}/1000</p>
+              {reportError && <p className="p-3 rounded-lg bg-red-50 text-sm text-red-700">{reportError}</p>}
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setReportingReview(null)} className="px-4 py-2 rounded-lg bg-gray-100">Hủy</button>
+                <button disabled={reportSubmitting} type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white disabled:opacity-50">
+                  {reportSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="mt-20 space-y-6">
           <h2 className="text-2xl font-black text-on-surface flex items-center gap-2 border-l-4 border-primary-container pl-3">
