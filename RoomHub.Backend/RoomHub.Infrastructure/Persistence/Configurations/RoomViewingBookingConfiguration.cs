@@ -17,6 +17,7 @@ public class RoomViewingBookingConfiguration : IEntityTypeConfiguration<RoomView
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.HasIndex(x => new { x.RoomId, x.ScheduledStartAt, x.ScheduledEndAt, x.Status });
         builder.HasIndex(x => new { x.TenantId, x.Status });
+        builder.HasIndex(x => new { x.TenantId, x.RoomId });
         builder.HasOne(x => x.Room).WithMany(x => x.ViewingBookings).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
     }
