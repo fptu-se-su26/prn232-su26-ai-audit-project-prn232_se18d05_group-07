@@ -1,5 +1,6 @@
 using Application.Common.Interfaces;
 using RoomHub.Domain.Entities;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
@@ -26,7 +27,14 @@ public sealed class FavoriteRoomRepository(ApplicationDbContext context) : IFavo
         context.FavoriteRooms.AnyAsync(f => f.UserId == userId && f.RoomId == roomId, cancellationToken);
 
     public Task<bool> RoomCanBeFavoritedAsync(int roomId, CancellationToken cancellationToken = default) =>
-        context.Rooms.AnyAsync(r => r.Id == roomId && !r.IsDeleted && r.HasListing, cancellationToken);
+        context.Rooms.AnyAsync(r =>
+            r.Id == roomId
+            && !r.IsDeleted
+            && r.HasListing
+            && r.IsPublished
+            && !r.HiddenByOwner
+            && r.ModerationStatus == ModerationStatus.Approved,
+            cancellationToken);
 
     public async Task AddIfMissingAsync(string userId, int roomId, CancellationToken cancellationToken = default)
     {

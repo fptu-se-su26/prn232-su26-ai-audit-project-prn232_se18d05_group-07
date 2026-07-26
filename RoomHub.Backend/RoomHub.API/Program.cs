@@ -5,6 +5,7 @@ using RoomHub.API.Middlewares;
 using Application.Common.Interfaces;
 using RoomHub.API.Hubs;
 using RoomHub.API.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,21 +44,27 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed database on startup
+// Keep the existing startup migration behavior in every environment, while
+// restricting demo accounts, buildings and rooms to Development only.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<Infrastructure.Persistence.ApplicationDbContext>();
-        var userManager = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Domain.Entities.ApplicationUser>>();
-        var roleManager = services.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
-        await Infrastructure.Persistence.DbInitializer.SeedDataAsync(context, userManager, roleManager);
+        await context.Database.MigrateAsync();
+
+        if (app.Environment.IsDevelopment())
+        {
+            var userManager = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Domain.Entities.ApplicationUser>>();
+            var roleManager = services.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
+            await Infrastructure.Persistence.DbInitializer.SeedDataAsync(context, userManager, roleManager);
+        }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
 }
 
