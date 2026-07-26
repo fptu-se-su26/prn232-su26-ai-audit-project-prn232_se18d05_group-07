@@ -504,6 +504,267 @@ namespace Infrastructure.Persistence
                 context.InvoiceItems.AddRange(invoiceMonth1Items);
                 await context.SaveChangesAsync();
             }
+
+            await SeedDaNangDemoListingsAsync(context, owner);
         }
+
+        private static async Task SeedDaNangDemoListingsAsync(
+            ApplicationDbContext context,
+            ApplicationUser owner)
+        {
+            const string demoSeedPrefix = "danang-demo";
+            var now = DateTime.UtcNow;
+            var amenities = await context.Amenities
+                .OrderBy(a => a.Id)
+                .ToListAsync();
+
+            var buildingSpecs = new[]
+            {
+                new DemoBuildingSpec(
+                    "An Thượng Urban Stay",
+                    "Ngũ Hành Sơn",
+                    "Mỹ An",
+                    "35 An Thượng 3",
+                    16.0488m,
+                    108.2442m,
+                    RoomType.Studio,
+                    3200000m,
+                    28m,
+                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Khuê Mỹ Riverside Rooms",
+                    "Ngũ Hành Sơn",
+                    "Khuê Mỹ",
+                    "118 Chương Dương",
+                    16.0349m,
+                    108.2380m,
+                    RoomType.BoardingHouse,
+                    2500000m,
+                    24m,
+                    "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Sơn Trà Ocean House",
+                    "Sơn Trà",
+                    "Phước Mỹ",
+                    "92 Hồ Nghinh",
+                    16.0686m,
+                    108.2423m,
+                    RoomType.Studio,
+                    3900000m,
+                    30m,
+                    "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Mân Thái Coastal Residence",
+                    "Sơn Trà",
+                    "Mân Thái",
+                    "41 Trương Định",
+                    16.0904m,
+                    108.2449m,
+                    RoomType.MiniApartment,
+                    4300000m,
+                    34m,
+                    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Hải Châu Central Living",
+                    "Hải Châu",
+                    "Bình Hiên",
+                    "76 Núi Thành",
+                    16.0478m,
+                    108.2176m,
+                    RoomType.MiniApartment,
+                    4100000m,
+                    32m,
+                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Thanh Khê Student Home",
+                    "Thanh Khê",
+                    "Thạc Gián",
+                    "155 Hà Huy Tập",
+                    16.0657m,
+                    108.1972m,
+                    RoomType.BoardingHouse,
+                    2200000m,
+                    22m,
+                    "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Cẩm Lệ Green Apartments",
+                    "Cẩm Lệ",
+                    "Hòa Xuân",
+                    "28 Nguyễn Phước Lan",
+                    16.0114m,
+                    108.2249m,
+                    RoomType.Apartment,
+                    5200000m,
+                    42m,
+                    "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80"),
+                new DemoBuildingSpec(
+                    "Liên Chiểu Campus House",
+                    "Liên Chiểu",
+                    "Hòa Khánh Bắc",
+                    "63 Ngô Văn Sở",
+                    16.0749m,
+                    108.1493m,
+                    RoomType.BoardingHouse,
+                    2000000m,
+                    21m,
+                    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1200&q=80")
+            };
+
+            var existingBuildingNames = await context.Buildings
+                .Where(b => b.OwnerId == owner.Id)
+                .Select(b => b.Name)
+                .ToListAsync();
+            var existingNames = existingBuildingNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            for (var buildingIndex = 0; buildingIndex < buildingSpecs.Length; buildingIndex++)
+            {
+                var spec = buildingSpecs[buildingIndex];
+                if (existingNames.Contains(spec.Name))
+                {
+                    continue;
+                }
+
+                var building = new Building
+                {
+                    OwnerId = owner.Id,
+                    Name = spec.Name,
+                    Province = "Đà Nẵng",
+                    City = "Đà Nẵng",
+                    District = spec.District,
+                    Ward = spec.Ward,
+                    Address = spec.StreetAddress,
+                    Latitude = spec.Latitude,
+                    Longitude = spec.Longitude,
+                    ElectricityPrice = 3500m + (buildingIndex % 3) * 200m,
+                    WaterPrice = 15000m + (buildingIndex % 2) * 5000m,
+                    WaterBillingType = "PerCubicMeter",
+                    InternetPrice = 100000m,
+                    GarbagePrice = 30000m,
+                    ThumbnailUrl = spec.ImageUrl,
+                    CreatedAt = now.AddDays(-(buildingIndex + 1))
+                };
+                context.Buildings.Add(building);
+
+                for (var floorNumber = 1; floorNumber <= 3; floorNumber++)
+                {
+                    var floor = new Floor
+                    {
+                        Building = building,
+                        FloorNumber = floorNumber,
+                        Description = $"Tầng {floorNumber}"
+                    };
+                    context.Floors.Add(floor);
+
+                    for (var roomIndex = 1; roomIndex <= 6; roomIndex++)
+                    {
+                        var roomNumber = $"{floorNumber}{roomIndex:00}";
+                        var priceOffset = (floorNumber - 1) * 150000m + (roomIndex - 1) * 50000m;
+                        var areaOffset = (roomIndex - 1) % 3;
+                        var room = new Room
+                        {
+                            Floor = floor,
+                            RoomNumber = roomNumber,
+                            RoomType = spec.RoomType,
+                            MaxCapacity = spec.RoomType == RoomType.Apartment ? 4 : 2,
+                            SurfaceArea = spec.BaseArea + areaOffset,
+                            BasePrice = spec.BasePrice + priceOffset,
+                            Description = BuildDemoDescription(spec, floorNumber, roomNumber),
+                            AIFormattedDescription = BuildDemoDescription(spec, floorNumber, roomNumber),
+                            IsFurnished = true,
+                            Status = RoomStatus.Available,
+                            LandlordId = owner.Id,
+                            Title = $"{GetRoomTypeLabel(spec.RoomType)} {roomNumber} tại {spec.Name}",
+                            IsPublished = true,
+                            HasListing = true,
+                            HiddenByOwner = false,
+                            ModerationStatus = ModerationStatus.Approved,
+                            ModerationRemarks = "Dữ liệu demo đã được duyệt sẵn.",
+                            ModeratedAt = now,
+                            ListingScore = 92 + ((buildingIndex + roomIndex) % 9),
+                            CreatedAt = now.AddDays(-((buildingIndex * 2 + roomIndex) % 12))
+                        };
+                        context.Rooms.Add(room);
+
+                        context.RoomPhotos.AddRange(
+                            new RoomPhoto
+                            {
+                                Room = room,
+                                Url = spec.ImageUrl,
+                                PublicId = $"{demoSeedPrefix}-{buildingIndex + 1}-{floorNumber}-{roomIndex}-main",
+                                IsMain = true,
+                                DisplayOrder = 0,
+                                UploadedAt = now
+                            },
+                            new RoomPhoto
+                            {
+                                Room = room,
+                                Url = GetSecondaryImageUrl(buildingIndex, roomIndex),
+                                PublicId = $"{demoSeedPrefix}-{buildingIndex + 1}-{floorNumber}-{roomIndex}-detail",
+                                IsMain = false,
+                                DisplayOrder = 1,
+                                UploadedAt = now
+                            });
+
+                        foreach (var amenity in amenities
+                                     .Skip((buildingIndex + roomIndex) % Math.Max(1, amenities.Count))
+                                     .Concat(amenities)
+                                     .DistinctBy(a => a.Id)
+                                     .Take(Math.Min(4, amenities.Count)))
+                        {
+                            context.RoomAmenities.Add(new RoomAmenity
+                            {
+                                Room = room,
+                                Amenity = amenity
+                            });
+                        }
+                    }
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        private static string BuildDemoDescription(
+            DemoBuildingSpec spec,
+            int floorNumber,
+            string roomNumber)
+        {
+            return $"{GetRoomTypeLabel(spec.RoomType)} {roomNumber} ở tầng {floorNumber}, "
+                + $"đầy đủ nội thất, thoáng sáng và sẵn sàng nhận phòng. "
+                + $"Vị trí tại {spec.StreetAddress}, phường {spec.Ward}, quận {spec.District}, Đà Nẵng; "
+                + "thuận tiện di chuyển, có chỗ để xe, WiFi và khu vực sinh hoạt an toàn.";
+        }
+
+        private static string GetRoomTypeLabel(RoomType roomType) => roomType switch
+        {
+            RoomType.Studio => "Studio",
+            RoomType.MiniApartment => "Căn hộ mini",
+            RoomType.Apartment => "Căn hộ",
+            _ => "Phòng trọ"
+        };
+
+        private static string GetSecondaryImageUrl(int buildingIndex, int roomIndex)
+        {
+            var imageUrls = new[]
+            {
+                "https://images.unsplash.com/photo-1560185008-b033106af5c3?auto=format&fit=crop&w=1200&q=80",
+                "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+                "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1200&q=80",
+                "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1200&q=80"
+            };
+            return imageUrls[(buildingIndex + roomIndex) % imageUrls.Length];
+        }
+
+        private sealed record DemoBuildingSpec(
+            string Name,
+            string District,
+            string Ward,
+            string StreetAddress,
+            decimal Latitude,
+            decimal Longitude,
+            RoomType RoomType,
+            decimal BasePrice,
+            decimal BaseArea,
+            string ImageUrl);
     }
 }
