@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { MOCK_ROOMS } from './Browse';
 import { viewingApi } from '../services/viewings';
 import { favoritesApi } from '../services/favorites';
 
@@ -14,15 +13,6 @@ interface RoomDetailProps {
 
 type ReviewReportReason = { code: string; label: string };
 type ReportableReview = { id: number; tenantName: string; comment?: string };
-
-// Additional mockup interior images for the gallery grid
-const INTERIOR_IMAGES = [
-  "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80"
-];
-
 
 const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage, setSelectedRoomId }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -57,7 +47,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!activeRoomId || activeRoomId >= 100000) return;
+    if (!activeRoomId) return;
     api.get(`/reviews/room/${activeRoomId}`).then(r => setReviewSummary(r.data)).catch(() => setReviewSummary({ averageRating: 0, totalReviews: 0, reviews: [] }));
   }, [activeRoomId]);
 
@@ -73,11 +63,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
       ]));
   }, []);
 
-  // Ghi lại lịch sử xem phòng cho người thuê đã đăng nhập (bỏ qua phòng mock; lỗi được bỏ qua).
+  // Ghi lại lịch sử xem phòng cho người thuê đã đăng nhập; lỗi được bỏ qua.
   // loggedRoomsRef chặn việc ghi trùng khi effect chạy 2 lần (React StrictMode) cho cùng một phòng.
   const loggedRoomsRef = useRef<Set<number>>(new Set());
   useEffect(() => {
-    if (!activeRoomId || activeRoomId >= 100000) return;
+    if (!activeRoomId) return;
     if (user?.role !== 'Tenant') return;
     if (loggedRoomsRef.current.has(activeRoomId)) return;
     loggedRoomsRef.current.add(activeRoomId);
@@ -90,27 +80,6 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     if (!activeRoomId) {
       setLoading(false);
       return;
-    }
-
-    if (activeRoomId >= 100000) {
-      const mockId = activeRoomId - 100000;
-      const foundMock = MOCK_ROOMS.find(r => r.id === mockId);
-      if (foundMock) {
-        setRoomData({
-          ...foundMock,
-          id: activeRoomId,
-          imageUrls: [foundMock.image, ...INTERIOR_IMAGES],
-          electricityPrice: 3500,
-          waterPrice: 50000,
-          internetPrice: 0,
-          garbagePrice: 0,
-          landlordName: "Chủ nhà RoomHub",
-          landlordPhone: "0905 123 ***",
-          landlordAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
-        });
-        setLoading(false);
-        return;
-      }
     }
 
     let isMounted = true;
@@ -164,38 +133,10 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
         const data = res.data;
         const items = Array.isArray(data) ? data : (data.items ?? []);
         
-        let combinedSimilar = items.filter((r: any) => r.id !== activeRoomId);
-        if (combinedSimilar.length < 3) {
-          const mockSimilar = MOCK_ROOMS
-            .filter(r => r.type === room.type && (r.id + 100000) !== activeRoomId)
-            .map(r => ({
-              id: r.id + 100000,
-              title: r.title,
-              type: r.type,
-              price: r.price,
-              image: r.image,
-              location: r.location,
-              area: r.area,
-              maxPeople: r.maxPeople
-            }));
-          combinedSimilar = [...combinedSimilar, ...mockSimilar];
-        }
-        
-        setSimilarRooms(combinedSimilar.slice(0, 3));
+        const apiSimilar = items.filter((r: any) => r.id !== activeRoomId);
+        setSimilarRooms(apiSimilar.slice(0, 3));
       } catch {
-        const mockSimilar = MOCK_ROOMS
-          .filter(r => r.type === room.type && (r.id + 100000) !== activeRoomId)
-          .map(r => ({
-            id: r.id + 100000,
-            title: r.title,
-            type: r.type,
-            price: r.price,
-            image: r.image,
-            location: r.location,
-            area: r.area,
-            maxPeople: r.maxPeople
-          }));
-        setSimilarRooms(mockSimilar.slice(0, 3));
+        setSimilarRooms([]);
       }
     };
     fetchSimilar();
@@ -241,12 +182,25 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     }
   };
 
-  if (loading || !room) {
+  if (loading) {
     return (
       <main className="bg-surface text-on-surface py-8 min-h-[50vh] flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 rounded-full border-4 border-orange-100 border-t-primary-container animate-spin"></div>
           <p className="text-sm font-semibold text-gray-500">Đang tải thông tin chi tiết phòng...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!room) {
+    return (
+      <main className="bg-surface text-on-surface py-8 min-h-[50vh] flex items-center justify-center">
+        <div className="bg-white border border-red-100 rounded-2xl p-10 text-center max-w-lg">
+          <span className="material-symbols-outlined text-[56px] text-red-300">error</span>
+          <h2 className="text-xl font-bold mt-3">Không tìm thấy tin đăng</h2>
+          <p className="text-sm text-gray-500 mt-2">Tin đăng không tồn tại, đã bị ẩn hoặc không còn được công khai.</p>
+          <button className="mt-6 px-5 py-2.5 bg-primary-container text-white rounded-xl font-bold" onClick={() => navigate('/browse')}>Quay lại danh sách phòng</button>
         </div>
       </main>
     );
@@ -300,6 +254,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     role: room.landlordRole || "Chủ nhà",
     avatar: room.landlordAvatar || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
   };
+  const galleryImages: string[] = room.imageUrls?.length ? room.imageUrls : [room.image];
 
   const formatPrice = (price: number) => {
     return price ? price.toLocaleString('vi-VN') : '0';
@@ -363,16 +318,16 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
           {/* 4 detail views (Desktop only) */}
           <div className="grid grid-cols-2 gap-3 h-[300px] sm:h-[400px] md:h-[480px] hidden md:grid">
             <div className="rounded-xl overflow-hidden">
-              <img alt="Nội thất chi tiết 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={INTERIOR_IMAGES[0]} />
+              <img alt="Nội thất chi tiết 1" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={galleryImages[1 % galleryImages.length]} />
             </div>
             <div className="rounded-xl overflow-hidden">
-              <img alt="Nội thất chi tiết 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={INTERIOR_IMAGES[1]} />
+              <img alt="Nội thất chi tiết 2" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={galleryImages[2 % galleryImages.length]} />
             </div>
             <div className="rounded-xl overflow-hidden">
-              <img alt="Nội thất chi tiết 3" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={INTERIOR_IMAGES[2]} />
+              <img alt="Nội thất chi tiết 3" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" src={galleryImages[3 % galleryImages.length]} />
             </div>
             <div className="relative rounded-xl overflow-hidden group">
-              <img alt="Nội thất chi tiết 4" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={INTERIOR_IMAGES[3]} />
+              <img alt="Nội thất chi tiết 4" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={galleryImages[4 % galleryImages.length]} />
               <div
                 onClick={() => handleAlert('Tính năng xem toàn bộ album ảnh thực tế sẽ mở ở giai đoạn tiếp theo!')}
                 className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer hover:bg-black/50 transition-colors text-white"
