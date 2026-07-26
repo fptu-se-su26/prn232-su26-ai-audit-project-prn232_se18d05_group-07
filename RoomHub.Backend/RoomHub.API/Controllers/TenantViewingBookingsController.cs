@@ -18,7 +18,35 @@ public class TenantViewingBookingsController(IViewingWorkflowService service) : 
 }
 
 [ApiController, Route("api/tenant/deposits"), Authorize(Roles = "Tenant")]
-public class TenantDepositsController(IViewingWorkflowService service) : ViewingControllerBase
+public class TenantDepositsController(
+    IViewingWorkflowService service,
+    IDepositPaymentProofService proofService) : ViewingControllerBase
 {
     [HttpGet("{id:int}")] public Task<IActionResult> Get(int id, CancellationToken ct) => Run(async () => await service.TenantDepositAsync(UserId, id, ct));
+
+    [HttpPost("proofs")]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> UploadProof(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { success = false, message = "Vui lòng chọn ảnh minh chứng thanh toán.", errors = new { } });
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await proofService.UploadAsync(
+                UserId,
+                stream,
+                file.FileName,
+                file.ContentType,
+                file.Length,
+                $"{Request.Scheme}://{Request.Host}",
+                ct);
+            return StatusCode(201, new { success = true, data = result });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message, errors = new { } });
+        }
+    }
 }

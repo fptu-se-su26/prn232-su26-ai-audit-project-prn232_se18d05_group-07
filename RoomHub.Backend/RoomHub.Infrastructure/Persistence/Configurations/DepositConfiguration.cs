@@ -26,11 +26,15 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(d => d.TransactionId).HasMaxLength(200);
             builder.Property(d => d.PaymentMethod).HasMaxLength(100);
             builder.Property(d => d.PaymentProofUrl).HasMaxLength(2048);
+            builder.Property(d => d.ActiveHoldRoomId)
+                .HasComputedColumnSql("CASE WHEN [Status] IN ('Holding','Active') THEN [RoomId] ELSE NULL END", stored: true);
             builder.Property(d => d.RefundReason).HasMaxLength(1000);
             builder.Property(d => d.ForfeitReason).HasMaxLength(1000);
             builder.Property(d => d.RowVersion).IsRowVersion();
             builder.ToTable(t => t.HasCheckConstraint("CK_Deposits_ValidValues", "[Amount] > 0 AND [HoldDurationDays] > 0 AND [ExpiresAt] > [PlacedAt]"));
             builder.HasIndex(d => d.TransactionId).IsUnique().HasFilter("[TransactionId] IS NOT NULL");
+            builder.HasIndex(d => d.ActiveHoldRoomId).IsUnique().HasFilter("[ActiveHoldRoomId] IS NOT NULL");
+            builder.HasIndex(d => new { d.RoomId, d.Status });
 
             builder.HasOne(d => d.Room)
                 .WithMany(r => r.Deposits)

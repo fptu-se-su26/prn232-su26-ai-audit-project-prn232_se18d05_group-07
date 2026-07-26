@@ -37,6 +37,7 @@ namespace Infrastructure.Persistence
 
         // Deposit & Contract
         public DbSet<Deposit> Deposits => Set<Deposit>();
+        public DbSet<DepositPaymentProof> DepositPaymentProofs => Set<DepositPaymentProof>();
         public DbSet<RoomViewingBooking> RoomViewingBookings => Set<RoomViewingBooking>();
         public DbSet<Contract> Contracts => Set<Contract>();
 

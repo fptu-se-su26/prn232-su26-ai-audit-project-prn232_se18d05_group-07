@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Application.Common.DTOs.Viewings;
 using Application.Common.Interfaces;
@@ -56,24 +57,95 @@ public class ViewingWorkflowService(ApplicationDbContext db) : IViewingWorkflowS
 
     public async Task<DepositDto> PlaceDepositAsync(string tenantId, long bookingId, DepositRequest request, CancellationToken ct)
     {
-        var b = await OwnedTenant(tenantId, bookingId, ct);
-        if (b.Status is not (ViewingBookingStatus.Approved or ViewingBookingStatus.Completed)) throw new WorkflowException("Chỉ có thể đặt cọc cho lịch đã duyệt hoặc đã hoàn tất.", 409);
-        if (request.HoldDurationDays is < 1 or > 30 || string.IsNullOrWhiteSpace(request.PaymentMethod)) throw new WorkflowException("Thời gian giữ phòng phải từ 1 đến 30 ngày và phương thức thanh toán là bắt buộc.");
-        var expected = b.Room.BasePrice;
-        if (request.Amount != expected) throw new WorkflowException($"Số tiền cọc phải bằng {expected}.", 409);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        if (b.Room.Status != RoomStatus.Available || await db.Deposits.AnyAsync(x => x.RoomId == b.RoomId && (x.Status == DepositStatus.Holding || x.Status == DepositStatus.Active), ct)) throw new WorkflowException("Phòng đã được người khác giữ hoặc đặt cọc.", 409);
-        if (!string.IsNullOrWhiteSpace(request.TransactionId)) {
-            var existing = await db.Deposits.AsNoTracking().SingleOrDefaultAsync(x => x.TransactionId == request.TransactionId, ct);
-            if (existing != null) { if (existing.TenantId != tenantId || existing.ViewingBookingId != bookingId) throw new WorkflowException("Mã giao dịch đã được sử dụng.", 409); return Map(existing); }
+        var booking = await OwnedTenant(tenantId, bookingId, ct);
+        if (booking.Status is not (ViewingBookingStatus.Approved or ViewingBookingStatus.Completed))
+            throw new WorkflowException("Chỉ có thể đặt cọc cho lịch đã duyệt hoặc đã hoàn tất.", 409);
+        if (request.HoldDurationDays is < 1 or > 30)
+            throw new WorkflowException("Thời gian giữ phòng phải từ 1 đến 30 ngày.");
+
+        var paymentMethod = DepositRequestPolicy.NormalizePaymentMethod(request.PaymentMethod);
+        var transactionId = DepositRequestPolicy.NormalizeTransactionId(request.TransactionId);
+        if (paymentMethod == DepositRequestPolicy.BankTransfer && (transactionId is null || request.PaymentProofId is null))
+            throw new WorkflowException("Chuyển khoản yêu cầu mã giao dịch và ảnh minh chứng thanh toán.");
+
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (transactionId is not null)
+        {
+            var existing = await db.Deposits.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.TransactionId == transactionId, ct);
+            if (existing is not null)
+            {
+                if (existing.TenantId != tenantId || existing.ViewingBookingId != bookingId)
+                    throw new WorkflowException("Mã giao dịch đã được sử dụng.", 409);
+                await tx.CommitAsync(ct);
+                return Map(existing);
+            }
         }
+
+        var room = await db.Rooms.SingleAsync(x => x.Id == booking.RoomId, ct);
+        var hasActiveHold = await db.Deposits.AnyAsync(x => x.RoomId == booking.RoomId
+            && (x.Status == DepositStatus.Holding || x.Status == DepositStatus.Active), ct);
+        if (room.Status != RoomStatus.Available || hasActiveHold)
+            throw new WorkflowException("Phòng đã được người khác giữ hoặc đặt cọc.", 409);
+
         var now = DateTime.UtcNow;
-        var d = new Deposit { RoomId = b.RoomId, TenantId = tenantId, ViewingBookingId = bookingId, Amount = expected, HoldDurationDays = request.HoldDurationDays, PlacedAt = now, ExpiresAt = now.AddDays(request.HoldDurationDays), Status = DepositStatus.Holding, PaymentMethod = request.PaymentMethod.Trim(), TransactionId = request.TransactionId?.Trim(), PaymentProofUrl = request.PaymentProofUrl?.Trim() };
-        db.Deposits.Add(d); AddAudit(tenantId, "PlaceDeposit", "Deposit", null, new { bookingId, expected, d.ExpiresAt });
-        AddNotification(b.Room.LandlordId, "DepositPlaced", "Có khoản cọc chờ xác nhận", b.Room.Title, null);
-        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return Map(d);
+        DepositPaymentProof? proof = null;
+        if (request.PaymentProofId is not null)
+        {
+            proof = await db.DepositPaymentProofs.SingleOrDefaultAsync(x =>
+                x.Id == request.PaymentProofId
+                && x.TenantId == tenantId
+                && x.DepositId == null
+                && x.ExpiresAt > now, ct);
+            if (proof is null)
+                throw new WorkflowException("Minh chứng không tồn tại, đã hết hạn hoặc đã được sử dụng.", 409);
+        }
+
+        var expected = room.BasePrice;
+        var deposit = new Deposit
+        {
+            RoomId = booking.RoomId,
+            TenantId = tenantId,
+            ViewingBookingId = bookingId,
+            Amount = expected,
+            HoldDurationDays = request.HoldDurationDays,
+            PlacedAt = now,
+            ExpiresAt = now.AddDays(request.HoldDurationDays),
+            Status = DepositStatus.Holding,
+            PaymentMethod = paymentMethod,
+            TransactionId = transactionId,
+            PaymentProofUrl = proof?.StorageUrl
+        };
+        db.Deposits.Add(deposit);
+        AddAudit(tenantId, "PlaceDeposit", "Deposit", null,
+            new { bookingId, expected, deposit.ExpiresAt, paymentMethod, paymentProofId = proof?.Id });
+        AddNotification(booking.Room.LandlordId, "DepositPlaced",
+            "Có khoản cọc chờ xác nhận", booking.Room.Title, null);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (proof is not null)
+            {
+                proof.DepositId = deposit.Id;
+                proof.UsedAt = now;
+                await db.SaveChangesAsync(ct);
+            }
+            await tx.CommitAsync(ct);
+            return Map(deposit);
+        }
+        catch (DbUpdateException)
+        {
+            throw new WorkflowException(
+                "Phòng vừa được giữ hoặc mã giao dịch/minh chứng đã được sử dụng bởi yêu cầu khác.", 409);
+        }
     }
-    public async Task<DepositDto> TenantDepositAsync(string tenantId, int id, CancellationToken ct) => Map(await db.Deposits.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct) ?? throw new WorkflowException("Không tìm thấy khoản cọc.", 404));
+
+    public async Task<DepositDto> TenantDepositAsync(string tenantId, int id, CancellationToken ct) =>
+        Map(await db.Deposits.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct)
+            ?? throw new WorkflowException("Không tìm thấy khoản cọc.", 404));
+
     public Task<PagedResult<ViewingBookingDto>> OwnerListAsync(string ownerId, int page, int pageSize, ViewingBookingStatus? status, CancellationToken ct) => List(db.RoomViewingBookings.Where(x => x.Room.LandlordId == ownerId), page, pageSize, status, ct);
 
     public async Task<ViewingBookingDto> OwnerTransitionAsync(string ownerId, long id, string action, RescheduleViewingRequest? reschedule, string? reason, CancellationToken ct)
@@ -127,7 +199,7 @@ public class ViewingWorkflowService(ApplicationDbContext db) : IViewingWorkflowS
     private async Task<PagedResult<ViewingBookingDto>> List(IQueryable<RoomViewingBooking> query, int page, int size, ViewingBookingStatus? status, CancellationToken ct) { page = Math.Max(1, page); size = Math.Clamp(size, 1, 100); if (status.HasValue) query = query.Where(x => x.Status == status); var count = await query.CountAsync(ct); var ids = await query.OrderByDescending(x => x.CreatedAt).Skip((page - 1) * size).Take(size).Select(x => x.Id).ToListAsync(ct); var list = new List<ViewingBookingDto>(); foreach (var id in ids) list.Add(await GetBooking(id, ct)); return new(list, page, size, count, (int)Math.Ceiling(count / (double)size)); }
     private async Task<RoomViewingBooking> OwnedTenant(string tenant, long id, CancellationToken ct) => await db.RoomViewingBookings.Include(x => x.Room).SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant, ct) ?? throw new WorkflowException("Không tìm thấy lịch xem.", 404);
     private async Task<bool> HasOverlap(int room, DateTime start, DateTime end, long? except, CancellationToken ct) => await db.RoomViewingBookings.AnyAsync(x => x.RoomId == room && (!except.HasValue || x.Id != except) && Blocking.Contains(x.Status) && x.ScheduledStartAt < end && x.ScheduledEndAt > start, ct);
-    private async Task<ViewingBookingDto> GetBooking(long id, CancellationToken ct) { var x = await db.RoomViewingBookings.AsNoTracking().Include(y => y.Room).Include(y => y.Tenant).Include(y => y.Deposits).SingleAsync(y => y.Id == id, ct); var d = x.Deposits.OrderByDescending(y => y.PlacedAt).FirstOrDefault(); return new(x.Id, x.RoomId, x.Room.Title, x.TenantId, x.Tenant.FullName ?? x.Tenant.Email ?? "Tenant", x.RequestedStartAt, x.RequestedEndAt, x.ScheduledStartAt, x.ScheduledEndAt, x.Status, x.TenantNote, x.OwnerNote, x.RejectReason, x.CreatedAt, x.UpdatedAt, x.CompletedAt, x.CancelledAt, d is null ? null : Map(d)); }
+    private async Task<ViewingBookingDto> GetBooking(long id, CancellationToken ct) { var x = await db.RoomViewingBookings.AsNoTracking().Include(y => y.Room).Include(y => y.Tenant).Include(y => y.Deposits).SingleAsync(y => y.Id == id, ct); var d = x.Deposits.OrderByDescending(y => y.PlacedAt).FirstOrDefault(); return new(x.Id, x.RoomId, x.Room.Title, x.TenantId, x.Tenant.FullName ?? x.Tenant.Email ?? "Tenant", x.RequestedStartAt, x.RequestedEndAt, x.ScheduledStartAt, x.ScheduledEndAt, x.Status, x.TenantNote, x.OwnerNote, x.RejectReason, x.CreatedAt, x.UpdatedAt, x.CompletedAt, x.CancelledAt, x.Room.BasePrice, d is null ? null : Map(d)); }
     private static DepositDto Map(Deposit d) => new(d.Id, d.ViewingBookingId, d.RoomId, d.TenantId, d.Amount, d.HoldDurationDays, d.PlacedAt, d.ExpiresAt, d.Status, d.PaymentMethod, d.TransactionId, d.PaymentProofUrl, d.ConfirmedAt, d.ReleasedAt, d.RefundedAt, d.RefundAmount, d.RefundReason, d.ForfeitReason);
     private void AddAudit(string? user, string action, string entity, int? id, object details) => db.AuditLogs.Add(new AuditLog { UserId = user, Action = action, EntityType = entity, EntityId = id, Details = JsonSerializer.Serialize(details) });
     private void AddNotification(string user, string type, string title, string content, int? id) => db.Notifications.Add(new Notification { UserId = user, Type = type, Title = title, Content = content, LinkedId = id });

@@ -22,6 +22,7 @@ namespace Domain.Entities
         public string? TransactionId { get; set; }
         public string? PaymentMethod { get; set; }
         public string? PaymentProofUrl { get; set; }
+        public int? ActiveHoldRoomId { get; private set; }
         public DateTime? ConfirmedAt { get; set; }
         public DateTime? ReleasedAt { get; set; }
         public DateTime? RefundedAt { get; set; }
@@ -33,5 +34,6 @@ namespace Domain.Entities
         public virtual Room Room { get; set; } = null!;
         public virtual ApplicationUser Tenant { get; set; } = null!;
         public virtual RoomViewingBooking? ViewingBooking { get; set; }
+        public virtual DepositPaymentProof? PaymentProof { get; set; }
     }
 }

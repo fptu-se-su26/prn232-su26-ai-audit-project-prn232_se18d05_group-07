@@ -99,6 +99,7 @@ namespace Infrastructure
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IFileUploadService, FileUploadService>();
+            services.AddScoped<IDepositPaymentProofService, DepositPaymentProofService>();
 
             // Register HttpClient and AI Moderation Services
             services.AddHttpClient<GroqModerationService>();
