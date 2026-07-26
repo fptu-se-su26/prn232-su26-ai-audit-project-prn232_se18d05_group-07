@@ -19,14 +19,17 @@ public sealed class ReviewModerationService(ApplicationDbContext db) : IReviewMo
     public async Task<AdminReviewDto?> GetReviewAsync(int id)
     {
         var r = await db.Reviews.AsNoTracking().Include(x => x.Room).Include(x => x.Tenant).Include(x => x.Contract).Include(x => x.Reports).FirstOrDefaultAsync(x => x.Id == id);
-        return r == null ? null : new(r.Id, r.RoomId, r.Room?.Title, r.Tenant.FullName, r.ContractId, r.Contract?.Status.ToString(), r.Rating, r.Comment, r.ModerationStatus.ToString(), r.ModerationReason, r.Reports.Select(MapReport).ToList());
+        return r == null ? null : new(r.Id, r.RoomId, r.Room?.Title, r.Tenant?.FullName ?? "Người thuê không còn tồn tại", r.ContractId, r.Contract?.Status.ToString(), r.Rating, r.Comment, r.ModerationStatus.ToString(), r.ModerationReason, r.Reports.Select(MapReport).ToList());
     }
     public async Task ModerateAsync(int id, string adminId, string action, string? reason, string? ip)
     {
         var r = await db.Reviews.Include(x => x.Reports).FirstOrDefaultAsync(x => x.Id == id) ?? throw new KeyNotFoundException();
         var before = r.ModerationStatus; var target = action.ToLowerInvariant() switch { "hide" => ReviewModerationStatus.Hidden, "remove" => ReviewModerationStatus.Removed, "restore" => ReviewModerationStatus.Visible, _ => throw new ArgumentException("Hành động không hợp lệ.") };
-        if (before == target) return; if (target == ReviewModerationStatus.Removed && string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Lý do gỡ đánh giá là bắt buộc.");
-        r.ModerationStatus = target; r.IsDeleted = false; r.ModeratedByAdminId = adminId; r.ModeratedAt = DateTime.UtcNow; r.ModerationReason = reason?.Trim(); r.IsModerated = true;
+        if (before == target) return;
+        reason = reason?.Trim();
+        if (reason?.Length > 1000) throw new ArgumentException("Lý do kiểm duyệt tối đa 1000 ký tự.");
+        if (target == ReviewModerationStatus.Removed && string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("Lý do gỡ đánh giá là bắt buộc.");
+        r.ModerationStatus = target; r.IsDeleted = false; r.ModeratedByAdminId = adminId; r.ModeratedAt = DateTime.UtcNow; r.ModerationReason = reason; r.IsModerated = true;
         foreach (var report in r.Reports.Where(x => x.Status == ReviewReportStatus.Pending)) { report.Status = ReviewReportStatus.Actioned; report.ReviewedAt = DateTime.UtcNow; report.ReviewedByAdminId = adminId; }
         db.Notifications.Add(new Notification { UserId = r.TenantId, Type = $"Review{target}", Title = "Cập nhật kiểm duyệt đánh giá", Content = reason, LinkedId = r.Id });
         db.AuditLogs.Add(new AuditLog { UserId = adminId, Action = $"Review{target}", EntityType = "Review", EntityId = r.Id, IpAddress = ip, Details = JsonSerializer.Serialize(new { before, after = target, reason }) });

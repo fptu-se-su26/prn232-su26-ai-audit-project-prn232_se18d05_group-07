@@ -36,6 +36,7 @@ namespace Application.Common.DTOs.Reviews
     }
 
     public record ReviewEligibilityDto(bool Eligible, string Reason, int? ContractId);
+    public record ReviewReportReasonDto(string Code, string Label);
     public class CreateReviewReportRequest { public string ReasonCode { get; set; } = null!; public string? Description { get; set; } }
 
     // Tổng hợp đánh giá của một phòng: điểm trung bình, số lượng và danh sách.

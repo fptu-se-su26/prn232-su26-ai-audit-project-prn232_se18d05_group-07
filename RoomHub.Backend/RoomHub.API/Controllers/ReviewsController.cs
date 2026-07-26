@@ -5,6 +5,7 @@ using Application.Common.DTOs.Reviews;
 using Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Application.Common.Reviews;
 
 namespace RoomHub.API.Controllers
 {
@@ -29,6 +30,10 @@ namespace RoomHub.API.Controllers
             var result = await _reviewService.GetRoomReviewsAsync(roomId);
             return Ok(result);
         }
+
+        [HttpGet("reviews/report-reasons")]
+        [AllowAnonymous]
+        public IActionResult ReportReasons() => Ok(ReviewReportReasonCatalog.All);
 
         // ==========================================
         // TENANT: tạo đánh giá cho phòng
@@ -111,6 +116,10 @@ namespace RoomHub.API.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
             }
         }
 
