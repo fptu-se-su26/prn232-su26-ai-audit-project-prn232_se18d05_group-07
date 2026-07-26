@@ -2,6 +2,7 @@ using Application.Common.DTOs.Reviews;
 using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
+using System.Text.Json;
 
 namespace Application.Services;
 
@@ -37,8 +38,66 @@ public sealed class ReviewService : IReviewService
         Validate(request.Rating, request.Comment); var user = await repository.GetUserAsync(tenantId);
         if (user?.ReviewBlockedUntil > DateTime.UtcNow) throw new InvalidOperationException("Tài khoản đang bị khóa quyền đánh giá.");
         var row = await repository.GetByIdAsync(id); if (row == null || row.TenantId != tenantId || row.IsDeleted) return null;
-        row.Rating = (byte)request.Rating; row.Comment = Clean(request.Comment); row.UpdatedAt = DateTime.UtcNow;
-        row.ModerationStatus = ReviewModerationStatus.Visible; row.ModerationReason = null;
+        if (row.ModerationStatus == ReviewModerationStatus.Removed)
+            throw new InvalidOperationException("Đánh giá đã bị gỡ bởi quản trị viên và không thể chỉnh sửa.");
+
+        var previousRating = row.Rating;
+        var previousComment = row.Comment;
+        var previousStatus = row.ModerationStatus;
+        var nextStatus = previousStatus == ReviewModerationStatus.Hidden
+            ? ReviewModerationStatus.Pending
+            : previousStatus;
+        var now = DateTime.UtcNow;
+
+        row.Rating = (byte)request.Rating;
+        row.Comment = Clean(request.Comment);
+        row.UpdatedAt = now;
+        row.ModerationStatus = nextStatus;
+        if (previousStatus == ReviewModerationStatus.Hidden)
+        {
+            row.ModerationReason = "Nội dung đã được chỉnh sửa sau khi bị ẩn và đang chờ quản trị viên duyệt lại.";
+            row.ModeratedByAdminId = null;
+            row.ModeratedAt = null;
+            row.IsModerated = false;
+        }
+
+        await repository.AddRevisionAsync(new ReviewRevision
+        {
+            ReviewId = row.Id,
+            EditedByUserId = tenantId,
+            PreviousRating = previousRating,
+            PreviousComment = previousComment,
+            PreviousModerationStatus = previousStatus,
+            NewRating = row.Rating,
+            NewComment = row.Comment,
+            NewModerationStatus = nextStatus,
+            CreatedAt = now
+        });
+        await repository.AddAuditLogAsync(new AuditLog
+        {
+            UserId = tenantId,
+            Action = "EditReview",
+            EntityType = "Review",
+            EntityId = row.Id,
+            CreatedAt = now,
+            Details = JsonSerializer.Serialize(new
+            {
+                before = new { rating = previousRating, comment = previousComment, moderationStatus = previousStatus.ToString() },
+                after = new { rating = row.Rating, comment = row.Comment, moderationStatus = nextStatus.ToString() }
+            })
+        });
+        if (previousStatus == ReviewModerationStatus.Hidden)
+        {
+            await repository.AddNotificationAsync(new Notification
+            {
+                UserId = tenantId,
+                Type = "ReviewPendingModeration",
+                Title = "Đánh giá đang chờ duyệt lại",
+                Content = "Nội dung vừa chỉnh sửa sẽ được hiển thị sau khi quản trị viên phê duyệt.",
+                LinkedId = row.Id,
+                CreatedAt = now
+            });
+        }
         await repository.UpdateAsync(row); await unitOfWork.SaveChangesAsync(); return Map(row);
     }
     public async Task<bool> DeleteReviewAsync(int id, string tenantId)
