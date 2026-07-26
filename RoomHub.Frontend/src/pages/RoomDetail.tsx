@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { chatService } from '../services/chats';
 import { useAuth } from '../hooks/useAuth';
 import { viewingApi } from '../services/viewings';
 import { favoritesApi } from '../services/favorites';
@@ -234,7 +235,11 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     if (!room?.ownerId || !user) return;
     try {
       setChatLoading(true);
-      await api.post('/chats/conversations', { ownerId: room.ownerId, roomId: activeRoomId });
+      if (!activeRoomId) return;
+      const conversation = await chatService.createConversation(room.ownerId, activeRoomId);
+      // The chat page may contain several landlords. Preserve the exact conversation
+      // selected from this room so it does not fall back to the first list item.
+      sessionStorage.setItem('roomhub:open-conversation', String(conversation.id));
       // Dashboard routes are hash-based. This also works when the detail page
       // is opened directly at /room/:id (where setCurrentPage is not supplied).
       if (setCurrentPage) {
