@@ -44,6 +44,7 @@ import TenantBookingHistory from './pages/tenant/BookingHistory';
 import OwnerNotifications from './pages/owner/Notifications';
 import Profile from './pages/owner/Profile';
 import OwnerSubscription from './pages/owner/Subscription';
+import OwnerReports from './pages/owner/Reports';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
@@ -81,6 +82,7 @@ export type PageType =
   | 'owner-notifications'
   | 'owner-profile'
   | 'owner-subscription'
+  | 'owner-reports'
   | 'owner-service-requests'
   | 'owner-messages'
   | 'owner-viewing-bookings'
@@ -235,6 +237,7 @@ const AppContent: React.FC = () => {
       if (hash === '#/owner/notifications') { setCurrentPage('owner-notifications'); return; }
       if (hash === '#/owner/profile') { setCurrentPage('owner-profile'); return; }
       if (hash === '#/owner/subscription') { setCurrentPage('owner-subscription'); return; }
+      if (hash === '#/owner/reports') { setCurrentPage('owner-reports'); return; }
       if (hash === '#/owner/service-requests') { setCurrentPage('owner-service-requests'); return; }
       if (hash === '#/owner/messages') { setCurrentPage('owner-messages'); return; }
       if (hash === '#/owner/viewing-bookings') { setCurrentPage('owner-viewing-bookings'); return; }
@@ -415,6 +418,8 @@ const AppContent: React.FC = () => {
           <Profile />
         ) : currentPage === 'owner-subscription' ? (
           <OwnerSubscription />
+        ) : currentPage === 'owner-reports' ? (
+          <OwnerReports setCurrentPage={setCurrentPage} />
         ) : currentPage === 'owner-messages' ? (
           <Chat />
         ) : currentPage === 'owner-viewing-bookings' ? (

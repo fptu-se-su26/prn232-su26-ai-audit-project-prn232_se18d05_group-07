@@ -138,6 +138,7 @@ namespace Infrastructure
             services.AddScoped<IListingService, Application.Services.ListingService>();
             services.AddScoped<IAdminModerationService, Application.Services.AdminModerationService>();
             services.AddScoped<IDashboardService, Application.Services.DashboardService>();
+            services.AddScoped<IOwnerReportService, Application.Services.OwnerReportService>();
             services.AddScoped<INotificationService, Application.Services.NotificationService>();
             services.AddScoped<ISubscriptionService, Application.Services.SubscriptionService>();
             services.AddScoped<IAuthService, Application.Services.AuthService>();
