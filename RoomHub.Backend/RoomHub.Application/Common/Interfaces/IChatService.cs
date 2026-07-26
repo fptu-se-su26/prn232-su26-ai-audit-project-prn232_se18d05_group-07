@@ -9,6 +9,6 @@ namespace Application.Common.Interfaces
         Task<List<ConversationDto>> GetConversationsAsync(string userId);
         Task<List<ChatMessageDto>> GetMessagesAsync(long conversationId, string userId);
         Task<ChatMessageDto> SendMessageAsync(long conversationId, string senderId, SendMessageRequestDto request);
-        Task<ConversationDto> CreateOrGetConversationAsync(string tenantId, string ownerId);
+        Task<ConversationDto> CreateOrGetConversationAsync(string tenantId, string ownerId, int roomId);
     }
 }

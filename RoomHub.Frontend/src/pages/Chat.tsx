@@ -7,6 +7,7 @@ import { API_ORIGIN } from '../services/api';
 
 const Chat = () => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -14,6 +15,7 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const connectionRef = useRef<HubConnection | null>(null);
   const activeConversationIdRef = useRef<number | null>(null);
+  const pendingMessageRef = useRef<{ conversationId: number; text: string; clientMessageId: string } | null>(null);
 
   // Fetch conversations when component mounts
   useEffect(() => {
@@ -31,7 +33,7 @@ const Chat = () => {
   }, [activeConversation]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const connection = new HubConnectionBuilder()
       .withUrl(`${API_ORIGIN}/hubs/chat`, {
@@ -51,6 +53,13 @@ const Chat = () => {
       fetchConversations();
     });
 
+    connection.on('messagesRead', (receipt: { conversationId: number; messageIds: number[] }) => {
+      if (activeConversationIdRef.current !== receipt.conversationId) return;
+      const readIds = new Set(receipt.messageIds);
+      setMessages((current) => current.map((message) =>
+        readIds.has(message.id) ? { ...message, isRead: true } : message));
+    });
+
     connection.start().catch((error) => {
       console.error('Không thể kết nối SignalR:', error);
     });
@@ -62,22 +71,22 @@ const Chat = () => {
         void connection.stop();
       }
     };
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const fetchConversations = async () => {
+  async function fetchConversations() {
     try {
       const data = await chatService.getConversations();
       setConversations(data);
     } catch (error) {
       console.error('Error fetching conversations:', error);
     }
-  };
+  }
 
-  const fetchMessages = async (conversationId: number) => {
+  async function fetchMessages(conversationId: number) {
     try {
       const data = await chatService.getMessages(conversationId);
       setMessages(data);
@@ -85,25 +94,39 @@ const Chat = () => {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  };
+  }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeConversation) return;
 
     try {
-      const message = await chatService.sendMessage(activeConversation.id, newMessage.trim());
+      const text = newMessage.trim();
+      if (!pendingMessageRef.current
+        || pendingMessageRef.current.conversationId !== activeConversation.id
+        || pendingMessageRef.current.text !== text) {
+        pendingMessageRef.current = {
+          conversationId: activeConversation.id,
+          text,
+          clientMessageId: crypto.randomUUID()
+        };
+      }
+      const message = await chatService.sendMessage(
+        activeConversation.id,
+        text,
+        pendingMessageRef.current.clientMessageId);
+      pendingMessageRef.current = null;
       setNewMessage('');
-      setMessages((current) => [...current, message]);
+      setMessages((current) => current.some(item => item.id === message.id) ? current : [...current, message]);
       fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
-  const scrollToBottom = () => {
+  function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }
 
   const getOtherUserName = (conv: Conversation) => {
     return user?.id === conv.ownerId ? conv.tenantName : conv.ownerName;
@@ -176,6 +199,7 @@ const Chat = () => {
                         }`}
                       >
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {isMine && <span className="ml-2">{msg.isRead ? 'Đã xem' : 'Đã gửi'}</span>}
                       </span>
                     </div>
                   </div>
@@ -191,6 +215,7 @@ const Chat = () => {
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Nhập tin nhắn..."
+                  maxLength={2000}
                 />
                 <button
                   type="submit"

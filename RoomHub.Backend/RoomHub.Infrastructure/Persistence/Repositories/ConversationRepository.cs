@@ -29,7 +29,7 @@ namespace Infrastructure.Persistence.Repositories
             return await _context.Conversations
                 .Include(c => c.Owner)
                 .Include(c => c.Tenant)
-                .FirstOrDefaultAsync(c => (c.OwnerId == ownerId && c.TenantId == tenantId) || (c.OwnerId == tenantId && c.TenantId == ownerId));
+                .FirstOrDefaultAsync(c => c.OwnerId == ownerId && c.TenantId == tenantId);
         }
 
         public async Task<List<Conversation>> GetAllForUserAsync(string userId)

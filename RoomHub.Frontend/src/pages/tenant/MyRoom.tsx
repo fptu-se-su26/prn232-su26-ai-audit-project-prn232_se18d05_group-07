@@ -379,7 +379,7 @@ const TenantMyRoom: React.FC<Props> = ({ setCurrentPage }) => {
               <button onClick={async () => {
                 if (user && roomData.ownerId) {
                   try {
-                    await api.post('/chats/conversations', { tenantId: user.id, ownerId: roomData.ownerId });
+                    await api.post('/chats/conversations', { ownerId: roomData.ownerId, roomId: roomData.roomId });
                     setCurrentPage('tenant-messages');
                   } catch (e) {
                     console.error('Lỗi khi tạo cuộc trò chuyện:', e);

@@ -7,7 +7,8 @@ namespace Application.Common.Interfaces
     public interface IChatMessageRepository
     {
         Task<List<ChatMessage>> GetByConversationIdAsync(long conversationId);
-        Task<ChatMessage> AddAsync(ChatMessage message);
-        Task MarkAsReadAsync(long conversationId, string receiverId);
+        Task<ChatMessage?> GetByClientMessageIdAsync(string senderId, string clientMessageId);
+        Task<(ChatMessage Message, bool Created)> AddIdempotentAsync(ChatMessage message);
+        Task<List<long>> MarkAsReadAsync(long conversationId, string receiverId);
     }
 }

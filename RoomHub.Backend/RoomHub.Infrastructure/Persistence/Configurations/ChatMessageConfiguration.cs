@@ -21,6 +21,15 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(m => m.MessageText)
                 .IsRequired();
 
+            builder.Property(m => m.ClientMessageId)
+                .HasMaxLength(36);
+
+            builder.HasIndex(m => new { m.SenderId, m.ClientMessageId })
+                .IsUnique()
+                .HasFilter("[ClientMessageId] IS NOT NULL");
+
+            builder.HasIndex(m => new { m.ConversationId, m.ReceiverId, m.IsRead });
+
             // Relationships
             builder.HasOne(m => m.Conversation)
                 .WithMany(c => c.Messages)
