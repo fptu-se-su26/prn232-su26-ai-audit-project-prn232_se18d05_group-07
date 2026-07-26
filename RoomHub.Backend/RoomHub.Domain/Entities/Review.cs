@@ -35,5 +35,6 @@ namespace Domain.Entities
         public virtual ICollection<Review> Replies { get; set; } = new List<Review>();
         public virtual Contract? Contract { get; set; }
         public virtual ICollection<ReviewViolation> Reports { get; set; } = new List<ReviewViolation>();
+        public virtual ICollection<ReviewRevision> Revisions { get; set; } = new List<ReviewRevision>();
     }
 }

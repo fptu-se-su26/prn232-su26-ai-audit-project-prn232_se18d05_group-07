@@ -17,6 +17,9 @@ namespace Application.Common.Interfaces
         Task<bool> HasPendingReportAsync(int reviewId, string reporterId);
         Task AddReportAsync(ReviewViolation report);
         Task AddAsync(Review review);
+        Task AddRevisionAsync(ReviewRevision revision);
+        Task AddAuditLogAsync(AuditLog auditLog);
+        Task AddNotificationAsync(Notification notification);
         Task UpdateAsync(Review review);
         Task DeleteAsync(Review review);
     }

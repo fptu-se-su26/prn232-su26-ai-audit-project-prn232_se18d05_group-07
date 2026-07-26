@@ -55,6 +55,7 @@ namespace Infrastructure.Persistence
         public DbSet<Message> Messages => Set<Message>();
         public DbSet<Review> Reviews => Set<Review>();
         public DbSet<ReviewViolation> ReviewViolations => Set<ReviewViolation>();
+        public DbSet<ReviewRevision> ReviewRevisions => Set<ReviewRevision>();
 
         // Notification & Audit
         public DbSet<Notification> Notifications => Set<Notification>();

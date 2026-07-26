@@ -63,6 +63,12 @@ namespace Infrastructure.Persistence.Repositories
             await _context.Reviews.AddAsync(review);
         }
 
+        public async Task AddRevisionAsync(ReviewRevision revision) => await _context.ReviewRevisions.AddAsync(revision);
+
+        public async Task AddAuditLogAsync(AuditLog auditLog) => await _context.AuditLogs.AddAsync(auditLog);
+
+        public async Task AddNotificationAsync(Notification notification) => await _context.Notifications.AddAsync(notification);
+
         public async Task<int> GetReviewEligibilityDaysAsync() =>
             await _context.SystemSettings.AsNoTracking().Select(x => (int?)x.ReviewEligibilityDaysAfterContract).FirstOrDefaultAsync() ?? 90;
 
