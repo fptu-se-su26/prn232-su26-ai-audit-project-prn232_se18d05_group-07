@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { viewingApi } from '../services/viewings';
 import { favoritesApi } from '../services/favorites';
+import RecommendationRow from '../components/RecommendationRow';
 
 interface RoomDetailProps {
   selectedRoomId?: number | null;
@@ -614,6 +615,9 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
             </div>
           )}
         </section>
+
+        {/* Phòng tương tự — tự ẩn nếu không tìm được gợi ý nào */}
+        {activeRoomId && <RecommendationRow mode="similar" roomId={activeRoomId} take={8} />}
 
         {reportingReview && (
           <div className="fixed inset-0 z-[70] bg-black/50 grid place-items-center p-4">

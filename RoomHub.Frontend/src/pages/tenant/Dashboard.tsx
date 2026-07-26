@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { PageType } from '../../App';
 import { Reveal, ParallaxHero } from '../../components/parallax/Parallax';
 import api from '../../services/api';
+import RecommendationRow from '../../components/RecommendationRow';
 
 interface Props {
   setCurrentPage: (page: PageType) => void;
@@ -298,6 +299,9 @@ const TenantDashboard: React.FC<Props> = ({ setCurrentPage, setSelectedInvoiceId
             })()}
           </div>
         </Reveal>
+
+        {/* Gợi ý cá nhân hoá — tự ẩn nếu chưa có dữ liệu */}
+        <RecommendationRow mode="for-you" take={8} />
       </div>
     </div>
   );

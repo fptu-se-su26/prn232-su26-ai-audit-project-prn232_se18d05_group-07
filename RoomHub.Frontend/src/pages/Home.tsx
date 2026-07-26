@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import heroApartment from '../assets/hero_apartment.png';
 import tenantBenefits from '../assets/tenant_benefits.png';
 import landlordDashboard from '../assets/landlord_dashboard.png';
+import RecommendationRow from '../components/RecommendationRow';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -362,6 +363,9 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Gợi ý cá nhân hoá — tự ẩn nếu chưa có dữ liệu */}
+      <RecommendationRow mode="for-you" take={8} />
 
       {/* How it works (Renters) */}
       <section id="how-it-works" className="py-16 bg-white">

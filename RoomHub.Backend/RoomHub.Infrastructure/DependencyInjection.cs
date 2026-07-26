@@ -147,6 +147,7 @@ namespace Infrastructure
             services.AddScoped<IReviewService, Application.Services.ReviewService>();
             services.AddScoped<ISearchHistoryService, Application.Services.SearchHistoryService>();
             services.AddScoped<IFavoriteRoomService, Application.Services.FavoriteRoomService>();
+            services.AddScoped<IRecommendationService, Application.Services.RecommendationService>();
             services.AddScoped<IBookingHistoryService, Application.Services.BookingHistoryService>();
             services.AddScoped<IMaintenanceTicketService, Application.Services.MaintenanceTicketService>();
             services.AddScoped<IServiceCatalogService, Application.Services.ServiceCatalogService>();
