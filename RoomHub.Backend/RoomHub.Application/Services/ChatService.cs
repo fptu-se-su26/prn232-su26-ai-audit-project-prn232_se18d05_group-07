@@ -41,6 +41,7 @@ namespace Application.Services
                 OwnerName = c.Owner?.FullName ?? "Unknown",
                 TenantId = c.TenantId,
                 TenantName = c.Tenant?.FullName ?? "Unknown",
+                RoomId = c.RoomId,
                 LastMessage = c.LastMessage,
                 UpdatedAt = c.UpdatedAt,
                 UnreadCount = c.Messages.Count(m => m.ReceiverId == userId && !m.IsRead)
@@ -67,6 +68,10 @@ namespace Application.Services
                 SenderId = m.SenderId,
                 ReceiverId = m.ReceiverId,
                 MessageText = m.MessageText,
+                AttachmentUrl = m.AttachmentUrl,
+                AttachmentName = m.AttachmentName,
+                AttachmentContentType = m.AttachmentContentType,
+                AttachmentSize = m.AttachmentSize,
                 Timestamp = m.Timestamp,
                 IsRead = m.IsRead
             }).ToList();
@@ -80,7 +85,7 @@ namespace Application.Services
             if (conversation.OwnerId != senderId && conversation.TenantId != senderId)
                 throw new ForbiddenException("Bạn không phải thành viên của cuộc trò chuyện này.");
 
-            var messageText = NormalizeMessage(request.MessageText);
+            var messageText = NormalizeMessage(request.MessageText, request.AttachmentUrl);
             var clientMessageId = NormalizeClientMessageId(request.ClientMessageId);
             var existing = await _chatMessageRepository.GetByClientMessageIdAsync(senderId, clientMessageId);
             if (existing is not null)
@@ -98,6 +103,10 @@ namespace Application.Services
                 SenderId = senderId,
                 ReceiverId = receiverId,
                 MessageText = messageText,
+                AttachmentUrl = NormalizeOptional(request.AttachmentUrl, 1000),
+                AttachmentName = NormalizeOptional(request.AttachmentName, 255),
+                AttachmentContentType = NormalizeOptional(request.AttachmentContentType, 100),
+                AttachmentSize = request.AttachmentSize,
                 ClientMessageId = clientMessageId,
                 Timestamp = DateTime.UtcNow,
                 IsRead = false
@@ -135,6 +144,12 @@ namespace Application.Services
             var existing = await _conversationRepository.GetByParticipantsAsync(ownerId, tenantId);
             if (existing != null)
             {
+                if (existing.RoomId != roomId)
+                {
+                    existing.RoomId = roomId;
+                    await _conversationRepository.UpdateAsync(existing);
+                    await _unitOfWork.SaveChangesAsync();
+                }
                 return new ConversationDto
                 {
                     Id = existing.Id,
@@ -142,6 +157,7 @@ namespace Application.Services
                     OwnerName = existing.Owner?.FullName ?? "Unknown",
                     TenantId = existing.TenantId,
                     TenantName = existing.Tenant?.FullName ?? "Unknown",
+                    RoomId = existing.RoomId ?? roomId,
                     LastMessage = existing.LastMessage,
                     UpdatedAt = existing.UpdatedAt
                 };
@@ -151,6 +167,7 @@ namespace Application.Services
             {
                 OwnerId = ownerId,
                 TenantId = tenantId,
+                RoomId = roomId,
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -167,19 +184,29 @@ namespace Application.Services
                 OwnerName = fetched.Owner?.FullName ?? "Unknown",
                 TenantId = fetched.TenantId,
                 TenantName = fetched.Tenant?.FullName ?? "Unknown",
+                RoomId = fetched.RoomId,
                 LastMessage = fetched.LastMessage,
                 UpdatedAt = fetched.UpdatedAt
             };
         }
 
-        private static string NormalizeMessage(string? value)
+        private static string NormalizeMessage(string? value, string? attachmentUrl)
         {
             var normalized = string.Join(' ', (value ?? string.Empty)
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-            if (normalized.Length == 0)
+            if (normalized.Length == 0 && string.IsNullOrWhiteSpace(attachmentUrl))
                 throw new ArgumentException("Nội dung tin nhắn là bắt buộc.");
             if (normalized.Length > 2000)
                 throw new ArgumentException("Nội dung tin nhắn không được vượt quá 2000 ký tự.");
+            return normalized;
+        }
+
+        private static string? NormalizeOptional(string? value, int maxLength)
+        {
+            var normalized = value?.Trim();
+            if (string.IsNullOrEmpty(normalized)) return null;
+            if (normalized.Length > maxLength)
+                throw new ArgumentException("Thông tin tệp đính kèm không hợp lệ.");
             return normalized;
         }
 
@@ -197,6 +224,10 @@ namespace Application.Services
             SenderId = message.SenderId,
             ReceiverId = message.ReceiverId,
             MessageText = message.MessageText,
+            AttachmentUrl = message.AttachmentUrl,
+            AttachmentName = message.AttachmentName,
+            AttachmentContentType = message.AttachmentContentType,
+            AttachmentSize = message.AttachmentSize,
             Timestamp = message.Timestamp,
             IsRead = message.IsRead
         };

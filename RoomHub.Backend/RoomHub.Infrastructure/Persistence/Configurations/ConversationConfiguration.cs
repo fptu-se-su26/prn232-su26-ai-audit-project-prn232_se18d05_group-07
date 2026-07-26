@@ -21,6 +21,8 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(c => c.LastMessage)
                 .HasMaxLength(1000);
 
+            builder.HasIndex(c => c.RoomId);
+
             // Relationships
             builder.HasOne(c => c.Owner)
                 .WithMany()

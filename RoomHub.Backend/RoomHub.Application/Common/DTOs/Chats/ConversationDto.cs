@@ -10,6 +10,7 @@ namespace Application.Common.DTOs.Chats
         public string OwnerName { get; set; } = string.Empty;
         public string TenantId { get; set; } = string.Empty;
         public string TenantName { get; set; } = string.Empty;
+        public int? RoomId { get; set; }
         public string? LastMessage { get; set; }
         public DateTime UpdatedAt { get; set; }
         public int UnreadCount { get; set; }
