@@ -23,5 +23,22 @@ namespace RoomHub.API.Services
             await _hubContext.Clients.Users(message.SenderId, message.ReceiverId)
                 .SendAsync("conversationUpdated", message.ConversationId);
         }
+
+        public Task NotifyMessagesReadAsync(
+            long conversationId,
+            string readerId,
+            string ownerId,
+            string tenantId,
+            IReadOnlyCollection<long> messageIds,
+            DateTime readAt)
+        {
+            return _hubContext.Clients.Users(ownerId, tenantId).SendAsync("messagesRead", new
+            {
+                conversationId,
+                readerId,
+                messageIds,
+                readAt
+            });
+        }
     }
 }

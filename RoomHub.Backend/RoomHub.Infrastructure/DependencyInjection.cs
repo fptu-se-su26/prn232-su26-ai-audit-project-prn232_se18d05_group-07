@@ -121,6 +121,7 @@ namespace Infrastructure
             services.AddScoped<IRefreshTokenRepository, Persistence.Repositories.RefreshTokenRepository>();
             services.AddScoped<IConversationRepository, Persistence.Repositories.ConversationRepository>();
             services.AddScoped<IChatMessageRepository, Persistence.Repositories.ChatMessageRepository>();
+            services.AddScoped<IChatAccessRepository, Persistence.Repositories.ChatAccessRepository>();
             services.AddScoped<IReviewRepository, Persistence.Repositories.ReviewRepository>();
             services.AddScoped<ISearchHistoryRepository, Persistence.Repositories.SearchHistoryRepository>();
             services.AddScoped<IFavoriteRoomRepository, Persistence.Repositories.FavoriteRoomRepository>();

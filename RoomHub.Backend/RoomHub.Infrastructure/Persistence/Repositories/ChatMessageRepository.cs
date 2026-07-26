@@ -26,14 +26,32 @@ namespace Infrastructure.Persistence.Repositories
                 .ToListAsync();
         }
 
-        public async Task<ChatMessage> AddAsync(ChatMessage message)
+        public Task<ChatMessage?> GetByClientMessageIdAsync(string senderId, string clientMessageId)
         {
-            _context.ChatMessages.Add(message);
-            await _context.SaveChangesAsync();
-            return message;
+            return _context.ChatMessages
+                .AsNoTracking()
+                .SingleOrDefaultAsync(m => m.SenderId == senderId && m.ClientMessageId == clientMessageId);
         }
 
-        public async Task MarkAsReadAsync(long conversationId, string receiverId)
+        public async Task<(ChatMessage Message, bool Created)> AddIdempotentAsync(ChatMessage message)
+        {
+            _context.ChatMessages.Add(message);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return (message, true);
+            }
+            catch (DbUpdateException)
+            {
+                _context.Entry(message).State = EntityState.Detached;
+                var existing = await GetByClientMessageIdAsync(message.SenderId, message.ClientMessageId!);
+                if (existing is null)
+                    throw;
+                return (existing, false);
+            }
+        }
+
+        public async Task<List<long>> MarkAsReadAsync(long conversationId, string receiverId)
         {
             var unreadMessages = await _context.ChatMessages
                 .Where(m => m.ConversationId == conversationId && m.ReceiverId == receiverId && !m.IsRead)
@@ -48,6 +66,8 @@ namespace Infrastructure.Persistence.Repositories
             {
                 await _context.SaveChangesAsync();
             }
+
+            return unreadMessages.Select(message => message.Id).ToList();
         }
     }
 }

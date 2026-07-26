@@ -22,7 +22,8 @@ namespace RoomHub.API.Controllers
 
         private string GetUserId()
         {
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("User ID not found in token");
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new UnauthorizedAccessException("Không tìm thấy định danh người dùng trong access token.");
         }
 
         [HttpGet("conversations")]
@@ -37,49 +38,28 @@ namespace RoomHub.API.Controllers
         public async Task<IActionResult> GetMessages(long id)
         {
             var userId = GetUserId();
-            try
-            {
-                var messages = await _chatService.GetMessagesAsync(id, userId);
-                return Ok(messages);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
+            var messages = await _chatService.GetMessagesAsync(id, userId);
+            return Ok(messages);
         }
 
         [HttpPost("conversations/{id}/messages")]
         public async Task<IActionResult> SendMessage(long id, [FromBody] SendMessageRequestDto request)
         {
             var userId = GetUserId();
-            try
-            {
-                var message = await _chatService.SendMessageAsync(id, userId, request);
-                return Ok(message);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
+            var message = await _chatService.SendMessageAsync(id, userId, request);
+            return Ok(message);
         }
 
         [HttpPost("conversations")]
         [Authorize(Roles = "Tenant")]
         public async Task<IActionResult> CreateConversation([FromBody] CreateConversationRequestDto request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.OwnerId))
-                return BadRequest(new { Message = "Missing owner information." });
+            if (request == null)
+                throw new ArgumentException("Thông tin cuộc trò chuyện là bắt buộc.");
 
-            try
-            {
-                // The tenant comes from the token, not the request body.
-                var conversation = await _chatService.CreateOrGetConversationAsync(GetUserId(), request.OwnerId);
-                return Ok(conversation);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
+            var conversation = await _chatService.CreateOrGetConversationAsync(
+                GetUserId(), request.OwnerId, request.RoomId);
+            return Ok(conversation);
         }
     }
 }
