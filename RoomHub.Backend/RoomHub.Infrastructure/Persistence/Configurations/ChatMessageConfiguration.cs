@@ -19,7 +19,12 @@ namespace Infrastructure.Persistence.Configurations
                 .IsRequired();
 
             builder.Property(m => m.MessageText)
-                .IsRequired();
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            builder.Property(m => m.AttachmentUrl).HasMaxLength(1000);
+            builder.Property(m => m.AttachmentName).HasMaxLength(255);
+            builder.Property(m => m.AttachmentContentType).HasMaxLength(100);
 
             builder.Property(m => m.ClientMessageId)
                 .HasMaxLength(36);

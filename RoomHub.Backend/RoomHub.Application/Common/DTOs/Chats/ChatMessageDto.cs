@@ -9,6 +9,10 @@ namespace Application.Common.DTOs.Chats
         public string SenderId { get; set; } = string.Empty;
         public string ReceiverId { get; set; } = string.Empty;
         public string MessageText { get; set; } = string.Empty;
+        public string? AttachmentUrl { get; set; }
+        public string? AttachmentName { get; set; }
+        public string? AttachmentContentType { get; set; }
+        public long? AttachmentSize { get; set; }
         public DateTime Timestamp { get; set; }
         public bool IsRead { get; set; }
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { PageType } from '../../App';
 import { useAuth } from '../../hooks/useAuth';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
+import { useUnreadChats } from '../../hooks/useUnreadChats';
 
 interface TenantLayoutProps {
   currentPage: PageType;
@@ -19,6 +20,8 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
   const [isAvatarOpen, setIsAvatarOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const { unreadCount: unreadNotifCount } = useUnreadNotifications();
+  const { unreadCount: unreadChatCount, latestMessage } = useUnreadChats(!!user);
+  const [showChatToast, setShowChatToast] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   const fullName = user?.fullName || 'Khách thuê RoomHub';
@@ -34,6 +37,13 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!latestMessage || currentPage === 'tenant-messages') return;
+    setShowChatToast(true);
+    const timeout = window.setTimeout(() => setShowChatToast(false), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [latestMessage, currentPage]);
 
   const pageInfoMap: Record<string, { title: string; subtitle: string }> = {
     'tenant-dashboard': { title: 'Tổng quan', subtitle: 'Tình hình thuê trọ của bạn trong nháy mắt.' },
@@ -79,7 +89,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
     { label: 'Dịch vụ', icon: 'room_service', route: 'tenant-service-requests' },
     { label: 'Lịch xem & đặt cọc', icon: 'event_available', route: 'tenant-viewing-bookings' },
     { label: 'Thông báo', icon: 'notifications', route: 'tenant-notifications', badge: unreadNotifCount > 0 ? unreadNotifCount : undefined },
-    { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: 2 },
+    { label: 'Tin nhắn', icon: 'chat', route: 'tenant-messages', badge: unreadChatCount > 0 ? unreadChatCount : undefined },
     { label: 'Hồ sơ', icon: 'person', route: 'tenant-profile' },
   ];
 
@@ -208,6 +218,22 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ currentPage, setCurrentPage
         <main className="flex-grow bg-gray-50 p-6 md:p-8 min-h-screen pt-[96px] lg:pt-[96px] overflow-y-auto">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
+      {showChatToast && (
+        <button
+          type="button"
+          onClick={() => {
+            setShowChatToast(false);
+            setCurrentPage('tenant-messages');
+          }}
+          className="fixed right-5 top-24 z-50 flex max-w-sm items-center gap-3 rounded-2xl border border-orange-100 bg-white p-4 text-left shadow-xl animate-fade-in"
+        >
+          <span className="material-symbols-outlined grid h-10 w-10 place-items-center rounded-xl bg-orange-100 text-primary-container">chat</span>
+          <span>
+            <strong className="block text-sm text-on-surface">Bạn có tin nhắn mới</strong>
+            <span className="line-clamp-1 text-xs text-gray-500">{latestMessage?.messageText || 'Đã gửi một tệp đính kèm'}</span>
+          </span>
+        </button>
+      )}
       {isLogoutConfirmOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 soft-shadow relative animate-scale-up border border-gray-100 text-center">

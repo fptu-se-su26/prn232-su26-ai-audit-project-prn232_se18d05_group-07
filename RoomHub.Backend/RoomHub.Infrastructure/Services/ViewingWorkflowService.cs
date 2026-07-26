@@ -25,6 +25,11 @@ public class ViewingWorkflowService(ApplicationDbContext db) : IViewingWorkflowS
         if (await db.Contracts.AnyAsync(x => x.RoomId == room.Id && x.TenantId == tenantId && x.Status == ContractStatus.Active, ct))
             throw new WorkflowException("Bạn đang thuê phòng này.", 409);
         if (await HasOverlap(room.Id, start, end, null, ct)) throw new WorkflowException("Khung giờ này đã có lịch xem khác.", 409);
+        if (await db.RoomViewingBookings.AsNoTracking().AnyAsync(
+            x => x.RoomId == room.Id && x.TenantId == tenantId, ct))
+            throw new WorkflowException(
+                "Bạn đã từng đặt lịch xem phòng này. Mỗi người chỉ được đặt lịch một lần cho mỗi phòng.",
+                409);
         var booking = new RoomViewingBooking { RoomId = room.Id, TenantId = tenantId, RequestedStartAt = start, RequestedEndAt = end, ScheduledStartAt = start, ScheduledEndAt = end, TenantNote = request.Note?.Trim() };
         db.RoomViewingBookings.Add(booking);
         AddAudit(tenantId, "CreateBooking", "RoomViewingBooking", null, new { room.Id, start, end });

@@ -8,6 +8,7 @@ namespace Domain.Entities
         public long Id { get; set; }
         public string OwnerId { get; set; } = null!;
         public string TenantId { get; set; } = null!;
+        public int? RoomId { get; set; }
         public string? LastMessage { get; set; }
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
