@@ -3,6 +3,7 @@ using Application.Common.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using System.Text.Json;
+using Application.Common.Reviews;
 
 namespace Application.Services;
 
@@ -117,7 +118,9 @@ public sealed class ReviewService : IReviewService
         var row = await repository.GetByIdAsync(reviewId) ?? throw new ArgumentException("Không tìm thấy đánh giá.");
         if (row.IsDeleted || row.ModerationStatus == ReviewModerationStatus.Removed) throw new ArgumentException("Đánh giá không còn tồn tại.");
         if (row.TenantId == reporterId) throw new InvalidOperationException("Bạn không thể báo cáo đánh giá của chính mình.");
-        var code = request.ReasonCode?.Trim(); if (string.IsNullOrWhiteSpace(code) || code.Length > 50) throw new ArgumentException("Mã lý do không hợp lệ.");
+        var code = ReviewReportReasonCatalog.Normalize(request.ReasonCode);
+        if (code == "Other" && string.IsNullOrWhiteSpace(request.Description))
+            throw new ArgumentException("Vui lòng mô tả lý do báo cáo.");
         if ((request.Description?.Trim().Length ?? 0) > 1000) throw new ArgumentException("Mô tả tối đa 1000 ký tự.");
         if (await repository.HasPendingReportAsync(reviewId, reporterId)) throw new InvalidOperationException("Bạn đã có báo cáo đang chờ xử lý.");
         await repository.AddReportAsync(new() { ReviewId = reviewId, ReporterId = reporterId, UserId = reporterId, ReasonCode = code,
