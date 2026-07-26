@@ -279,7 +279,7 @@ const RoomDetail: React.FC<RoomDetailProps> = ({ selectedRoomId, setCurrentPage,
     if (!room?.ownerId || !user) return;
     try {
       setChatLoading(true);
-      await api.post('/chats/conversations', { ownerId: room.ownerId });
+      await api.post('/chats/conversations', { ownerId: room.ownerId, roomId: activeRoomId });
       // Dashboard routes are hash-based. This also works when the detail page
       // is opened directly at /room/:id (where setCurrentPage is not supplied).
       if (setCurrentPage) {

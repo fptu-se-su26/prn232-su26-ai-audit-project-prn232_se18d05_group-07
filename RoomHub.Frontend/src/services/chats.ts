@@ -32,13 +32,13 @@ export const chatService = {
     return response.data;
   },
 
-  sendMessage: async (conversationId: number, messageText: string): Promise<ChatMessage> => {
-    const response = await api.post(`/chats/conversations/${conversationId}/messages`, { messageText });
+  sendMessage: async (conversationId: number, messageText: string, clientMessageId: string): Promise<ChatMessage> => {
+    const response = await api.post(`/chats/conversations/${conversationId}/messages`, { messageText, clientMessageId });
     return response.data;
   },
 
-  createConversation: async (tenantId: string, ownerId: string): Promise<Conversation> => {
-    const response = await api.post('/chats/conversations', { tenantId, ownerId });
+  createConversation: async (ownerId: string, roomId: number): Promise<Conversation> => {
+    const response = await api.post('/chats/conversations', { ownerId, roomId });
     return response.data;
   }
 };
