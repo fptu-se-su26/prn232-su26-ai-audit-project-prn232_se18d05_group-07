@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { favoritesApi } from '../services/favorites';
+import { updateFavoriteIds } from '../utils/favoriteState';
 import MapBrowse from '../components/MapBrowse';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -51,7 +52,9 @@ const AMENITY_OPTIONS = [
   'Tủ lạnh',
 ];
 
-export const MOCK_ROOMS: Room[] = [
+/* Legacy mock listing fixture retained only as historical design reference.
+   It is intentionally excluded from every runtime browse/detail/favorite path.
+Legacy listing examples (inactive):
   {
     id: 1,
     title: "Studio ban công view biển Mỹ Khê - Đầy đủ nội thất",
@@ -190,6 +193,7 @@ export const MOCK_ROOMS: Room[] = [
     amenities: ["Wifi miễn phí", "Chỗ để xe", "Vệ sinh khép kín"]
   }
 ];
+*/
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -224,6 +228,7 @@ const Browse: React.FC<BrowseProps> = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favoriteBusy, setFavoriteBusy] = useState<Set<number>>(new Set());
+  const [favoriteError, setFavoriteError] = useState('');
 
   useEffect(() => {
     if (user?.role !== 'Tenant') { setFavoriteIds(new Set()); return; }
@@ -306,78 +311,9 @@ const Browse: React.FC<BrowseProps> = () => {
     if (viewMode === 'map') fetchMapListings();
   }, [viewMode, fetchMapListings]);
 
-  // Filter & Sort Logic for Mock Rooms
-  const filteredMockRooms = useMemo(() => {
-    let result = [...MOCK_ROOMS];
-
-    // Filter by Keyword
-    if (searchKeyword.trim() !== '') {
-      const keyword = searchKeyword.toLowerCase();
-      result = result.filter(room => 
-        room.title.toLowerCase().includes(keyword) || 
-        room.location.toLowerCase().includes(keyword)
-      );
-    }
-
-    // Filter by Property Type
-    if (selectedType !== 'Tất cả') {
-      result = result.filter(room => room.type === selectedType);
-    }
-
-    // Filter by District/Location
-    if (selectedLocation !== 'Tất cả') {
-      result = result.filter(room => room.district === selectedLocation);
-    }
-
-    // Filter by Price Range
-    const priceFilter = PRICE_RANGES[priceRange] ?? {};
-    if (priceFilter.min != null) {
-      result = result.filter(room => room.price >= priceFilter.min!);
-    }
-    if (priceFilter.max != null) {
-      result = result.filter(room => room.price <= priceFilter.max!);
-    }
-
-    // Filter by Amenities
-    if (selectedAmenities.length > 0) {
-      result = result.filter(room => 
-        selectedAmenities.every(amenity => room.amenities.includes(amenity))
-      );
-    }
-
-    return result;
-  }, [searchKeyword, selectedType, selectedLocation, priceRange, selectedAmenities]);
-
-  // Demo filler rooms are only shown alongside page 1 of real results - they don't
-  // exist on the server, so they must never affect the server-driven pagination.
-  const combinedRooms = useMemo(() => {
-    if (currentPage !== 1) return dbRooms;
-
-    const mappedMock = filteredMockRooms.map((r: Room) => ({
-      ...r,
-      id: r.id + 100000 // avoid conflicts with database IDs
-    }));
-
-    const merged = [...dbRooms, ...mappedMock];
-
-    if (sortBy === 'priceAsc') {
-      merged.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'priceDesc') {
-      merged.sort((a, b) => b.price - a.price);
-    } else {
-      merged.sort((a, b) => {
-        if (a.isNew && !b.isNew) return -1;
-        if (!a.isNew && b.isNew) return 1;
-        return b.id - a.id;
-      });
-    }
-
-    return merged;
-  }, [dbRooms, filteredMockRooms, sortBy, currentPage]);
-
-  const rooms = combinedRooms;
+  const rooms = dbRooms;
   const totalPages = serverTotalPages;
-  const totalCount = serverTotal + (currentPage === 1 ? filteredMockRooms.length : 0);
+  const totalCount = serverTotal;
 
   // Reset to page 1 whenever a filter changes (not on page navigation itself)
   useEffect(() => {
@@ -441,12 +377,16 @@ const Browse: React.FC<BrowseProps> = () => {
 
   const toggleFavorite = async (roomId: number) => {
     if (user?.role !== 'Tenant') { setIsLoginModalOpen(true); return; }
-    if (roomId >= 100000 || favoriteBusy.has(roomId)) return;
+    if (!rooms.some(room => room.id === roomId) || favoriteBusy.has(roomId)) return;
     const wasFavorite = favoriteIds.has(roomId);
-    setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.delete(roomId); else next.add(roomId); return next; });
+    setFavoriteError('');
+    setFavoriteIds(current => updateFavoriteIds(current, roomId, !wasFavorite));
     setFavoriteBusy(current => new Set(current).add(roomId));
     try { if (wasFavorite) await favoritesApi.remove(roomId); else await favoritesApi.add(roomId); }
-    catch { setFavoriteIds(current => { const next = new Set(current); if (wasFavorite) next.add(roomId); else next.delete(roomId); return next; }); }
+    catch {
+      setFavoriteIds(current => updateFavoriteIds(current, roomId, wasFavorite));
+      setFavoriteError('Không thể cập nhật phòng yêu thích. Trạng thái trước đó đã được khôi phục.');
+    }
     finally { setFavoriteBusy(current => { const next = new Set(current); next.delete(roomId); return next; }); }
   };
 
@@ -705,6 +645,12 @@ const Browse: React.FC<BrowseProps> = () => {
 
         {/* ── Right: Results Panel ──────────────────────────────────────────── */}
         <main>
+          {favoriteError && (
+            <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between gap-3">
+              <span>{favoriteError}</span>
+              <button className="font-bold" onClick={() => setFavoriteError('')} aria-label="Đóng thông báo">×</button>
+            </div>
+          )}
           {/* Result count + sort row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h2 className="text-xl font-bold text-on-surface">
@@ -847,7 +793,7 @@ const Browse: React.FC<BrowseProps> = () => {
                       {/* Favorite Button */}
                       <button
                         aria-label={favoriteIds.has(room.id) ? 'Bỏ lưu yêu thích' : 'Lưu yêu thích'}
-                        disabled={favoriteBusy.has(room.id) || room.id >= 100000}
+                        disabled={favoriteBusy.has(room.id)}
                         onClick={(e) => {
                           e.stopPropagation();
                           void toggleFavorite(room.id);

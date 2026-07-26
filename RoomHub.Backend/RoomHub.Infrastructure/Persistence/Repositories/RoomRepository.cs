@@ -124,7 +124,12 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(r => r.RoomPhotos)
                 .Include(r => r.RoomAmenities)
                     .ThenInclude(ra => ra.Amenity)
-                .Where(r => !r.IsDeleted && r.HasListing && r.IsPublished && r.ModerationStatus == ModerationStatus.Approved);
+                .Where(r =>
+                    !r.IsDeleted
+                    && !r.HiddenByOwner
+                    && r.HasListing
+                    && r.IsPublished
+                    && r.ModerationStatus == ModerationStatus.Approved);
 
             if (!string.IsNullOrEmpty(filter.District) && filter.District != "Tất cả")
             {
@@ -204,7 +209,13 @@ namespace Infrastructure.Persistence.Repositories
                 .Include(r => r.RoomPhotos)
                 .Include(r => r.RoomAmenities)
                     .ThenInclude(ra => ra.Amenity)
-                .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r =>
+                    r.Id == id
+                    && !r.IsDeleted
+                    && !r.HiddenByOwner
+                    && r.HasListing
+                    && r.IsPublished
+                    && r.ModerationStatus == ModerationStatus.Approved);
         }
     }
 }

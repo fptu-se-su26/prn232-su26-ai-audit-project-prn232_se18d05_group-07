@@ -46,6 +46,20 @@ public sealed class FavoriteRoomServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_ClampsPagination_AndCalculatesTotalPages()
+    {
+        var repository = new FakeFavoriteRoomRepository { Total = 101 };
+        var service = new FavoriteRoomService(repository);
+
+        var result = await service.GetAsync("tenant-a", 0, 500);
+
+        Assert.Equal(1, repository.RequestedPage);
+        Assert.Equal(50, repository.RequestedPageSize);
+        Assert.Equal(101, result.Total);
+        Assert.Equal(3, result.TotalPages);
+    }
+
+    [Fact]
     public void Controller_IsRestrictedToTenantRole()
     {
         var attribute = Assert.Single(typeof(TenantFavoritesController)
@@ -57,10 +71,17 @@ public sealed class FavoriteRoomServiceTests
     private sealed class FakeFavoriteRoomRepository : IFavoriteRoomRepository
     {
         public bool RoomExists { get; init; }
+        public int Total { get; init; }
+        public int RequestedPage { get; private set; }
+        public int RequestedPageSize { get; private set; }
         public HashSet<(string UserId, int RoomId)> Favorites { get; } = [];
 
-        public Task<(IReadOnlyList<FavoriteRoom> Items, int Total)> GetPageAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default) =>
-            Task.FromResult<(IReadOnlyList<FavoriteRoom>, int)>(([], 0));
+        public Task<(IReadOnlyList<FavoriteRoom> Items, int Total)> GetPageAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            RequestedPage = page;
+            RequestedPageSize = pageSize;
+            return Task.FromResult<(IReadOnlyList<FavoriteRoom>, int)>(([], Total));
+        }
 
         public Task<IReadOnlyList<int>> GetRoomIdsAsync(string userId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<int>>(Favorites.Where(x => x.UserId == userId).Select(x => x.RoomId).ToList());
