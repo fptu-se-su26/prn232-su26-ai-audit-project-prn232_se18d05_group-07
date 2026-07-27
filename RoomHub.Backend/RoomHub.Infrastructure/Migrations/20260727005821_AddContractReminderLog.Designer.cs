@@ -717,7 +717,7 @@ namespace RoomHub.Infrastructure.Migrations
 
                     b.HasIndex("ActiveHoldRoomId")
                         .IsUnique()
-                        .HasFilter("[ActiveHoldRoomId] IS NOT NULL");
+                        .HasFilter("[Status] IN ('Holding','Active')");
 
                     b.HasIndex("TenantId");
 
