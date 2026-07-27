@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { PageType } from '../../App';
 import api from '../../services/api';
+import { contractDocumentApi } from '../../services/contractDocuments';
 
 interface UnitDetailProps {
   unitId: string | null;
@@ -54,6 +55,18 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+  const [downloadingContract, setDownloadingContract] = useState(false);
+
+  const handleDownloadContract = async () => {
+    try {
+      setDownloadingContract(true);
+      await contractDocumentApi.downloadRoomContract(unitIdNum);
+    } catch {
+      alert('Không tải được hợp đồng. Phòng này có thể chưa có hợp đồng đang hiệu lực.');
+    } finally {
+      setDownloadingContract(false);
+    }
+  };
 
   const [unitStatus, setUnitStatus] = useState<string>('Còn trống');
   const [roomNote, setRoomNote] = useState('');
@@ -821,6 +834,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ unitId, setCurrentPage, setSele
 
                 {/* Operations */}
                 <div className="space-y-1.5 pt-2 border-t border-gray-50">
+                  <button
+                    onClick={handleDownloadContract}
+                    disabled={downloadingContract}
+                    className="w-full py-2 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 border border-gray-200 rounded-xl text-[11px] font-bold text-center cursor-pointer transition-colors active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+                    {downloadingContract ? 'Đang tạo PDF...' : 'Tải hợp đồng PDF'}
+                  </button>
                   {tenant.contractStatus === 'Pending' ? (
                     <>
                       <button 
