@@ -100,6 +100,8 @@ namespace Infrastructure
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IFileUploadService, FileUploadService>();
             services.AddScoped<IDepositPaymentProofService, DepositPaymentProofService>();
+            services.AddScoped<IContractPdfService, ContractPdfService>();
+            services.AddScoped<IContractReminderService, ContractReminderService>();
 
             // Register HttpClient and AI Moderation Services
             services.AddHttpClient<GroqModerationService>();
