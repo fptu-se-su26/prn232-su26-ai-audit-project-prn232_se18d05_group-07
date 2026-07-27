@@ -16,6 +16,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IChatNotifier, SignalRChatNotifier>();
 builder.Services.AddHostedService<DepositExpiryHostedService>();
+builder.Services.AddHostedService<ContractExpiryReminderHostedService>();
 
 // Auth endpoints (login/register/OTP) have no other brute-force protection at the HTTP layer,
 // so cap how many attempts an IP can make per minute.
