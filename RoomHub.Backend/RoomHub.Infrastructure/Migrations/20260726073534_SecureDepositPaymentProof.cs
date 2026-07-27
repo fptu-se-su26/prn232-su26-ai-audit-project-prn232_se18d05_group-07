@@ -59,7 +59,7 @@ namespace RoomHub.Infrastructure.Migrations
                 table: "Deposits",
                 column: "ActiveHoldRoomId",
                 unique: true,
-                filter: "[ActiveHoldRoomId] IS NOT NULL");
+                filter: "[Status] IN ('Holding','Active')");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Deposits_RoomId_Status",
