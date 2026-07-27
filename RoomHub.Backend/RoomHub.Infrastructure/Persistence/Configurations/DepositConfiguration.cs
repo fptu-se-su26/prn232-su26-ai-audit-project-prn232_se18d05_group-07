@@ -33,7 +33,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(d => d.RowVersion).IsRowVersion();
             builder.ToTable(t => t.HasCheckConstraint("CK_Deposits_ValidValues", "[Amount] > 0 AND [HoldDurationDays] > 0 AND [ExpiresAt] > [PlacedAt]"));
             builder.HasIndex(d => d.TransactionId).IsUnique().HasFilter("[TransactionId] IS NOT NULL");
-            builder.HasIndex(d => d.ActiveHoldRoomId).IsUnique().HasFilter("[ActiveHoldRoomId] IS NOT NULL");
+            builder.HasIndex(d => d.ActiveHoldRoomId).IsUnique().HasFilter("[Status] IN ('Holding','Active')");
             builder.HasIndex(d => new { d.RoomId, d.Status });
 
             builder.HasOne(d => d.Room)
